@@ -10,6 +10,7 @@
     "clean": "yarn workspaces run clean"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.0",
     "@callstack/repack": "5.2.0",
     "typescript": "^5.9.0"
   }

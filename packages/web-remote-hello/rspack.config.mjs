@@ -78,25 +78,6 @@ export default {
         },
       },
     }),
-    new Repack.plugins.ModuleFederationPluginV2({
-      name: 'HelloRemote',
-      filename: 'HelloRemote.container.js.bundle',
-      exposes: {
-        './HelloRemote': './src/HelloRemote',
-      },
-      shared: {
-        react: {
-          singleton: true,
-          eager: true,
-          requiredVersion: pkg.dependencies.react,
-        },
-        'react-native': {
-          singleton: true,
-          eager: true,
-          requiredVersion: pkg.dependencies['react-native'],
-        },
-      },
-    }),
     new HtmlRspackPlugin({
       template: './public/index.html',
     }),

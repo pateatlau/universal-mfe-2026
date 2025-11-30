@@ -85,11 +85,18 @@ export default {
           requiredVersion: '19.2.0',
           eager: true,
         },
-        // 'react-native': {
-        //   singleton: true,
-        //   eager: true,
-        //   version: '0.80.0',
-        // },
+        'react-native': {
+          singleton: true,
+          eager: true,
+        },
+        '@universal/shared-utils': {
+          singleton: true,
+          eager: true,
+        },
+        '@universal/shared-hello-ui': {
+          singleton: true,
+          eager: true,
+        },
       },
       dts: false,
     }),

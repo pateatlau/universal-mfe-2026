@@ -16,7 +16,7 @@
   resolved "https://registry.yarnpkg.com/@babel/compat-data/-/compat-data-7.28.5.tgz#a8a4962e1567121ac0b3b487f52107443b455c7f"
   integrity sha512-6uFXyCayocRbqhZOB+6XcuZbkMNimwfVGFji8CTZnCzOHVGvDqzvitu1re2AU5LROliz7eQPhB8CpAMvnx9EjA==
 
-"@babel/core@^7.11.6", "@babel/core@^7.12.3", "@babel/core@^7.25.2":
+"@babel/core@^7.11.6", "@babel/core@^7.12.3", "@babel/core@^7.25.2", "@babel/core@^7.26.0":
   version "7.28.5"
   resolved "https://registry.yarnpkg.com/@babel/core/-/core-7.28.5.tgz#4c81b35e51e1b734f510c99b07dfbc7bbbb48f7e"
   integrity sha512-e7jT4DxYvIDLk1ZHmU/m/mB19rex9sv0c2ftBtjSBv+kVM/902eh0fINUzD7UwLLNR+jU585GxUJ8/EBfAM5fw==
@@ -294,61 +294,12 @@
     source-map "^0.7.4"
     ws "^8.18.1"
 
-"@callstack/repack-dev-server@5.2.2":
-  version "5.2.2"
-  resolved "https://registry.yarnpkg.com/@callstack/repack-dev-server/-/repack-dev-server-5.2.2.tgz#a828e551a2d1f49fdf75f001b4c7381a2b3be54e"
-  integrity sha512-ZKm9T6jxm99YfaN6Ygdu8dWK/C8YjxizyUJS9ZUcZrD9oV4QQjae6YgCzXXYNV63amlo9o7X5ZMZQr/Q60vjBQ==
-  dependencies:
-    "@babel/code-frame" "^7.26.2"
-    "@fastify/middie" "^8.3.0"
-    "@fastify/sensible" "^5.5.0"
-    fastify "^4.24.3"
-    fastify-favicon "^4.3.0"
-    fastify-plugin "^4.5.1"
-    http-proxy-middleware "^3.0.3"
-    launch-editor "^2.10.0"
-    open "^10.1.0"
-    pretty-format "^28.1.0"
-    source-map "^0.7.4"
-    ws "^8.18.1"
-
 "@callstack/repack@5.2.0":
   version "5.2.0"
   resolved "https://registry.yarnpkg.com/@callstack/repack/-/repack-5.2.0.tgz#48d7019ff999f52a89f605c64b7e47b119b2baa9"
   integrity sha512-OoAky6LejpbOpcVjH/WldAmmaixyZgT3sGC3TjWpPm/HBriIn7rODyUXquBSVQZCoBNVBaqlUbxZpzvWcfgWMQ==
   dependencies:
     "@callstack/repack-dev-server" "5.2.0"
-    "@discoveryjs/json-ext" "^0.5.7"
-    "@rspack/plugin-react-refresh" "1.0.0"
-    babel-loader "^9.2.1"
-    colorette "^2.0.20"
-    dedent "^0.7.0"
-    estree-util-is-identifier-name "^1.1.0"
-    events "^3.3.0"
-    execa "^5.0.0"
-    exit-hook "^4.0.0"
-    flow-remove-types "^2.277.0"
-    gradient-string "^2.0.2"
-    image-size "^1.1.1"
-    jsonwebtoken "^9.0.2"
-    memfs "^4.11.1"
-    mime-types "^2.1.35"
-    pretty-format "^26.6.2"
-    react-refresh "^0.14.0"
-    schema-utils "^4.2.0"
-    semver "^7.7.2"
-    shallowequal "^1.1.0"
-    tapable "^2.2.1"
-    terser-webpack-plugin "^5.3.14"
-    throttleit "^2.1.0"
-    webpack-merge "^6.0.1"
-
-"@callstack/repack@^5.2.0":
-  version "5.2.2"
-  resolved "https://registry.yarnpkg.com/@callstack/repack/-/repack-5.2.2.tgz#b71a9d66a5eaf068df37b5e7fe35db8f8ef1df32"
-  integrity sha512-4xMRj1OS2ncpnAXFxf6C9XyH2wHgy0KzgZYqAYbUmlpiL36NTOKz3d2rryaleg7adiYv15KGRCWcN5a0YkBNQw==
-  dependencies:
-    "@callstack/repack-dev-server" "5.2.2"
     "@discoveryjs/json-ext" "^0.5.7"
     "@rspack/plugin-react-refresh" "1.0.0"
     babel-loader "^9.2.1"

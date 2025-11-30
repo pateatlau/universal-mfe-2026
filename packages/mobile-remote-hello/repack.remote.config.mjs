@@ -1,66 +1,213 @@
-import * as Repack from "@callstack/repack";
-import rspack from "@rspack/core";
-import path from "node:path";
+import * as Repack from '@callstack/repack';
+import rspack from '@rspack/core';
+import path from 'node:path';
 
 const dirname = Repack.getDirname(import.meta.url);
+const platform = process.env.PLATFORM || 'android';
 
 export default {
   context: dirname,
+  mode: 'development',
+
   entry: {
-    app: "./src/main.ts",
+    // This should import your HelloRemote component somewhere
+    index: './src/main.ts', // or "./src/index.ts" if that's your main entry
   },
+
   output: {
-    path: path.join(dirname, "dist"),
-    filename: "[name].js",
-    publicPath: "http://localhost:9004/",
+    path: path.join(dirname, 'dist'),
+    // RN-style entry bundle; we don't care much about this one
+    filename: 'index.bundle',
+    publicPath: '',
   },
+
+  devServer: {
+    port: 9004,
+    host: '0.0.0.0',
+    allowedHosts: 'all',
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
+    static: {
+      // directory: path.join(dirname, 'public'),
+      directory: path.join(dirname, 'dist'),
+      // publicPath: '/',
+    },
+  },
+
+  devtool: false,
+
   resolve: {
-    extensions: [".tsx", ".ts", ".jsx", ".js", ".json"],
+    ...Repack.getResolveOptions({
+      platform,
+      environment: 'react-native',
+      enablePackageExports: true,
+    }),
     fallback: {
       util: false,
     },
   },
-  devServer: {
-    port: 9004,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-    },
-    static: {
-      directory: path.join(dirname, "public"),
-    },
-  },
+
   module: {
     rules: [
       ...Repack.getJsTransformRules(),
       ...Repack.getAssetTransformRules(),
     ],
   },
+
   plugins: [
-    new Repack.RepackPlugin({ platform: "android" }),
-    // Replace React Native dev tools internal modules with empty stubs
-    // These modules don't exist in the published React Native package
+    new Repack.RepackPlugin({
+      platform,
+      hermes: true,
+    }),
+
+    // keep your RN devtools stubs
     new rspack.NormalModuleReplacementPlugin(
       /devsupport\/rndevtools\/ReactDevToolsSettingsManager/,
-      path.join(dirname, "src", "stubs", "ReactDevToolsSettingsManager.js")
+      path.join(dirname, 'src', 'stubs', 'ReactDevToolsSettingsManager.js')
     ),
     new rspack.NormalModuleReplacementPlugin(
       /devsupport\/rndevtools\/specs\/NativeReactDevToolsRuntimeSettingsModule/,
-      path.join(dirname, "src", "stubs", "NativeReactDevToolsRuntimeSettingsModule.js")
+      path.join(
+        dirname,
+        'src',
+        'stubs',
+        'NativeReactDevToolsRuntimeSettingsModule.js'
+      )
     ),
+
     new Repack.plugins.ModuleFederationPluginV2({
-      name: "HelloRemote",
-      filename: "HelloRemote.container.js.bundle",
+      name: 'HelloRemote',
+      filename: 'HelloRemote.container.js.bundle',
       exposes: {
-        "./HelloRemote": "./src/HelloRemote.tsx",
+        './HelloRemote': './src/HelloRemote.tsx',
       },
       shared: {
-        react: { singleton: true },
-        "react-native": { singleton: true },
-        "@universal/shared-utils": { singleton: true },
-        "@universal/shared-hello-ui": { singleton: true },
+        react: { singleton: true, eager: true },
+
+        // Let MF handle react-native via the host's share
+        'react-native': { singleton: true, eager: true },
+
+        '@universal/shared-utils': { singleton: true, eager: true },
+        '@universal/shared-hello-ui': { singleton: true, eager: true },
       },
       dts: false,
     }),
   ],
 };
 
+// import * as Repack from '@callstack/repack';
+// import rspack from '@rspack/core';
+// import path from 'node:path';
+
+// const dirname = Repack.getDirname(import.meta.url);
+// const platform = process.env.PLATFORM || 'android';
+
+// export default {
+//   context: dirname,
+//   mode: 'development',
+
+//   // Entry that bootstraps your remote (can be simple)
+//   entry: {
+//     // app: './src/main.ts',
+//     index: './src/main.ts',
+//   },
+//   output: {
+//     path: path.join(dirname, 'dist'),
+//     filename: '[name].js',
+//     // filename: '[name].bundle', // Maybe use this?
+//     // filename: 'HelloRemote.container.js.bundle',
+//     publicPath: '',
+//   },
+
+//   devServer: {
+//     port: 9004,
+//     headers: {
+//       'Access-Control-Allow-Origin': '*',
+//     },
+//     static: {
+//       directory: path.join(dirname, 'public'),
+//     },
+//   },
+
+//   devtool: false,
+
+//   resolve: {
+//     // RN-aware resolution
+//     ...Repack.getResolveOptions({
+//       platform,
+//       environment: 'react-native',
+//       enablePackageExports: true,
+//     }),
+
+//     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
+
+//     fallback: {
+//       util: false,
+//     },
+//   },
+
+//   module: {
+//     rules: [
+//       ...Repack.getJsTransformRules(),
+//       ...Repack.getAssetTransformRules(),
+//     ],
+//   },
+
+//   plugins: [
+//     new Repack.RepackPlugin({
+//       // platform: 'android',
+//       platform,
+//       hermes: true,
+//     }),
+
+//     // your devtools stubs – keep as-is
+//     new rspack.NormalModuleReplacementPlugin(
+//       /devsupport\/rndevtools\/ReactDevToolsSettingsManager/,
+//       path.join(dirname, 'src', 'stubs', 'ReactDevToolsSettingsManager.js')
+//     ),
+
+//     new rspack.NormalModuleReplacementPlugin(
+//       /devsupport\/rndevtools\/specs\/NativeReactDevToolsRuntimeSettingsModule/,
+//       path.join(
+//         dirname,
+//         'src',
+//         'stubs',
+//         'NativeReactDevToolsRuntimeSettingsModule.js'
+//       )
+//     ),
+
+//     new Repack.plugins.ModuleFederationPluginV2({
+//       // 👇 MUST match what host uses in Federated.importModule + prefetchScript
+//       name: 'HelloRemote',
+
+//       // 👇 MUST match ScriptManager resolver URL path
+//       filename: 'HelloRemote.container.js.bundle',
+
+//       // 👇 MUST match Federated.importModule('HelloRemote', './HelloRemote', 'default')
+//       exposes: {
+//         './HelloRemote': './src/HelloRemote.tsx',
+//       },
+
+//       shared: {
+//         react: {
+//           singleton: true,
+//           eager: true,
+//         },
+//         'react-native': {
+//           singleton: true,
+//           eager: true,
+//         },
+//         '@universal/shared-utils': {
+//           singleton: true,
+//           eager: true,
+//         },
+//         '@universal/shared-hello-ui': {
+//           singleton: true,
+//           eager: true,
+//         },
+//       },
+//       dts: false,
+//     }),
+//   ],
+// };
