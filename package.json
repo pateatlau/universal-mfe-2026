@@ -1,0 +1,16 @@
+{
+  "name": "universal-mfe-yarn-seed",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "packageManager": "yarn@1.22.22",
+  "scripts": {
+    "clean": "yarn workspaces run clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}
+

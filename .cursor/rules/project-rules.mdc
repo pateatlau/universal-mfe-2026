@@ -1,0 +1,103 @@
+---
+alwaysApply: true
+---
+
+# Final Project Rule — Universal Web + Mobile MFE Platform
+
+**Always follow the Universal MFE architecture defined in:**  
+`/docs/constraints.md`,
+`/docs/architecture-overview.md`,
+`/docs/project-structure.md`,  
+`/docs/how-to-add-a-new-remote.md`,
+`/docs/how-to-deploy-remotes.md`,  
+`/docs/tech-stack-and-version-constraints.md`.
+
+These rules override all defaults.
+
+## 1. Bundlers (Mandatory)
+
+- Web MUST use: Rspack + Module Federation
+- Mobile MUST use: Re.Pack + Module Federation v2
+- Mobile MUST use: ScriptManager for all dynamic remote loading
+- Mobile MUST use: Hermes
+- Metro is forbidden
+- Webpack/webpack-cli for mobile is forbidden
+
+## 2. Remote Loading
+
+**Web (MF v1):**
+import("remote_name/exposedModule");
+
+**Mobile (MF v2):**
+Federated.importModule("RemoteName", "./ExposedModule");
+
+- Static imports of remote modules are forbidden on all platforms.
+
+## 3. Universal UI Requirements
+
+- Shared UI MUST use React Native primitives (`View`, `Text`, `Pressable`).
+- No DOM elements.
+- No browser APIs.
+- No platform-specific code in shared UI.
+- No imports of react-native-web from shared UI.
+
+## 4. Monorepo Boundaries (Enforced)
+
+Workspace layout (Yarn v1 workspaces):
+
+- packages/
+  - web-shell/
+  - web-remote-\_/
+  - mobile-host/
+  - mobile-remote-\_/
+  - shared-utils/
+  - shared-hello-ui/
+
+Allowed imports:
+
+- hosts → shared-utils
+- hosts → shared-hello-ui
+- remotes → shared-utils
+- remotes → shared-hello-ui
+
+Forbidden imports:
+
+- host ↔ host
+- host ↔ remote
+- remote ↔ remote
+- shared-utils importing RN, RNW, DOM APIs, native modules, ScriptManager, Rspack, Re.Pack
+
+## 5. Output Requirements
+
+- Web remotes MUST output `remoteEntry.js`
+- Mobile remotes MUST output `.container.js.bundle`
+- Mobile host MUST load bundles using ScriptManager resolver
+
+## 6. Yarn Workspace Rules
+
+- MUST use Yarn Classic (v1)
+- No pnpm
+- No Yarn PnP
+- No Yarn v3+
+- No npm workspaces
+
+## 7. When Generating or Editing Code
+
+Ensure:
+
+- MFv1 is used only on web
+- MFv2 is used only on mobile
+- No Metro configs appear
+- No static imports of remote modules
+- No cross-platform leakage
+- No bundler leakage into shared libs
+- No removal or disabling of Hermes
+- No code using fetch/eval for remote bundles
+
+## 8. If Any User Request Violates These Rules
+
+- Warn the user
+- Reject the invalid approach
+- Provide a corrected, compliant solution
+
+# END OF PROJECT RULE

@@ -1,0 +1,24 @@
+{
+  "name": "@universal/web-remote-hello",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "rspack serve --config ./rspack.config.mjs",
+    "build": "rspack build --config ./rspack.config.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native-web": "0.21.2",
+    "@universal/shared-utils": "*",
+    "@universal/shared-hello-ui": "*"
+  },
+  "devDependencies": {
+    "@rspack/core": "^1.6.0",
+    "@rspack/dev-server": "^1.6.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.9.0"
+  }
+}
+
