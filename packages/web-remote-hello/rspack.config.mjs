@@ -1,12 +1,13 @@
-import { defineConfig } from "@rspack/core";
-import { ModuleFederationPlugin } from "@rspack/core";
+import rspack from "@rspack/core";
+const { ModuleFederationPlugin } = rspack.container;
+const { HtmlRspackPlugin } = rspack;
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
-  entry: "./src/index.ts",
+export default {
+  entry: "./src/standalone.tsx",
   mode: "development",
   devtool: "eval-source-map",
   devServer: {
@@ -55,23 +56,31 @@ export default defineConfig({
         react: {
           singleton: true,
           requiredVersion: "19.2.0",
+          eager: true,
         },
         "react-dom": {
           singleton: true,
           requiredVersion: "19.2.0",
+          eager: true,
         },
         "react-native-web": {
           singleton: true,
           requiredVersion: "0.21.2",
+          eager: true,
         },
         "@universal/shared-utils": {
           singleton: true,
+          eager: true,
         },
         "@universal/shared-hello-ui": {
           singleton: true,
+          eager: true,
         },
       },
     }),
+    new HtmlRspackPlugin({
+      template: "./public/index.html",
+    }),
   ],
-});
+};
 

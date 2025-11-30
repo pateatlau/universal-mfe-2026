@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "rspack serve --config ./rspack.config.mjs",
-    "build": "rspack build --config ./rspack.config.mjs"
+    "dev": "npx rspack serve --config ./rspack.config.mjs",
+    "build": "npx rspack build --config ./rspack.config.mjs"
   },
   "dependencies": {
     "react": "19.2.0",
@@ -12,6 +12,7 @@
     "react-native-web": "0.21.2"
   },
   "devDependencies": {
+    "@rspack/cli": "^1.6.0",
     "@rspack/core": "^1.6.0",
     "@rspack/dev-server": "^1.6.0",
     "@rspack/plugin-html": "^1.6.0",
@@ -20,4 +21,3 @@
     "typescript": "^5.9.0"
   }
 }
-

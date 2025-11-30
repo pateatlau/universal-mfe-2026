@@ -1,12 +1,12 @@
-import { defineConfig } from "@rspack/core";
-import { ModuleFederationPlugin } from "@rspack/core";
-import HtmlRspackPlugin from "@rspack/plugin-html";
+import rspack from "@rspack/core";
+const { ModuleFederationPlugin } = rspack.container;
+const { HtmlRspackPlugin } = rspack;
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
+export default {
   entry: "./src/index.tsx",
   mode: "development",
   devtool: "eval-source-map",
@@ -55,14 +55,17 @@ export default defineConfig({
         react: {
           singleton: true,
           requiredVersion: "19.2.0",
+          eager: true,
         },
         "react-dom": {
           singleton: true,
           requiredVersion: "19.2.0",
+          eager: true,
         },
         "react-native-web": {
           singleton: true,
           requiredVersion: "0.21.2",
+          eager: true,
         },
       },
     }),
@@ -70,5 +73,5 @@ export default defineConfig({
       template: "./public/index.html",
     }),
   ],
-});
+};
 
