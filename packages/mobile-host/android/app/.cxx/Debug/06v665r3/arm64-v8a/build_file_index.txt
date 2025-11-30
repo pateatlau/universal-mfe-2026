@@ -1,0 +1,2 @@
+/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/node_modules/@callstack/repack/android/build/generated/source/codegen/jni/CMakeLists.txt
+/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/node_modules/react-native/ReactAndroid/cmake-utils/default-app-setup/CMakeLists.txt

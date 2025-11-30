@@ -1,0 +1,25 @@
+# ninja log v5
+6	2730	1764513061049626961	CMakeFiles/appmodules.dir/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/build/generated/autolinking/src/main/jni/autolinking.cpp.o	2a6dbfbc5932c831
+6	2353	1764513060672794876	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/Props.cpp.o	148a590259c59cf8
+1	12	0	/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/.cxx/Debug/06v665r3/arm64-v8a/CMakeFiles/cmake.verify_globs	29ebb58ae572b60c
+2765	2997	1764513061314708519	/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/build/intermediates/cxx/Debug/06v665r3/obj/arm64-v8a/libappmodules.so	8a3ef2cee184b23e
+6	2765	1764513061084255803	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/ComponentDescriptors.cpp.o	15f6ee99ce58ba07
+7	2031	1764513060344212157	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/States.cpp.o	d8430af69640ac04
+69	628	1764514840273211700	build.ninja	8c476303506a20fb
+0	14	0	clean	7bdce16a80aaa240
+6	2304	1764513060623353870	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/EventEmitters.cpp.o	489d719a07be1c27
+6	2704	1764513061019634213	CMakeFiles/appmodules.dir/OnLoad.cpp.o	2e1bb65b5f3731c2
+7	2603	1764513060920808870	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/RNScriptManagerSpecJSI-generated.cpp.o	f5dfcdf1ab6dced
+6	2665	1764513060978519924	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/RNScriptManagerSpec-generated.cpp.o	58081a53823d974d
+7	2669	1764513060988971040	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/ShadowNodes.cpp.o	320b48768ef95f0d
+1	38	0	/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/.cxx/Debug/06v665r3/arm64-v8a/CMakeFiles/cmake.verify_globs	29ebb58ae572b60c
+19	3200	1764514843582123397	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/States.cpp.o	d8430af69640ac04
+11	3481	1764514843845919516	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/EventEmitters.cpp.o	489d719a07be1c27
+13	3512	1764514843894112915	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/Props.cpp.o	148a590259c59cf8
+16	3653	1764514844033640266	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/RNScriptManagerSpecJSI-generated.cpp.o	f5dfcdf1ab6dced
+8	3771	1764514844141833318	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/RNScriptManagerSpec-generated.cpp.o	58081a53823d974d
+4	3788	1764514844168001061	CMakeFiles/appmodules.dir/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/build/generated/autolinking/src/main/jni/autolinking.cpp.o	2a6dbfbc5932c831
+10	3813	1764514844193149126	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/ComponentDescriptors.cpp.o	15f6ee99ce58ba07
+17	3846	1764514844229172601	RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir/react/renderer/components/RNScriptManagerSpec/ShadowNodes.cpp.o	320b48768ef95f0d
+8	3944	1764514844322783244	CMakeFiles/appmodules.dir/OnLoad.cpp.o	2e1bb65b5f3731c2
+3944	4185	1764514844565857596	/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/build/intermediates/cxx/Debug/06v665r3/obj/arm64-v8a/libappmodules.so	8a3ef2cee184b23e

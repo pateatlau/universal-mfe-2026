@@ -37,6 +37,6 @@ This starts a dev server on port 9004 serving the bundle at:
 The mobile host consumes this remote via ScriptManager + MFv2:
 
 ```typescript
-const Remote = await Federated.importModule("HelloRemote", "./HelloRemote");
+const Remote = await Federated.importModule("HelloRemote", "./HelloRemote", "default");
 ```
 

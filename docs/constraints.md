@@ -106,7 +106,7 @@ Web
 import("hello_remote/HelloRemote");
 
 Mobile
-Federated.importModule("HelloRemote", "./HelloRemote");
+Federated.importModule("HelloRemote", "./HelloRemote", "default");
 
 This is required for both security and correctness.
 

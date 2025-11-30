@@ -39,7 +39,7 @@ cd packages/mobile-host
 - **Module Federation**: v2 (via Re.Pack)
 - **Runtime Loader**: ScriptManager
 - **JS Engine**: Hermes (required)
-- **Remote Loading**: `Federated.importModule("HelloRemote", "./HelloRemote")`
+- **Remote Loading**: `Federated.importModule("HelloRemote", "./HelloRemote", "default")`
 
 ## Configuration
 

@@ -244,7 +244,7 @@ return { url: `http://localhost:9004/${scriptId}` };
 
 ScriptManager.prefetchScript("HelloRemote");
 
-const Remote = await Federated.importModule("HelloRemote", "./HelloRemote");
+const Remote = await Federated.importModule("HelloRemote", "./HelloRemote", "default");
 
 This ensures the remote is fetched, cached, evaluated, and rendered.
 

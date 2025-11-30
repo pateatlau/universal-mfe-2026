@@ -239,7 +239,8 @@ In mobile host code:
 const NotificationsRemote = React.lazy(() =>
 Federated.importModule(
 "MobileRemoteNotifications",
-"./NotificationsRemote"
+"./NotificationsRemote",
+"default"
 )
 );
 

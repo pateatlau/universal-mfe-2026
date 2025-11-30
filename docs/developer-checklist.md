@@ -97,7 +97,7 @@ Mobile
 
 Mobile host uses:
 
-Federated.importModule("HelloRemote", "./HelloRemote");
+Federated.importModule("HelloRemote", "./HelloRemote", "default");
 
 No static imports from mobile remotes.
 

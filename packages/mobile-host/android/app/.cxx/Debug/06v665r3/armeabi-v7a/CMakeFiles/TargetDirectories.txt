@@ -1,0 +1,6 @@
+/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/.cxx/Debug/06v665r3/armeabi-v7a/CMakeFiles/appmodules.dir
+/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/.cxx/Debug/06v665r3/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/.cxx/Debug/06v665r3/armeabi-v7a/CMakeFiles/rebuild_cache.dir
+/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/.cxx/Debug/06v665r3/armeabi-v7a/RNScriptManagerSpec_autolinked_build/CMakeFiles/react_codegen_RNScriptManagerSpec.dir
+/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/.cxx/Debug/06v665r3/armeabi-v7a/RNScriptManagerSpec_autolinked_build/CMakeFiles/edit_cache.dir
+/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/.cxx/Debug/06v665r3/armeabi-v7a/RNScriptManagerSpec_autolinked_build/CMakeFiles/rebuild_cache.dir

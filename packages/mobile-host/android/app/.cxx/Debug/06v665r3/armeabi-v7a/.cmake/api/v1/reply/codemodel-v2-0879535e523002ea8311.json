@@ -1,0 +1,88 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.13"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "RNScriptManagerSpec_autolinked_build",
+					"jsonFile" : "directory-RNScriptManagerSpec_autolinked_build-Debug-a9f8078b6929cea1e846.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.13"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/node_modules/@callstack/repack/android/build/generated/source/codegen/jni",
+					"targetIndexes" : 
+					[
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1
+					],
+					"name" : "appmodules",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "appmodules::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appmodules-Debug-a5a4ce02a03ecb8a844a.json",
+					"name" : "appmodules",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "react_codegen_RNScriptManagerSpec::@d4ffaac6e9a2cc059aa6",
+					"jsonFile" : "target-react_codegen_RNScriptManagerSpec-Debug-8d83a984dddf86e4fdb8.json",
+					"name" : "react_codegen_RNScriptManagerSpec",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/.cxx/Debug/06v665r3/armeabi-v7a",
+		"source" : "/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/node_modules/react-native/ReactAndroid/cmake-utils/default-app-setup"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}
