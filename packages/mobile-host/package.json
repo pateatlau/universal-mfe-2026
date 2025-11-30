@@ -1,0 +1,26 @@
+{
+  "name": "@universal/mobile-host",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "android": "rspack serve --config ./repack.config.mjs --env PLATFORM=android",
+    "ios": "rspack serve --config ./repack.config.mjs --env PLATFORM=ios",
+    "build:android": "rspack build --config ./repack.config.mjs --env PLATFORM=android",
+    "build:ios": "rspack build --config ./repack.config.mjs --env PLATFORM=ios"
+  },
+  "dependencies": {
+    "react": "19.2.0",
+    "react-native": "^0.80.0",
+    "@callstack/repack": "^5.2.0",
+    "@module-federation/enhanced": "^0.21.6",
+    "@swc/helpers": "^0.5.0"
+  },
+  "devDependencies": {
+    "@babel/plugin-syntax-typescript": "^7.25.0",
+    "@react-native/babel-plugin-codegen": "^0.80.0",
+    "@rspack/cli": "^1.6.0",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.9.0"
+  }
+}
+

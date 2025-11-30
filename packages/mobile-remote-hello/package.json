@@ -1,0 +1,26 @@
+{
+  "name": "@universal/mobile-remote-hello",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build:remote": "rspack build --config ./repack.remote.config.mjs",
+    "serve": "rspack serve --config ./repack.remote.config.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.0",
+    "react-native": "^0.80.0",
+    "@module-federation/enhanced": "^0.21.6",
+    "@swc/helpers": "^0.5.0",
+    "@universal/shared-utils": "*",
+    "@universal/shared-hello-ui": "*"
+  },
+  "devDependencies": {
+    "@babel/plugin-syntax-typescript": "^7.25.0",
+    "@callstack/repack": "^5.2.0",
+    "@react-native/babel-plugin-codegen": "^0.80.0",
+    "@rspack/cli": "^1.6.0",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.9.0"
+  }
+}
+

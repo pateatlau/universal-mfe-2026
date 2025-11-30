@@ -14,8 +14,8 @@
   "devDependencies": {
     "@rspack/cli": "^1.6.0",
     "@rspack/core": "^1.6.0",
-    "@rspack/dev-server": "^1.6.0",
-    "@rspack/plugin-html": "^1.6.0",
+    "@rspack/dev-server": "^1.1.4",
+    "@rspack/plugin-html": "^0.5.8",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.9.0"
