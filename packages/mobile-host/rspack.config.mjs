@@ -5,8 +5,10 @@ import path from 'node:path';
 const dirname = Repack.getDirname(import.meta.url);
 const platform = process.env.PLATFORM || 'android';
 
-// Use different ports for different platforms to allow running both simultaneously
-const devServerPort = process.env.PORT || (platform === 'ios' ? 8081 : 8080);
+// Use port 8081 for both iOS and Android to match ReactHost's hardcoded port
+// NOTE: This means Android and iOS host bundlers cannot run simultaneously
+// This is a temporary workaround until we can properly configure ReactHost
+const devServerPort = process.env.PORT || 8081;
 
 export default {
   context: dirname,
@@ -34,6 +36,18 @@ export default {
     static: {
       directory: path.join(dirname, 'public'),
       publicPath: '/',
+    },
+    // Configure MIME types for bundle files
+    setupMiddlewares: (middlewares, devServer) => {
+      if (!devServer) {
+        throw new Error('webpack-dev-server is not defined');
+      }
+      // Set correct MIME type for .bundle files
+      devServer.app?.get('*.bundle', (req, res, next) => {
+        res.setHeader('Content-Type', 'application/javascript');
+        next();
+      });
+      return middlewares;
     },
   },
   devtool: false, // Disable source maps to avoid copy errors in dev mode

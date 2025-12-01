@@ -4,6 +4,8 @@ import path from 'node:path';
 
 const dirname = Repack.getDirname(import.meta.url);
 const platform = process.env.PLATFORM || 'android';
+// Use separate ports for Android (9004) and iOS (9005) to allow simultaneous testing
+const devServerPort = platform === 'ios' ? 9005 : 9004;
 
 export default {
   context: dirname,
@@ -22,7 +24,7 @@ export default {
   },
 
   devServer: {
-    port: 9004,
+    port: devServerPort,
     host: '0.0.0.0',
     allowedHosts: 'all',
     headers: {

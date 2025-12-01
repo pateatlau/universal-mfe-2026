@@ -4,11 +4,14 @@
   "private": true,
   "scripts": {
     "start:bundler:android": "react-native start --platform android --port 8081",
-    "android:app": "cd android && ./gradlew installDebug",
+    "android:app": "cd android && ./gradlew installDebug && adb shell am start -n com.mobilehosttmp/.MainActivity",
     "android": "yarn start:bundler:android & yarn android:app",
-    "ios": "rspack serve --config ./repack.config.mjs --env PLATFORM=ios",
-    "build:android": "rspack build --config ./repack.config.mjs --env PLATFORM=android",
-    "build:ios": "rspack build --config ./repack.config.mjs --env PLATFORM=ios"
+    "start:bundler:ios": "react-native start --platform ios --port 8081",
+    "ios:app": "cd ios && xcodebuild -workspace MobileHostTmp.xcworkspace -scheme MobileHostTmp -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' -derivedDataPath ./build build && xcrun simctl install 'iPhone 15' ./build/Build/Products/Debug-iphonesimulator/MobileHostTmp.app && xcrun simctl launch 'iPhone 15' com.universal.mobilehost",
+    "ios": "yarn start:bundler:ios & yarn ios:app",
+    "ios:simulator": "react-native run-ios --simulator=\"iPhone 15\"",
+    "build:android": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res",
+    "build:ios": "react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle --assets-dest ios"
   },
   "dependencies": {
     "@callstack/repack": "5.2.0",

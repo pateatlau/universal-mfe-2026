@@ -19,11 +19,22 @@ This produces:
 Serve the bundle for development:
 
 ```bash
+# For Android (default)
 yarn serve
+# or explicitly
+PLATFORM=android yarn serve
+
+# For iOS
+PLATFORM=ios yarn serve
 ```
 
-This starts a dev server on port 9004 serving the bundle at:
-- `http://localhost:9004/HelloRemote.container.js.bundle`
+**Port Configuration:**
+- **Android**: Port 9004 (default)
+- **iOS**: Port 9005
+
+This allows simultaneous testing of both platforms. The dev server serves bundles at:
+- **Android**: `http://localhost:9004/HelloRemote.container.js.bundle`
+- **iOS**: `http://localhost:9005/HelloRemote.container.js.bundle`
 
 ## Architecture
 

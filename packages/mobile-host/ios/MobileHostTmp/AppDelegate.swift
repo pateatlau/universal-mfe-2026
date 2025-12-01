@@ -24,7 +24,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     window = UIWindow(frame: UIScreen.main.bounds)
 
     factory.startReactNative(
-      withModuleName: "MobileHostTmp",
+      withModuleName: "MobileHost",
       in: window,
       launchOptions: launchOptions
     )
@@ -40,7 +40,12 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
 
   override func bundleURL() -> URL? {
 #if DEBUG
-    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+    // For Re.Pack dev server, explicitly set the bundle URL
+    // Re.Pack serves bundles on port 8081 (iOS) or 8080 (Android)
+    // iOS simulator can access localhost directly
+    // IMPORTANT: Re.Pack requires the platform query parameter
+    let bundleURL = URL(string: "http://localhost:8081/index.bundle?platform=ios")
+    return bundleURL
 #else
     Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif

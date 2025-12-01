@@ -18,19 +18,25 @@ import {
 } from 'react-native';
 import { ScriptManager, Federated } from '@callstack/repack/client';
 
-// const REMOTE_HOST =
-//   Platform.OS === 'android'
-//     ? 'http://192.168.0.104:9004' // Android emulator → host machine
-//     : 'http://localhost:9004'; // iOS simulator → host machine
-const REMOTE_HOST =
-  Platform.OS === 'android'
-    ? // Android emulator → host machine
-      'http://10.0.2.2:9004'
-    : // iOS simulator (and any other) → localhost
-      'http://localhost:9004';
+// Platform-specific remote host configuration
+// Android uses port 9004, iOS uses port 9005 to allow simultaneous testing
+// Use a function to ensure Platform is available when called
+const getRemoteHost = () => {
+  if (Platform && Platform.OS) {
+    return Platform.OS === 'android'
+      ? // Android emulator → host machine
+        'http://10.0.2.2:9004'
+      : // iOS simulator → localhost (uses separate port 9005)
+        'http://localhost:9005';
+  }
+  // Fallback: assume iOS if Platform not available (for initial load)
+  return 'http://localhost:9005';
+};
 
 ScriptManager.shared.addResolver(async (scriptId, caller) => {
   console.log('[ScriptManager resolver]', { scriptId, caller });
+
+  const REMOTE_HOST = getRemoteHost();
 
   // 1 Main container bundle for the remote
   if (scriptId === 'HelloRemote') {

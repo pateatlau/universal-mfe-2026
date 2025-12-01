@@ -1,0 +1,6 @@
+module Pods_MobileHostTmp {
+  umbrella header "Pods-MobileHostTmp-umbrella.h"
+
+  export *
+  module * { export * }
+}
