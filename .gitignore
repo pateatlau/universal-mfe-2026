@@ -8,6 +8,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# Android build artifacts
+packages/mobile-host/android/app/.cxx/
+packages/mobile-host/android/.gradle/
+
 # IDE
 .vscode/
 .idea/
