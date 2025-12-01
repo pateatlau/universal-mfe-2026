@@ -1,1 +1,0 @@
-/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/mobile-host/android/app/build/intermediates/cxx/Debug/06v665r3/obj/arm64-v8a
