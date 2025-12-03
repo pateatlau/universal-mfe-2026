@@ -1,0 +1,149 @@
+# Universal MFE Platform - Cursor Rules
+
+For complete project context, see: docs/cursor/MASTER_PROMPT.md
+
+## Project Overview
+
+Universal Microfrontend Platform enabling single React Native codebase for Web, iOS, and Android with dynamic remote loading via Module Federation.
+
+Key Innovation: React Native primitives as universal UI API, rendered via React Native Web on web and natively on mobile.
+
+## Critical Technology Constraints
+
+- Yarn Classic v1.22.22 is REQUIRED (not pnpm/npm) - React Native autolinking requires hoisted node_modules
+- Hermes is REQUIRED for mobile - ScriptManager requires Hermes for dynamic bundle execution
+- Exact version matching is CRITICAL - All packages must use exact versions (no ^ or ~) to prevent runtime errors
+- React Native Web alias required - Web must alias "react-native" to "react-native-web"
+
+## Technology Stack (Locked Versions)
+
+- Node.js: 24.11.x (LTS)
+- Yarn Classic: 1.22.22
+- TypeScript: 5.9.x
+- React: 19.2.0
+- React Native: 0.80.x
+- React Native Web: 0.21.2
+- Rspack: 1.6.x (web bundler)
+- Re.Pack: 5.2.x (mobile bundler, uses Rspack internally)
+- Module Federation: v1.5 (web, migrating to v2) / v2 (mobile)
+- ScriptManager: via Re.Pack (mobile dynamic loader)
+- Hermes: Bundled with RN 0.80.x (required for mobile)
+
+## Architecture
+
+Dual-host microfrontend architecture:
+
+- Web Shell: Rspack + MF v1.5/v2, React Native Web, Port 9001
+- Mobile Host: Re.Pack + MF v2, ScriptManager + Hermes, Port 8080
+- Web Remote: Rspack + MF v1.5/v2, Port 9003
+- Mobile Remote: Re.Pack + MF v2, Port 9004
+- Shared Libraries: shared-utils (TypeScript), shared-hello-ui (React Native components)
+
+## Universal Component Rules
+
+When creating universal components:
+
+- Use React Native primitives ONLY (View, Text, Pressable, Image, etc.)
+- Place in packages/shared-hello-ui/ or similar shared package
+- Test on both web and mobile
+- Use Platform.select() for platform-specific logic if needed
+
+FORBIDDEN in shared components:
+
+- DOM elements (<div>, <span>, <button>)
+- Browser APIs (window, document, localStorage)
+- Native modules
+- Platform-specific imports
+
+## Code Organization
+
+- Universal components: packages/shared-hello-ui/
+- Shared utilities: packages/shared-utils/ (pure TypeScript, no platform APIs)
+- Web-specific code: packages/web-shell/, packages/web-remote-hello/
+- Mobile-specific code: packages/mobile-host/, packages/mobile-remote-hello/
+
+## Module Federation Configuration
+
+- Shared dependencies MUST be configured as singletons
+- Eager loading is REQUIRED for shared libraries
+- Web: Currently MF v1.5, migrating to v2
+- Mobile: MF v2 (required by Re.Pack)
+- Both use @module-federation/enhanced@0.21.6
+
+## Bundle Formats
+
+- Web remotes: .js files (standard JavaScript)
+- Mobile remotes: .bundle files (Hermes bytecode)
+- Never mix formats
+
+## Network Configuration
+
+- Android emulator: Use 10.0.2.2 or LAN IP (not localhost)
+- iOS simulator: Use localhost directly
+- Web: Use localhost in development
+
+## Documentation Rules
+
+- New .md files should be created in docs/temp/ unless they are essential, permanent documentation
+- Main documentation in docs/
+- Cursor context in docs/cursor/
+
+## Development Workflow
+
+Web:
+
+- Terminal 1: cd packages/web-remote-hello && yarn dev (port 9003)
+- Terminal 2: cd packages/web-shell && yarn dev (port 9001)
+- Browser: http://localhost:9001
+
+Mobile Android:
+
+- Terminal 1: cd packages/mobile-remote-hello && yarn build:remote && yarn serve (port 9004)
+- Terminal 2: cd packages/mobile-host && yarn android (port 8080)
+
+Mobile iOS:
+
+- Terminal 1: cd packages/mobile-remote-hello && PLATFORM=ios yarn build:remote && yarn serve (port 9004)
+- Terminal 2: cd packages/mobile-host && yarn ios (port 8081)
+
+## Key Principles
+
+1. Version Compatibility is Critical - Exact version matching across all packages
+2. Universal Code First - Write UI using React Native primitives only
+3. Independent Deployment - Remotes deploy independently without host redeployment
+4. Runtime Dynamic Loading - Web uses browser import(), Mobile uses ScriptManager
+
+## Common Pitfalls to Avoid
+
+1. Version mismatches - Never use version ranges (^ or ~) for core dependencies
+2. Platform-specific code in shared libraries - Don't use DOM APIs or native modules in shared code
+3. Bundle format confusion - Web outputs .js, mobile outputs .bundle
+4. Module Federation misconfiguration - Shared deps must be singletons with eager loading
+5. Network configuration errors - Android needs 10.0.2.2, iOS uses localhost
+
+## Current Status
+
+Completed (POC-0):
+
+- Web shell with Rspack + MF v1.5
+- Web remote with dynamic loading
+- Mobile host with Re.Pack + MF v2
+- Mobile remote with ScriptManager
+- Universal components working on both platforms
+- iOS and Android implementations complete
+
+In Progress:
+
+- Migration from MF v1.5 to v2 for web
+- Enhanced testing infrastructure
+- Production deployment pipeline
+
+## When Implementing Features
+
+Always:
+
+- Check version compatibility first
+- Test on both web and mobile for universal components
+- Use React Native primitives for shared UI
+- Keep shared code platform-agnostic
+- Reference docs/cursor/MASTER_PROMPT.md for full context
