@@ -1,27 +1,31 @@
 # Universal Web + Mobile Microfrontend Platform
 
 A universal microfrontend platform that runs on both Web and Mobile using:
-- **Web**: Rspack + Module Federation v1
+- **Web**: Rspack + Module Federation v2
 - **Mobile**: Re.Pack + Module Federation v2 + ScriptManager
 - **Universal UI**: React Native primitives shared across platforms
 
 ## Project Status
 
-### ✅ Phase 1: Foundation Setup (COMPLETE)
+### ✅ POC-0: Foundation & Basic MFE (COMPLETE)
 
 - Root workspace configuration with Yarn v1
 - Shared utilities library (`@universal/shared-utils`)
 - Shared UI library (`@universal/shared-hello-ui`)
-
-### 🚧 Phase 2: Web MFE (TODO)
-
-- Web shell with Rspack + Module Federation
+- Web shell with Rspack + Module Federation v2
 - Web remote with dynamic loading
-
-### 🚧 Phase 3: Mobile MFE (TODO)
-
 - Mobile host with Re.Pack + Module Federation v2 + ScriptManager
 - Mobile remote with dynamic loading
+- Runtime plugins infrastructure (logging plugin)
+
+### 🚧 POC-1: Payments System Foundation (IN PROGRESS)
+
+- Authentication system with mock auth and RBAC
+- Payments system foundation
+- Routing infrastructure (React Router 7)
+- State management (Zustand)
+- Styling infrastructure (Tailwind CSS v4)
+- Testing infrastructure (Jest unified)
 
 ## Architecture
 
