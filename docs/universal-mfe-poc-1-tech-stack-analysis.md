@@ -48,88 +48,115 @@
 
 ## 2. Vitest vs Jest
 
-### Recommendation: ⚠️ **HYBRID APPROACH - Vitest for Web, Jest for Mobile**
+### Recommendation: ✅ **UNIFIED APPROACH - Jest for Web and Mobile**
+
+**Decision:** Use **Jest for both Web and Mobile** to maximize code sharing and consistency.
 
 **Analysis:**
 
-#### Vitest Advantages:
-- ✅ **Much faster** - ESM-first, Vite-powered, parallel execution
-- ✅ **Better TypeScript support** - Native ESM, better type checking
-- ✅ **Modern tooling** - Built for modern JavaScript/TypeScript
-- ✅ **Better DX** - Faster feedback, better error messages
-- ✅ **Smaller bundle** - More lightweight than Jest
-- ✅ **Works great with Rspack** - Both use similar modern tooling
-
-#### Vitest Disadvantages:
-- ❌ **React Native compatibility** - Not officially supported for RN testing
-- ❌ **Ecosystem** - Smaller ecosystem than Jest for React Native
-- ❌ **@testing-library/react-native** - May not work perfectly with Vitest
-- ❌ **Detox integration** - Detox is built for Jest
-
 #### Jest Advantages:
 - ✅ **Industry standard** - Used by 90%+ of React Native projects
-- ✅ **React Native support** - Official support, well-tested
+- ✅ **React Native support** - Official support, well-tested (required for mobile)
 - ✅ **Ecosystem** - Large ecosystem, many plugins
 - ✅ **Detox integration** - Works seamlessly with Detox
 - ✅ **@testing-library/react-native** - Built for Jest
+- ✅ **Consistency** - Same framework across all platforms
+- ✅ **Code sharing** - Shared test utilities, configs, patterns
+- ✅ **Single framework** - Team only needs to learn one framework
+- ✅ **Universal MFE goal** - Aligns with common codebase philosophy
 
 #### Jest Disadvantages:
-- ❌ **Slower** - Especially for large test suites
-- ❌ **Older architecture** - CommonJS-first, less modern
-- ❌ **TypeScript** - Less optimal TypeScript support
+- ⚠️ **Slower for web** - Especially for large test suites (acceptable trade-off)
+- ⚠️ **Older architecture** - CommonJS-first, less modern
+- ⚠️ **TypeScript** - Less optimal TypeScript support (but still good)
 
-### Recommended Approach: **Hybrid Strategy**
+#### Why Not Vitest for Web?
+- ❌ **Would require separate framework** - Breaks code sharing goal
+- ❌ **Different configs** - Can't share test utilities easily
+- ❌ **Team overhead** - Need to learn and maintain two frameworks
+- ❌ **Inconsistent patterns** - Different testing patterns across platforms
+
+### Recommended Approach: **Unified Strategy**
+
+**All Packages (Web, Mobile, Shared):**
+- Use **Jest 29.7.x** for all packages
+- Shared Jest configuration
+- Shared test utilities
+- Consistent testing patterns
+- Maximum code sharing
 
 **Web Packages:**
-- Use **Vitest** for web shell and web remotes
-- Faster builds, better TypeScript support
-- Works great with Rspack
-- Modern tooling aligns with web stack
+- Use **Jest** for web shell and web remotes
+- @testing-library/react for web components
+- Shared test utilities with mobile
 
 **Mobile Packages:**
 - Use **Jest** for mobile host and mobile remotes
+- @testing-library/react-native for mobile components
 - Required for React Native testing
-- Works with Detox
-- Industry standard for RN
+- Shared test utilities with web
 
 **Shared Packages:**
-- Use **Vitest** (can test pure TypeScript/utilities)
-- Faster for unit tests
-- Better TypeScript support
+- Use **Jest** for shared-utils and shared-hello-ui
+- Shared test utilities
+- Consistent with web and mobile
 
 **Rationale:**
-- Best tool for each platform
-- No compromise on functionality
-- Maximum performance where possible
-- Production-ready for both platforms
+- **Maximum code sharing** - Core goal of Universal MFE Platform
+- **Consistency** - Same framework, patterns, utilities everywhere
+- **Single framework** - Team only needs Jest
+- **Shared infrastructure** - Shared configs, utilities, patterns
+- **Production-ready** - Jest works well for both platforms
 
 **Implementation:**
 ```json
 // Web package (package.json)
 {
   "devDependencies": {
-    "vitest": "^2.0.0",
-    "@testing-library/react": "^16.1.0"
+    "jest": "29.7.0",
+    "@testing-library/react": "16.1.0",
+    "@testing-library/jest-dom": "^6.1.0",
+    "@types/jest": "^29.5.0",
+    "ts-jest": "^29.1.0"
   },
   "scripts": {
-    "test": "vitest",
-    "test:ui": "vitest --ui"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   }
 }
 
 // Mobile package (package.json)
 {
   "devDependencies": {
-    "jest": "^29.7.0",
-    "@testing-library/react-native": "^12.8.0"
+    "jest": "29.7.0",
+    "@testing-library/react-native": "12.8.0",
+    "@testing-library/jest-native": "^5.4.3",
+    "@types/jest": "^29.5.0"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  }
+}
+
+// Shared package (package.json)
+{
+  "devDependencies": {
+    "jest": "29.7.0",
+    "@types/jest": "^29.5.0",
+    "ts-jest": "^29.1.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   }
 }
 ```
 
-**Carry Forward:** ✅ **YES** - Hybrid approach is production-ready and optimal
+**Carry Forward:** ✅ **YES** - Unified Jest approach maximizes code sharing and consistency
 
 ---
 
@@ -234,18 +261,25 @@ describe('Sign In Flow', () => {
 
 ---
 
-### 4.2 Testing Strategy ⚠️
+### 4.2 Testing Strategy ✅
 
-**Decision:** Hybrid approach
-- **Vitest** for web packages
+**Decision:** Unified approach - **Jest for all packages**
+- **Jest** for web packages
 - **Jest** for mobile packages
-- **Vitest** for shared packages
+- **Jest** for shared packages
+
+**Rationale:**
+- Maximum code sharing (core Universal MFE Platform goal)
+- Consistency across all platforms
+- Single framework to learn and maintain
+- Shared test utilities, configs, patterns
 
 **Action:**
 - Update tech stack document
-- Configure Vitest for web packages
-- Keep Jest for mobile packages
-- Document testing strategy
+- Configure Jest for all packages
+- Create shared Jest configuration
+- Create shared test utilities
+- Document unified testing strategy
 
 ---
 
@@ -268,13 +302,11 @@ describe('Sign In Flow', () => {
 | **Styling** |
 | Tailwind CSS | 4.0+ | Web | ✅ | Latest, 5x faster builds |
 | NativeWind | 4.x (v4 compatible) | Mobile | ✅ | Verify Tailwind v4 compatibility |
-| **Testing (Web)** |
-| Vitest | 2.0.x | Web | ✅ | Faster, better TS support |
-| React Testing Library | 16.1.x | Web | ✅ | Works with Vitest |
-| **Testing (Mobile)** |
-| Jest | 29.7.x | Mobile | ✅ | Required for RN testing |
-| React Testing Library | 16.1.x | Mobile | ✅ | Works with Jest |
-| @testing-library/react-native | 12.8.x | Mobile | ✅ | RN testing |
+| **Testing (All Platforms)** |
+| Jest | 29.7.x | Web, Mobile, Shared | ✅ | Unified framework, required for RN, max code sharing |
+| React Testing Library | 16.1.x | Web | ✅ | Works with Jest |
+| @testing-library/react-native | 12.8.x | Mobile | ✅ | RN testing, works with Jest |
+| ts-jest | 29.1.x | All | ✅ | TypeScript support for Jest |
 | **E2E Testing** |
 | Maestro | Latest | Mobile | ✅ | Simpler, YAML-based, modern |
 
@@ -297,18 +329,20 @@ describe('Sign In Flow', () => {
 
 ---
 
-### 6.2 Vitest Setup
+### 6.2 Jest Setup (Unified)
 
 **Steps:**
-1. Install Vitest in web packages
-2. Configure Vitest config
-3. Update test scripts
-4. Migrate existing Jest tests (if any)
-5. Document testing strategy
+1. Install Jest in all packages (web, mobile, shared)
+2. Create shared Jest configuration
+3. Configure Jest for TypeScript (ts-jest)
+4. Configure Jest for React Native (mobile packages)
+5. Create shared test utilities
+6. Update test scripts in all packages
+7. Document unified testing strategy
 
 **Risks:**
-- Learning curve for team
-- **Mitigation:** Vitest API is similar to Jest, easy migration
+- Web tests may be slower than Vitest (acceptable trade-off)
+- **Mitigation:** Jest is still fast enough, and consistency is more valuable
 
 ---
 
@@ -332,9 +366,8 @@ describe('Sign In Flow', () => {
 | Technology | Current | Recommended | Rationale |
 |------------|---------|-------------|-----------|
 | Tailwind CSS | 3.4.x | **4.0+** | ✅ Better performance, modern features |
-| Testing (Web) | Jest | **Vitest** | ✅ Faster, better TS, modern tooling |
-| Testing (Mobile) | Jest | **Jest** | ✅ Required for RN, industry standard |
-| E2E Testing | Detox | **Maestro** | ✅ Simpler, modern, better DX |
+| Testing (All) | None | **Jest** | ✅ Unified framework, max code sharing, required for RN |
+| E2E Testing | None | **Maestro** | ✅ Simpler, modern, better DX |
 
 **All recommendations are production-ready and will carry forward to MVP and Production.**
 
