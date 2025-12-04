@@ -98,17 +98,27 @@
 
 ---
 
-## Recommended Testing Strategy (From POC-1 Analysis)
+## Recommended Testing Strategy
 
-Based on `docs/universal-mfe-poc-1-tech-stack-analysis.md`, the recommended approach is:
+**Decision:** Use **Jest for both Web and Mobile** to maximize code sharing and consistency.
 
-### Hybrid Testing Strategy
+### Unified Testing Strategy
+
+**All Packages (Web, Mobile, Shared):**
+
+- **Framework:** Jest 29.7.x
+- **Rationale:**
+  - Required for React Native (mobile)
+  - Consistency across all platforms
+  - Maximum code sharing (shared test utilities, configs, patterns)
+  - Single framework to learn and maintain
+  - Aligns with Universal MFE Platform goal of common codebase
 
 **Web Packages:**
 
-- **Framework:** Vitest 2.0.x
-- **Library:** React Testing Library 16.1.x
-- **Rationale:** Faster, better TypeScript support, works great with Rspack
+- **Framework:** Jest 29.7.x
+- **Library:** @testing-library/react 16.1.x
+- **Rationale:** Consistency with mobile, shared test patterns
 
 **Mobile Packages:**
 
@@ -118,8 +128,8 @@ Based on `docs/universal-mfe-poc-1-tech-stack-analysis.md`, the recommended appr
 
 **Shared Packages:**
 
-- **Framework:** Vitest 2.0.x
-- **Rationale:** Faster for unit tests, better TypeScript support
+- **Framework:** Jest 29.7.x
+- **Rationale:** Consistency across all packages, shared test utilities
 
 **E2E Testing:**
 
@@ -132,63 +142,37 @@ Based on `docs/universal-mfe-poc-1-tech-stack-analysis.md`, the recommended appr
 
 ### Phase 1: Unit Testing Infrastructure
 
-#### 1.1 Web Packages (Vitest)
+#### 1.1 All Packages (Jest - Unified)
 
 **Packages:**
 
 - `packages/web-shell/`
 - `packages/web-remote-hello/`
+- `packages/mobile-host/`
+- `packages/mobile-remote-hello/`
+- `packages/shared-utils/`
+- `packages/shared-hello-ui/`
 
 **Required:**
 
-- Install Vitest
-- Install React Testing Library
-- Configure Vitest
+- Install Jest
+- Install React Testing Library (web) and React Native Testing Library (mobile)
+- Configure Jest for both web and mobile
 - Add test scripts
+- Create shared test utilities
 - Create example tests
 
-**Example Setup:**
+**Example Setup (Web Package):**
 
 ```json
 // packages/web-shell/package.json
 {
   "devDependencies": {
-    "vitest": "2.0.0",
-    "@testing-library/react": "16.1.0",
-    "@testing-library/jest-dom": "^6.1.0"
-  },
-  "scripts": {
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
-  }
-}
-```
-
-#### 1.2 Mobile Packages (Jest)
-
-**Packages:**
-
-- `packages/mobile-host/`
-- `packages/mobile-remote-hello/`
-
-**Required:**
-
-- Install Jest
-- Install React Native Testing Library
-- Configure Jest for React Native
-- Add test scripts
-- Create example tests
-
-**Example Setup:**
-
-```json
-// packages/mobile-host/package.json
-{
-  "devDependencies": {
     "jest": "29.7.0",
-    "@testing-library/react-native": "12.8.0",
-    "@testing-library/jest-native": "^5.4.3"
+    "@testing-library/react": "16.1.0",
+    "@testing-library/jest-dom": "^6.1.0",
+    "@types/jest": "^29.5.0",
+    "ts-jest": "^29.1.0"
   },
   "scripts": {
     "test": "jest",
@@ -198,19 +182,44 @@ Based on `docs/universal-mfe-poc-1-tech-stack-analysis.md`, the recommended appr
 }
 ```
 
-#### 1.3 Shared Packages (Vitest)
+**Example Setup (Mobile Package):**
 
-**Packages:**
+```json
+// packages/mobile-host/package.json
+{
+  "devDependencies": {
+    "jest": "29.7.0",
+    "@testing-library/react-native": "12.8.0",
+    "@testing-library/jest-native": "^5.4.3",
+    "@types/jest": "^29.5.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  }
+}
+```
 
-- `packages/shared-utils/`
-- `packages/shared-hello-ui/`
+**Example Setup (Shared Package):**
 
-**Required:**
+```json
+// packages/shared-utils/package.json
+{
+  "devDependencies": {
+    "jest": "29.7.0",
+    "@types/jest": "^29.5.0",
+    "ts-jest": "^29.1.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  }
+}
+```
 
-- Install Vitest
-- Configure for TypeScript
-- Add test scripts
-- Create example tests
+**Note:** All packages now use Jest for consistency and code sharing.
 
 ---
 
@@ -279,23 +288,15 @@ Based on `docs/universal-mfe-poc-1-tech-stack-analysis.md`, the recommended appr
 
 ### Unit Testing Setup
 
-**Web Packages (Vitest):**
+**All Packages (Jest - Unified):**
 
-- Setup: 1-2 days
-- Example tests: 1 day
-- **Total: 2-3 days**
-
-**Mobile Packages (Jest):**
-
-- Setup: 2-3 days (React Native config is more complex)
-- Example tests: 1 day
-- **Total: 3-4 days**
-
-**Shared Packages (Vitest):**
-
-- Setup: 1 day
-- Example tests: 1 day
-- **Total: 2 days**
+- Shared Jest config setup: 1-2 days
+- Web packages setup: 1 day
+- Mobile packages setup: 2-3 days (React Native config is more complex)
+- Shared packages setup: 1 day
+- Shared test utilities: 1 day
+- Example tests: 2-3 days
+- **Total: 8-11 days** (includes shared infrastructure)
 
 ### Integration Testing
 
@@ -309,37 +310,47 @@ Based on `docs/universal-mfe-poc-1-tech-stack-analysis.md`, the recommended appr
 - Example tests: 2-3 days
 - **Total: 3-5 days**
 
-**Total Estimated Effort:** 14-20 days
+**Total Estimated Effort:** 14-20 days (includes shared infrastructure setup)
 
 ---
 
 ## Recommended Implementation Order
 
-### Step 1: Shared Packages Unit Tests (Week 1)
+### Step 1: Shared Jest Infrastructure (Week 1)
+
+- Set up shared Jest configuration
+- Create shared test utilities
+- Configure Jest for TypeScript
+- Establish testing patterns
+
+### Step 2: Shared Packages Unit Tests (Week 1-2)
 
 - Start with `shared-utils` (pure TypeScript, easiest)
 - Then `shared-hello-ui` (React Native components)
-- Establish testing patterns
+- Use shared Jest config
 
-### Step 2: Web Packages Unit Tests (Week 2)
+### Step 3: Web Packages Unit Tests (Week 2-3)
 
 - `web-shell` unit tests
 - `web-remote-hello` unit tests
 - Test React Native Web components
+- Reuse shared test utilities
 
-### Step 3: Integration Tests (Week 3)
-
-- Remote loading tests
-- Module Federation integration tests
-- Shared dependency tests
-
-### Step 4: Mobile Packages Unit Tests (Week 4)
+### Step 4: Mobile Packages Unit Tests (Week 3-4)
 
 - `mobile-host` unit tests
 - `mobile-remote-hello` unit tests
 - React Native component tests
+- Reuse shared test utilities
 
-### Step 5: E2E Tests (Week 5)
+### Step 5: Integration Tests (Week 4-5)
+
+- Remote loading tests
+- Module Federation integration tests
+- Shared dependency tests
+- Cross-platform integration tests
+
+### Step 6: E2E Tests (Week 5)
 
 - Maestro setup
 - Critical flow tests
