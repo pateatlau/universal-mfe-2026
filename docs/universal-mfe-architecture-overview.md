@@ -35,7 +35,7 @@ One codebase for UI (React Native)
 
 Two bundlers (Rspack for Web, Re.Pack for Native)
 
-Two MF runtimes (MF v1 for Web, MF v2 for Native)
+Two MF runtimes (MF v2 for Web, MF v2 for Native)
 
 One runtime loader for mobile (ScriptManager)
 
@@ -59,7 +59,7 @@ Web Host
 
 Bundled by Rspack
 
-Uses Module Federation (MF v1.5 with optional v2 enhancements)
+Uses Module Federation v2
 
 Loads remote modules at runtime
 
@@ -169,14 +169,36 @@ Module Federation
 
 React Native Web (to render universal RN UI)
 
-Web Shell Example MF Config:
+Web Shell Example MF v2 Config:
+
+```javascript
+import rspack from '@rspack/core';
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
+
 new ModuleFederationPlugin({
-name: "web_shell",
-remotes: {
-hello_remote: "hello_remote@http://localhost:9003/remoteEntry.js",
-},
-shared: ["react", "react-dom", "react-native-web"]
+  name: 'web_shell',
+  remotes: {
+    hello_remote: 'hello_remote@http://localhost:9003/remoteEntry.js',
+  },
+  shared: {
+    react: {
+      singleton: true,
+      requiredVersion: '19.2.0',
+      eager: true,
+    },
+    'react-dom': {
+      singleton: true,
+      requiredVersion: '19.2.0',
+      eager: true,
+    },
+    'react-native-web': {
+      singleton: true,
+      requiredVersion: '0.21.2',
+      eager: true,
+    },
+  },
 });
+```
 
 4.2 Web Remote
 Responsibilities:
@@ -189,10 +211,37 @@ Reuse shared libraries and shared UI components
 
 Remain compatible with RNW runtime
 
-Remote Exposure Example:
-exposes: {
-"./HelloRemote": "./src/app/HelloRemote",
-}
+Web Remote Example MF v2 Config:
+
+```javascript
+import rspack from '@rspack/core';
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
+
+new ModuleFederationPlugin({
+  name: 'hello_remote',
+  filename: 'remoteEntry.js',
+  exposes: {
+    './HelloRemote': './src/HelloRemote.tsx',
+  },
+  shared: {
+    react: {
+      singleton: true,
+      requiredVersion: '19.2.0',
+      eager: true,
+    },
+    'react-dom': {
+      singleton: true,
+      requiredVersion: '19.2.0',
+      eager: true,
+    },
+    'react-native-web': {
+      singleton: true,
+      requiredVersion: '0.21.2',
+      eager: true,
+    },
+  },
+});
+```
 
 5. Mobile Architecture (Re.Pack + Module Federation v2 + ScriptManager)
 
@@ -354,7 +403,7 @@ This is the closest equivalent ever created to native "super app" architecture.
 9. Platform Differences Summary
    Feature Web Mobile
    Bundler Rspack Re.Pack
-   MF Version MF v1 (enhanced) MF v2
+   MF Version MF v2 MF v2
    Runtime Loader Browser ScriptManager
    JS Engine Browser VM Hermes
    UI Renderer ReactDOM + RNW React Native

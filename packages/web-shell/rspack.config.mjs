@@ -1,10 +1,16 @@
 import rspack from "@rspack/core";
-const { ModuleFederationPlugin } = rspack.container;
+import { ModuleFederationPlugin } from "@module-federation/enhanced/rspack";
 const { HtmlRspackPlugin } = rspack;
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createLoggingPlugin } from "./src/plugins/mf-logging.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Enable logging plugin only in development mode
+// Can be disabled by setting ENABLE_MF_LOGGING=false
+const isDevelopment = process.env.NODE_ENV === "development";
+const enableLogging = process.env.ENABLE_MF_LOGGING !== "false" && isDevelopment;
 
 export default {
   entry: "./src/index.tsx",
@@ -51,6 +57,19 @@ export default {
       remotes: {
         hello_remote: "hello_remote@http://localhost:9003/remoteEntry.js",
       },
+      // Conditionally enable logging plugin (development only, safe to disable)
+      runtimePlugins: enableLogging
+        ? [
+            [
+              createLoggingPlugin,
+              {
+                enabled: true,
+                logLevel: "debug",
+                includeTimestamps: true,
+              },
+            ],
+          ]
+        : [],
       shared: {
         react: {
           singleton: true,

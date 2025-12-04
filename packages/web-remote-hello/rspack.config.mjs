@@ -1,5 +1,5 @@
 import rspack from '@rspack/core';
-const { ModuleFederationPlugin } = rspack.container;
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 const { HtmlRspackPlugin } = rspack;
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

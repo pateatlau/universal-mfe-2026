@@ -8,6 +8,17 @@ Universal Microfrontend Platform enabling single React Native codebase for Web, 
 
 Key Innovation: React Native primitives as universal UI API, rendered via React Native Web on web and natively on mobile.
 
+## Critical Development Rules
+
+**CRITICAL: Scope Discipline**
+
+- **DO NOT make any changes in the existing codebase other than the required changes for the task.**
+- Only modify files directly related to the task at hand
+- Do not refactor, clean up, or "improve" unrelated code
+- Do not delete or modify files/packages not involved in the current task
+- If you encounter errors, investigate the specific issue first before taking broad actions
+- When in doubt, ask for clarification rather than making assumptions
+
 ## Critical Technology Constraints
 
 - Yarn Classic v1.22.22 is REQUIRED (not pnpm/npm) - React Native autolinking requires hoisted node_modules
@@ -25,7 +36,7 @@ Key Innovation: React Native primitives as universal UI API, rendered via React 
 - React Native Web: 0.21.2
 - Rspack: 1.6.x (web bundler)
 - Re.Pack: 5.2.x (mobile bundler, uses Rspack internally)
-- Module Federation: v1.5 (web, migrating to v2) / v2 (mobile)
+- Module Federation: v2 (web) / v2 (mobile)
 - ScriptManager: via Re.Pack (mobile dynamic loader)
 - Hermes: Bundled with RN 0.80.x (required for mobile)
 
@@ -33,9 +44,9 @@ Key Innovation: React Native primitives as universal UI API, rendered via React 
 
 Dual-host microfrontend architecture:
 
-- Web Shell: Rspack + MF v1.5/v2, React Native Web, Port 9001
+- Web Shell: Rspack + MF v2, React Native Web, Port 9001
 - Mobile Host: Re.Pack + MF v2, ScriptManager + Hermes, Port 8080
-- Web Remote: Rspack + MF v1.5/v2, Port 9003
+- Web Remote: Rspack + MF v2, Port 9003
 - Mobile Remote: Re.Pack + MF v2, Port 9004
 - Shared Libraries: shared-utils (TypeScript), shared-hello-ui (React Native components)
 
@@ -66,7 +77,7 @@ FORBIDDEN in shared components:
 
 - Shared dependencies MUST be configured as singletons
 - Eager loading is REQUIRED for shared libraries
-- Web: Currently MF v1.5, migrating to v2
+- Web: MF v2 (migration completed)
 - Mobile: MF v2 (required by Re.Pack)
 - Both use @module-federation/enhanced@0.21.6
 
@@ -125,18 +136,23 @@ Mobile iOS:
 
 Completed (POC-0):
 
-- Web shell with Rspack + MF v1.5
-- Web remote with dynamic loading
+- Web shell with Rspack + MF v2
+- Web remote with dynamic loading (MF v2)
 - Mobile host with Re.Pack + MF v2
 - Mobile remote with ScriptManager
 - Universal components working on both platforms
 - iOS and Android implementations complete
+- Migration from MF v1.5 to v2 for web (completed)
 
 In Progress:
 
-- Migration from MF v1.5 to v2 for web
 - Enhanced testing infrastructure
 - Production deployment pipeline
+
+Recently Completed:
+
+- Migration from MF v1.5 to v2 for web (completed)
+- Runtime plugins - Logging plugin implemented (completed)
 
 ## When Implementing Features
 

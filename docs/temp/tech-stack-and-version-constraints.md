@@ -28,7 +28,7 @@ The stack is optimized for:
 | React Native Web | **0.21.2** | Compatible with RN 0.80+ |
 | Rspack | **1.6.x** | MF supported |
 | Re.Pack | **5.2.x** | MFv2 + ScriptManager |
-| Module Federation (Web) | Rspack built-in (MF v1.5) | Use Enhanced MFv2 |
+| Module Federation (Web) | MF v2 via @module-federation/enhanced/rspack | ✅ Migrated to v2 |
 | Module Federation v2 (Mobile) | via Re.Pack 5.2.x | Tied to ScriptManager |
 | ScriptManager | via Re.Pack 5.2.x | Required for dynamic bundles |
 | Hermes | Bundled with RN 0.80.x | Required for MF |
@@ -75,7 +75,7 @@ The stack is optimized for:
 # 2.7 Rspack — 1.6.x
 - Modern, Webpack-compatible bundler.
 - Extremely fast builds.
-- Fully supports Module Federation v1.5.
+- Uses Module Federation v2 via `@module-federation/enhanced/rspack`.
 - Works seamlessly with RNW builds.
 
 ## 2.8 Re.Pack — 5.2.x
@@ -87,11 +87,12 @@ The stack is optimized for:
 ---
 
 # 2.9 Module Federation (Web)
-- Provided by Rspack MF v1.5.
-- Enhanced with `@module-federation/enhanced` for MFv2 features:
+- Uses Module Federation v2 via `@module-federation/enhanced/rspack`.
+- Provides MFv2 features:
   - Remote manifests
   - Runtime plugin
   - Lazy loading utilities
+  - Enhanced lifecycle management
 
 ## 2.10 Module Federation v2 (Mobile)
 - Provided by Re.Pack 5.2.x.
