@@ -61,40 +61,39 @@ POC-1 extends POC-0 by implementing:
 
 #### Shared Jest Infrastructure
 
-- [ ] Create shared Jest configuration base
-- [ ] Configure Jest for TypeScript (ts-jest)
-- [ ] Create shared test utilities
-- [ ] Establish testing patterns and conventions
-- [ ] Document testing strategy
+- [x] Create shared Jest configuration base
+- [x] Configure Jest for TypeScript (ts-jest)
+- [x] Create shared test utilities
+- [x] Establish testing patterns and conventions
+- [x] Document testing strategy
 
 #### Web Packages Setup
 
-- [ ] Install Jest 29.7.0 in `web-shell` and `web-remote-hello`
-- [ ] Install `@testing-library/react` 16.1.0
-- [ ] Install `@testing-library/jest-dom` 6.1.0
-- [ ] Configure Jest for web packages
-- [ ] Add test scripts (`test`, `test:watch`, `test:coverage`)
+- [x] Install Jest 29.7.0 in `web-shell` and `web-remote-hello`
+- [x] Install `@testing-library/react` 16.1.0
+- [x] Install `@testing-library/jest-dom` 6.1.0
+- [x] Configure Jest for web packages
+- [x] Add test scripts (`test`, `test:watch`, `test:coverage`)
 
 #### Mobile Packages Setup
 
-- [ ] Install Jest 29.7.0 in `mobile-host` and `mobile-remote-hello`
-- [ ] Install `@testing-library/react-native` 12.8.0
-- [ ] Install `@testing-library/jest-native` 5.4.3
-- [ ] Configure Jest for React Native
-- [ ] Add test scripts
+- [x] Install Jest 29.7.0 in `mobile-host` and `mobile-remote-hello`
+- [x] Install `@testing-library/react-native` 12.8.0
+- [x] Configure Jest for React Native
+- [x] Add test scripts
 
 #### Shared Packages Setup
 
-- [ ] Install Jest 29.7.0 in `shared-utils` and `shared-hello-ui`
-- [ ] Configure Jest for shared packages
-- [ ] Add test scripts
+- [x] Install Jest 29.7.0 in `shared-utils` and `shared-hello-ui`
+- [x] Configure Jest for shared packages
+- [x] Add test scripts
 
 #### Example Tests
 
-- [ ] Create example unit test for `shared-utils`
-- [ ] Create example unit test for `shared-hello-ui`
-- [ ] Create example unit test for web shell
-- [ ] Verify all tests run successfully
+- [x] Create example unit test for `shared-utils`
+- [x] Create example unit test for `shared-hello-ui`
+- [x] Create example unit test for web shell
+- [x] Verify all tests run successfully
 
 **Deliverables:**
 
@@ -112,13 +111,13 @@ POC-1 extends POC-0 by implementing:
 
 **Tasks:**
 
-- [ ] Install React Router 7.x in web-shell and mobile-host
-- [ ] Install Zustand (latest) in root and shared packages
-- [ ] Install Tailwind CSS v4.0+ in web packages
-- [ ] Verify NativeWind v4 compatibility with Tailwind v4
-- [ ] Install NativeWind (v4 compatible) in mobile packages
-- [ ] Install `@react-native-async-storage/async-storage` in mobile packages
-- [ ] Verify all dependencies are exact versions (no ^ or ~)
+- [x] Install React Router 7.x in web-shell and mobile-host
+- [x] Install Zustand (latest) in root and shared packages
+- [x] Install Tailwind CSS v4.0+ in web packages
+- [x] Verify NativeWind v4 compatibility with Tailwind v4 (Result: NativeWind v4 does NOT support Tailwind v4)
+- [x] Install Uniwind (Tailwind v4 compatible) in mobile packages
+- [x] Install `@react-native-async-storage/async-storage` in mobile packages
+- [x] Verify all dependencies are exact versions (no ^ or ~)
 
 **Deliverables:**
 
@@ -137,27 +136,27 @@ POC-1 extends POC-0 by implementing:
 
 #### Web Setup
 
-- [ ] Configure Tailwind CSS v4 in web-shell
-- [ ] Configure Tailwind CSS v4 in web-remote-hello
-- [ ] Update PostCSS configuration
-- [ ] Integrate with Rspack
-- [ ] Test Tailwind classes work correctly
-- [ ] Verify build performance improvements
+- [x] Configure Tailwind CSS v4 in web-shell
+- [x] Configure Tailwind CSS v4 in web-remote-hello
+- [x] Update PostCSS configuration
+- [x] Integrate with Rspack
+- [ ] Test Tailwind classes work correctly (KNOWN ISSUE: Classes not being applied - parked)
+- [x] Verify build performance improvements
 
 #### Mobile Setup
 
-- [ ] Verify NativeWind v4 compatibility with Tailwind v4
-- [ ] Configure NativeWind in mobile-host
-- [ ] Configure NativeWind in mobile-remote-hello
-- [ ] Integrate with Re.Pack
-- [ ] Test Tailwind classes work on mobile
-- [ ] Test on both Android and iOS
+- [x] Verify NativeWind v4 compatibility with Tailwind v4 (Result: Not compatible, using Uniwind instead)
+- [x] Install and configure Uniwind in mobile-host
+- [x] Install and configure Uniwind in mobile-remote-hello
+- [x] Integrate with Re.Pack
+- [x] Test Tailwind classes work on mobile
+- [x] Test on both Android and iOS
 
 #### Shared Configuration
 
-- [ ] Create shared Tailwind config (where possible)
-- [ ] Document platform-specific overrides
-- [ ] Test styling consistency across platforms
+- [x] Create shared Tailwind config (where possible)
+- [x] Document platform-specific overrides
+- [x] Test styling consistency across platforms (mobile working, web needs fix)
 
 **Deliverables:**
 
@@ -746,14 +745,14 @@ POC-1 extends POC-0 by implementing:
 
 ## Risk Mitigation
 
-| Risk                                           | Impact | Mitigation                                                |
-| ---------------------------------------------- | ------ | --------------------------------------------------------- |
-| React Router 7 compatibility with React Native | High   | Test early, have React Navigation as fallback             |
-| NativeWind v4 compatibility with Tailwind v4   | Medium | Verify compatibility first, test early                    |
-| Zustand store sharing across MFEs              | Medium | Design carefully, test state synchronization early        |
-| Code sharing limitations                       | Medium | Use React Native primitives, avoid platform-specific code |
-| Testing infrastructure complexity              | Medium | Start with shared infrastructure, build incrementally     |
-| Performance with multiple remotes              | Low    | Monitor bundle sizes, optimize if needed                  |
+| Risk                                           | Impact | Mitigation                                                            |
+| ---------------------------------------------- | ------ | --------------------------------------------------------------------- |
+| React Router 7 compatibility with React Native | High   | Test early, have React Navigation as fallback                         |
+| Uniwind setup and Tailwind v4 compatibility    | Medium | Verify compatibility first, test early (NativeWind v4 not compatible) |
+| Zustand store sharing across MFEs              | Medium | Design carefully, test state synchronization early                    |
+| Code sharing limitations                       | Medium | Use React Native primitives, avoid platform-specific code             |
+| Testing infrastructure complexity              | Medium | Start with shared infrastructure, build incrementally                 |
+| Performance with multiple remotes              | Low    | Monitor bundle sizes, optimize if needed                              |
 
 ---
 

@@ -13,9 +13,11 @@
     "test:coverage": "yarn workspaces run test:coverage"
   },
   "devDependencies": {
-    "@babel/core": "^7.26.0",
+    "@babel/core": "7.26.0",
     "@callstack/repack": "5.2.0",
-    "typescript": "^5.9.0",
+    "tailwindcss": "4.1.17",
+    "typescript": "5.9.3",
+    "uniwind": "1.0.5",
     "zustand": "5.0.9"
   }
 }

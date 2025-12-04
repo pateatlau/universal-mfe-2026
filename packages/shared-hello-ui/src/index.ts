@@ -6,4 +6,5 @@
 
 export { HelloUniversal } from "./HelloUniversal";
 export type { HelloUniversalProps } from "./HelloUniversal";
+export { StorageDemo } from "./StorageDemo";
 

@@ -5,6 +5,9 @@
  * This file is required for Re.Pack to bundle the remote.
  */
 
+// Import Uniwind global CSS
+import './global.css';
+
 // Import the remote component to ensure it's included in the bundle
 import "./HelloRemote.tsx";
 

@@ -7,7 +7,8 @@
  */
 
 import React, { Suspense, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
+import { StorageDemo } from '@universal/shared-hello-ui';
 
 // Dynamic import of remote - NO static imports allowed
 const HelloRemote = React.lazy(() => import('hello_remote/HelloRemote'));
@@ -21,92 +22,56 @@ function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Universal MFE - Web Shell</Text>
-        <Text style={styles.subtitle}>
-          Dynamically loading remote component via Module Federation
+    <View className="flex-1 w-full min-h-screen bg-gray-50">
+      {/* Header */}
+      <View className="p-6 bg-white border-b border-gray-200 shadow-sm">
+        <Text className="text-3xl font-bold text-gray-900 mb-2 text-center">
+          Universal MFE - Web Shell
+        </Text>
+        <Text className="text-sm text-gray-600 text-center">
+          Dynamically loading remote component via Module Federation v2
         </Text>
       </View>
 
-      <View style={styles.content}>
-        <Suspense
-          fallback={
-            <View style={styles.loading}>
-              <Text style={styles.loadingText}>
-                Loading remote component...
-              </Text>
-            </View>
-          }
-        >
-          <HelloRemote
-            name="Web User"
-            onPress={handlePress}
-          />
-        </Suspense>
+      {/* Main Content */}
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 24 }}>
+        <View className="p-6 items-center">
+          {/* Remote Component Section */}
+          <View className="w-full max-w-2xl mb-8">
+            <View className="bg-white rounded-lg shadow-md p-6 items-center">
+              <Suspense
+                fallback={
+                  <View className="p-8 items-center">
+                    <Text className="text-base text-gray-500">
+                      Loading remote component...
+                    </Text>
+                  </View>
+                }
+              >
+                <HelloRemote
+                  name="Web User"
+                  onPress={handlePress}
+                />
+              </Suspense>
 
-        {pressCount > 0 && (
-          <View style={styles.counter}>
-            <Text style={styles.counterText}>
-              Button pressed {pressCount} time{pressCount !== 1 ? 's' : ''}
-            </Text>
+              {pressCount > 0 && (
+                <View className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <Text className="text-sm text-blue-700 font-medium text-center">
+                    Button pressed {pressCount} time{pressCount !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-        )}
-      </View>
+
+          {/* Storage Demo Section */}
+          <View className="w-full max-w-2xl bg-white rounded-lg shadow-md overflow-hidden">
+            <StorageDemo />
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: '100%',
-    minHeight: '100vh' as any, // React Native Web supports vh units
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    padding: 24,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loading: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#999',
-  },
-  counter: {
-    marginTop: 24,
-    padding: 12,
-    backgroundColor: '#e3f2fd',
-    borderRadius: 8,
-  },
-  counterText: {
-    fontSize: 14,
-    color: '#1976d2',
-    fontWeight: '500',
-  },
-});
 
 export default App;

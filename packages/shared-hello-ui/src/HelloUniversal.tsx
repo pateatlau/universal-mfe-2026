@@ -12,7 +12,7 @@
  */
 
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { getGreeting } from "@universal/shared-utils";
 
 export interface HelloUniversalProps {
@@ -33,38 +33,17 @@ export function HelloUniversal({ name, onPress }: HelloUniversalProps) {
   const greeting = getGreeting(name);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>{greeting}</Text>
+    <View className="p-6 items-center justify-center">
+      <Text className="text-2xl font-semibold mb-4 text-gray-800">{greeting}</Text>
       {onPress && (
-        <Pressable style={styles.button} onPress={onPress}>
-          <Text style={styles.buttonText}>Press Me</Text>
+        <Pressable 
+          className="bg-blue-500 px-6 py-3 rounded-lg shadow-sm active:bg-blue-600" 
+          onPress={onPress}
+        >
+          <Text className="text-white text-base font-semibold">Press Me</Text>
         </Pressable>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  text: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  button: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-});
 

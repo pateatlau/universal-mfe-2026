@@ -25,3 +25,15 @@ export function formatMessage(message: string, prefix?: string): string {
   return prefix ? `${prefix}: ${message}` : message;
 }
 
+/**
+ * Cross-platform storage utilities
+ */
+export {
+  storage,
+  setJSON,
+  getJSON,
+  setString,
+  getString,
+  type Storage,
+} from './storage';
+

@@ -6,6 +6,7 @@
  * Registers the app with React Native.
  */
 
+import './global.css'; // Import Uniwind global CSS
 import { AppRegistry } from "react-native";
 import App from "./App";
 import { name as appName } from "../app.json";

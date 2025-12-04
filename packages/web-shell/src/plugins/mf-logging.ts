@@ -22,9 +22,9 @@ const LOG_LEVELS = {
   error: 3,
 } as const;
 
-export function createLoggingPlugin(
-  options: LoggingOptions = {}
-): () => ModuleFederationRuntimePlugin {
+// Default export for Module Federation runtime plugin
+// Options are passed by Module Federation when the plugin is loaded
+export default function loggingPlugin(options: LoggingOptions = {}): ModuleFederationRuntimePlugin {
   const {
     enabled = process.env.NODE_ENV === 'development',
     logLevel = 'info',
@@ -55,62 +55,67 @@ export function createLoggingPlugin(
     }
   };
 
-  return function loggingPlugin() {
-    return {
-      name: 'mf-logging',
+  return {
+    name: 'mf-logging',
 
-      beforeInit(args) {
-        log('debug', 'Before MF initialization', args);
-        return args;
-      },
+    beforeInit(args) {
+      log('debug', 'Before MF initialization', args);
+      return args;
+    },
 
-      init(args) {
-        log('info', 'MF runtime initialized', {
-          options: args.options,
-        });
-        return args;
-      },
+    init(args) {
+      log('info', 'MF runtime initialized', {
+        options: args.options,
+      });
+      return args;
+    },
 
-      beforeRequest(args) {
-        log('debug', `Requesting remote: ${args.id}`, {
-          options: args.options,
-        });
-        return args;
-      },
+    beforeRequest(args) {
+      log('debug', `Requesting remote: ${args.id}`, {
+        options: args.options,
+      });
+      return args;
+    },
 
-      afterResolve(args) {
-        log('debug', `Resolved remote: ${args.id}`, {
-          remote: args.remote,
-        });
-        return args;
-      },
+    afterResolve(args) {
+      log('debug', `Resolved remote: ${args.id}`, {
+        remote: args.remote,
+      });
+      return args;
+    },
 
-      onLoad(args) {
-        log('info', `Remote loaded: ${args.id}`, {
-          expose: args.expose,
-          pkgNameOrAlias: args.pkgNameOrAlias,
-        });
-        return args;
-      },
+    onLoad(args) {
+      log('info', `Remote loaded: ${args.id}`, {
+        expose: args.expose,
+        pkgNameOrAlias: args.pkgNameOrAlias,
+      });
+      return args;
+    },
 
-      async errorLoadRemote(args) {
-        log('error', `Failed to load remote: ${args.id}`, {
-          error: args.error,
-        });
-        throw args.error;
-      },
+    async errorLoadRemote(args) {
+      log('error', `Failed to load remote: ${args.id}`, {
+        error: args.error,
+      });
+      throw args.error;
+    },
 
-      async loadShare(args) {
-        // Log available properties from args
-        const pkgName = 'pkgName' in args ? args.pkgName : 'unknown';
-        log('debug', `Loading shared: ${pkgName}`);
-      },
+    async loadShare(args) {
+      // Log available properties from args
+      const pkgName = 'pkgName' in args ? args.pkgName : 'unknown';
+      log('debug', `Loading shared: ${pkgName}`);
+    },
 
-      async beforeLoadShare(args) {
-        const pkgName = 'pkgName' in args ? args.pkgName : 'unknown';
-        log('debug', `Before loading shared: ${pkgName}`);
-        return args;
-      },
-    };
+    async beforeLoadShare(args) {
+      const pkgName = 'pkgName' in args ? args.pkgName : 'unknown';
+      log('debug', `Before loading shared: ${pkgName}`);
+      return args;
+    },
   };
+}
+
+// Export factory function for backward compatibility (if needed elsewhere)
+export function createLoggingPlugin(
+  options: LoggingOptions = {}
+): () => ModuleFederationRuntimePlugin {
+  return () => loggingPlugin(options);
 }

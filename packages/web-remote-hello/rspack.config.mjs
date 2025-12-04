@@ -20,6 +20,9 @@ export default {
     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
     alias: {
       'react-native': 'react-native-web',
+      // Resolve shared packages - point to package root so Module Federation can read package.json for version
+      '@universal/shared-hello-ui': path.resolve(__dirname, '../shared-hello-ui'),
+      '@universal/shared-utils': path.resolve(__dirname, '../shared-utils'),
     },
   },
   module: {
@@ -43,9 +46,36 @@ export default {
           },
         },
       },
+      {
+        test: /\.css$/,
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1,
+            },
+          },
+          {
+            loader: 'postcss-loader',
+            options: {
+              postcssOptions: {
+                config: path.resolve(__dirname, 'postcss.config.js'),
+              },
+            },
+          },
+        ],
+      },
     ],
   },
   plugins: [
+    // Replace AsyncStorage with stub for web builds - it's React Native only
+    // This must come BEFORE ModuleFederationPlugin to ensure it processes first
+    // Match both the package and any internal imports
+    new rspack.NormalModuleReplacementPlugin(
+      /^@react-native-async-storage\/async-storage/,
+      path.resolve(__dirname, './src/stubs/async-storage.js')
+    ),
     new ModuleFederationPlugin({
       name: 'hello_remote',
       filename: 'remoteEntry.js',
@@ -71,10 +101,14 @@ export default {
         '@universal/shared-utils': {
           singleton: true,
           eager: true,
+          requiredVersion: '0.1.0', // Match package.json version
+          // No import - let Module Federation resolve via alias to read version from package.json
         },
         '@universal/shared-hello-ui': {
           singleton: true,
           eager: true,
+          requiredVersion: '0.1.0', // Match package.json version
+          // No import - let Module Federation resolve via alias to read version from package.json
         },
       },
     }),

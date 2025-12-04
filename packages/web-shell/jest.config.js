@@ -16,5 +16,13 @@ module.exports = {
     ...baseConfig.moduleNameMapper,
     '^react-native$': 'react-native-web',
   },
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        lib: ['ES2020', 'DOM', 'DOM.Iterable'],
+        types: ['jest', 'node'],
+      },
+    },
+  },
 };
 

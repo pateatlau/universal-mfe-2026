@@ -1,6 +1,8 @@
 import * as Repack from '@callstack/repack';
 import rspack from '@rspack/core';
 import path from 'node:path';
+import tailwindcssPostcss from '@tailwindcss/postcss';
+import autoprefixer from 'autoprefixer';
 
 const dirname = Repack.getDirname(import.meta.url);
 const platform = process.env.PLATFORM || 'android';
@@ -66,6 +68,26 @@ export default {
   },
   module: {
     rules: [
+      // CSS support for Uniwind + Tailwind CSS v4
+      // MUST come before JS transform rules to prevent CSS files from being processed as JS
+      {
+        test: /\.css$/,
+        use: [
+          'style-loader',
+          'css-loader',
+          {
+            loader: 'postcss-loader',
+            options: {
+              postcssOptions: {
+                plugins: [
+                  tailwindcssPostcss,
+                  autoprefixer,
+                ],
+              },
+            },
+          },
+        ],
+      },
       ...Repack.getJsTransformRules(),
       ...Repack.getAssetTransformRules(),
     ],
