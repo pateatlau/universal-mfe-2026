@@ -671,7 +671,7 @@
     rambda "^9.1.0"
     ws "8.18.0"
 
-"@module-federation/enhanced@^0.21.6":
+"@module-federation/enhanced@0.21.6", "@module-federation/enhanced@^0.21.6":
   version "0.21.6"
   resolved "https://registry.yarnpkg.com/@module-federation/enhanced/-/enhanced-0.21.6.tgz#c917485505998c854307e7504f24755a3017d583"
   integrity sha512-8PFQxtmXc6ukBC4CqGIoc96M2Ly9WVwCPu4Ffvt+K/SB6rGbeFeZoYAwREV1zGNMJ5v5ly6+AHIEOBxNuSnzSg==

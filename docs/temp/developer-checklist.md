@@ -84,22 +84,39 @@ I am not importing react-dom or react-native-web directly in shared UI.
 
 Any platform-specific logic is done with Platform.select or small adapters.
 
-5. Module Federation Usage
-   Web
+5. Module Federation v2 Usage
+   Web (MF v2 via @module-federation/enhanced/rspack)
 
 Web host uses dynamic imports only:
 
+```typescript
 const Remote = React.lazy(() => import("hello_remote/HelloRemote"));
+```
 
 No static imports from remotes anywhere.
 
-Mobile
+Web shell config uses MF v2 plugin:
+
+```javascript
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
+```
+
+Mobile (MF v2 via Re.Pack)
 
 Mobile host uses:
 
+```typescript
 Federated.importModule("HelloRemote", "./HelloRemote", "default");
+```
 
 No static imports from mobile remotes.
+
+Mobile host config uses MF v2 plugin:
+
+```javascript
+import Repack from '@callstack/repack';
+new Repack.plugins.ModuleFederationPluginV2({ /* ... */ });
+```
 
 6. ScriptManager (Mobile Only)
 

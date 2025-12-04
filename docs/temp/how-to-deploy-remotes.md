@@ -60,19 +60,24 @@ Secondary chunks can be cached longer.
 
 2.3 Host Configuration (Web Shell)
 
-In web-shell MF config, update:
+In web-shell MF v2 config (`rspack.config.mjs`), update:
 
-remotes: {
-hello_remote: "hello_remote@https://cdn.example.com/remotes/hello-remote/remoteEntry.js"
-}
+```javascript
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 
-You can parameterize the URL via environment variables:
+const HELLO_REMOTE_URL = process.env.HELLO_REMOTE_URL || 
+  'https://cdn.example.com/remotes/hello-remote/remoteEntry.js';
 
-const HELLO_REMOTE_URL = process.env.HELLO_REMOTE_URL;
-// ...
-remotes: {
-hello_remote: `hello_remote@${HELLO_REMOTE_URL}`
-}
+new ModuleFederationPlugin({
+  name: "web_shell",
+  remotes: {
+    hello_remote: `hello_remote@${HELLO_REMOTE_URL}`,
+  },
+  // ... shared config
+});
+```
+
+You can parameterize the URL via environment variables for different environments (dev, staging, prod).
 
 2.4 Versioning Strategy (Web)
 

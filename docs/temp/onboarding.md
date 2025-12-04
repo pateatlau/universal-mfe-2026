@@ -11,9 +11,9 @@ Web uses Rspack
 
 Mobile uses Re.Pack
 
-Web uses Module Federation
+Web uses Module Federation v2 (via @module-federation/enhanced/rspack)
 
-Mobile uses Module Federation v2
+Mobile uses Module Federation v2 (via Re.Pack)
 
 Mobile remote loading is powered by ScriptManager
 
@@ -249,8 +249,8 @@ yarn serve
 
 8.3 Integrate remotes into shells
 
-Web shell dynamically loads via Module Federation.
-Mobile host dynamically loads via ScriptManager + MFv2.
+Web shell dynamically loads via Module Federation v2 (using `@module-federation/enhanced/rspack`).
+Mobile host dynamically loads via ScriptManager + MFv2 (using `Repack.plugins.ModuleFederationPluginV2`).
 
 8.4 Keep bundler boundaries clean
 
