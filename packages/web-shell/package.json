@@ -4,12 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "npx rspack serve --config ./rspack.config.mjs",
-    "build": "npx rspack build --config ./rspack.config.mjs"
+    "build": "npx rspack build --config ./rspack.config.mjs",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-native-web": "0.21.2"
+    "react-native-web": "0.21.2",
+    "react-router": "7.10.0"
   },
   "devDependencies": {
     "@module-federation/enhanced": "0.21.6",
@@ -17,8 +21,14 @@
     "@rspack/core": "^1.6.0",
     "@rspack/dev-server": "^1.1.4",
     "@rspack/plugin-html": "^0.5.8",
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/jest-dom": "6.1.0",
+    "@testing-library/react": "16.1.0",
+    "@types/jest": "29.5.12",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "jest": "29.7.0",
+    "ts-jest": "29.1.2",
     "typescript": "^5.9.0"
   }
 }

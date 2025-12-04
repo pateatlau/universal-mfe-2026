@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1764828493197" clover="3.2.0">
+  <project timestamp="1764828493197" name="All files">
+    <metrics statements="12" coveredstatements="3" conditionals="1" coveredconditionals="0" methods="2" coveredmethods="1" elements="15" coveredelements="4" complexity="0" loc="12" ncloc="12" packages="1" files="3" classes="3"/>
+    <file name="HelloRemote.tsx" path="/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/web-remote-hello/src/HelloRemote.tsx">
+      <metrics statements="3" coveredstatements="3" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+      <line num="11" count="1" type="stmt"/>
+      <line num="21" count="1" type="stmt"/>
+      <line num="22" count="3" type="stmt"/>
+    </file>
+    <file name="index.ts" path="/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/web-remote-hello/src/index.ts">
+      <metrics statements="1" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="0"/>
+      <line num="9" count="0" type="stmt"/>
+    </file>
+    <file name="standalone.tsx" path="/Users/patea/2026/projects/universal-mfe-yarn-seed/packages/web-remote-hello/src/standalone.tsx">
+      <metrics statements="8" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <line num="8" count="0" type="stmt"/>
+      <line num="9" count="0" type="stmt"/>
+      <line num="10" count="0" type="stmt"/>
+      <line num="12" count="0" type="stmt"/>
+      <line num="13" count="0" type="cond" truecount="0" falsecount="1"/>
+      <line num="14" count="0" type="stmt"/>
+      <line num="17" count="0" type="stmt"/>
+      <line num="18" count="0" type="stmt"/>
+    </file>
+  </project>
+</coverage>

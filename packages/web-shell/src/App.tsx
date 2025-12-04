@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    minHeight: '100vh',
+    minHeight: '100vh' as any, // React Native Web supports vh units
     backgroundColor: '#f5f5f5',
   },
   header: {
