@@ -48,6 +48,11 @@ export default {
     fallback: {
       util: false,
     },
+    // Map @swc/helpers internal paths
+    // React Native code uses paths like @swc/helpers/_/_call_super
+    // These need to be resolved to the actual helper functions
+    // Using a regex-like pattern isn't supported in alias, so we'll use a plugin instead
+    alias: {},
   },
 
   module: {
@@ -62,6 +67,54 @@ export default {
       platform,
       hermes: true,
     }),
+
+    // Fix @swc/helpers internal path imports
+    // React Native code imports @swc/helpers/_/_* but these paths aren't exported
+    // Replace with @swc/helpers main package
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_call_super$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_class_call_check$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_create_class$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_define_property$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_get$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_get_prototype_of$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_inherits$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_possible_constructor_return$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_set$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_set_prototype_of$/,
+      '@swc/helpers'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_to_consumable_array$/,
+      '@swc/helpers'
+    ),
 
     // keep your RN devtools stubs
     new rspack.NormalModuleReplacementPlugin(
@@ -85,11 +138,17 @@ export default {
         './HelloRemote': './src/HelloRemote.tsx',
       },
       shared: {
-        react: { singleton: true, eager: true },
-
+        react: { 
+          singleton: true, 
+          eager: true,
+          requiredVersion: '19.2.0',
+        },
         // Let MF handle react-native via the host's share
-        'react-native': { singleton: true, eager: true },
-
+        'react-native': { 
+          singleton: true, 
+          eager: true,
+          requiredVersion: '^0.80.0',
+        },
         '@universal/shared-utils': { singleton: true, eager: true },
         '@universal/shared-hello-ui': { singleton: true, eager: true },
       },

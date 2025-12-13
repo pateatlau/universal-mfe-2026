@@ -27,6 +27,10 @@ export default {
     alias: {
       'react-native': 'react-native-web',
     },
+    fallback: {
+      // Exclude React Native native modules that don't work on web
+      '@react-native-async-storage/async-storage': false,
+    },
   },
   module: {
     rules: [
