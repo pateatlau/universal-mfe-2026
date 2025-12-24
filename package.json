@@ -1,6 +1,8 @@
 {
   "name": "universal-mfe-yarn-seed",
   "version": "0.1.0",
+  "description": "A universal microfrontend platform for Web and Mobile using Module Federation",
+  "license": "MIT",
   "private": true,
   "workspaces": [
     "packages/*"
