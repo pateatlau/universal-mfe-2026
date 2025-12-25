@@ -114,3 +114,15 @@ export function createLoggingPlugin(
     };
   };
 }
+
+// Default export for Module Federation runtime plugin system
+// When loaded via string path with options tuple: [path, options]
+// Module Federation will call this function with the options and expect
+// the ModuleFederationRuntimePlugin object directly
+export default function (
+  options: LoggingOptions = {}
+): ModuleFederationRuntimePlugin {
+  // Create the plugin factory and immediately call it to get the plugin object
+  const pluginFactory = createLoggingPlugin(options);
+  return pluginFactory();
+}

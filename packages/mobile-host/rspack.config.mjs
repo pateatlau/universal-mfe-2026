@@ -96,7 +96,6 @@ export default {
       shared: {
         react: {
           singleton: true,
-          requiredVersion: '19.2.0',
           eager: true,
         },
         'react-native': {

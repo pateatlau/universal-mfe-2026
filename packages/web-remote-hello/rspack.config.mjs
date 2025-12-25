@@ -10,6 +10,9 @@ export default {
   entry: './src/standalone.tsx',
   mode: 'development',
   devtool: 'eval-source-map',
+  output: {
+    publicPath: 'auto',
+  },
   devServer: {
     port: 9003,
     headers: {
@@ -20,6 +23,11 @@ export default {
     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
     alias: {
       'react-native': 'react-native-web',
+      // Replace AsyncStorage with web-compatible stub
+      '@react-native-async-storage/async-storage': path.join(
+        __dirname,
+        './src/stubs/AsyncStorage.js'
+      ),
     },
   },
   module: {
@@ -46,6 +54,17 @@ export default {
     ],
   },
   plugins: [
+    // Replace AsyncStorage with web-compatible stub
+    // This handles imports of the package
+    new rspack.NormalModuleReplacementPlugin(
+      /^@react-native-async-storage\/async-storage$/,
+      path.join(__dirname, './src/stubs/AsyncStorage.js')
+    ),
+    // Handle internal file paths within the package
+    new rspack.NormalModuleReplacementPlugin(
+      /@react-native-async-storage\/async-storage\/lib\/module/,
+      path.join(__dirname, './src/stubs/AsyncStorage.js')
+    ),
     new ModuleFederationPlugin({
       name: 'hello_remote',
       filename: 'remoteEntry.js',

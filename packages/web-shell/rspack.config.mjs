@@ -1,31 +1,35 @@
-import rspack from "@rspack/core";
-import { ModuleFederationPlugin } from "@module-federation/enhanced/rspack";
+import rspack from '@rspack/core';
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 const { HtmlRspackPlugin } = rspack;
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { createLoggingPlugin } from "./src/plugins/mf-logging.ts";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Enable logging plugin only in development mode
 // Can be disabled by setting ENABLE_MF_LOGGING=false
-const isDevelopment = process.env.NODE_ENV === "development";
-const enableLogging = process.env.ENABLE_MF_LOGGING !== "false" && isDevelopment;
+const isDevelopment = process.env.NODE_ENV === 'development';
+const enableLogging =
+  process.env.ENABLE_MF_LOGGING !== 'false' && isDevelopment;
 
 export default {
-  entry: "./src/index.tsx",
-  mode: "development",
-  devtool: "eval-source-map",
+  entry: './src/index.tsx',
+  mode: 'development',
+  devtool: 'eval-source-map',
   devServer: {
     port: 9001,
     headers: {
-      "Access-Control-Allow-Origin": "*",
+      'Access-Control-Allow-Origin': '*',
     },
   },
   resolve: {
-    extensions: [".tsx", ".ts", ".jsx", ".js", ".json"],
+    extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
     alias: {
-      "react-native": "react-native-web",
+      'react-native': 'react-native-web',
+    },
+    fallback: {
+      // Exclude React Native native modules that don't work on web
+      '@react-native-async-storage/async-storage': false,
     },
   },
   module: {
@@ -33,16 +37,16 @@ export default {
       {
         test: /\.tsx?$/,
         use: {
-          loader: "builtin:swc-loader",
+          loader: 'builtin:swc-loader',
           options: {
             jsc: {
               parser: {
-                syntax: "typescript",
+                syntax: 'typescript',
                 tsx: true,
               },
               transform: {
                 react: {
-                  runtime: "automatic",
+                  runtime: 'automatic',
                 },
               },
             },
@@ -53,18 +57,19 @@ export default {
   },
   plugins: [
     new ModuleFederationPlugin({
-      name: "web_shell",
+      name: 'web_shell',
       remotes: {
-        hello_remote: "hello_remote@http://localhost:9003/remoteEntry.js",
+        hello_remote: 'hello_remote@http://localhost:9003/remoteEntry.js',
       },
       // Conditionally enable logging plugin (development only, safe to disable)
+      // Note: Must use string path, not function reference, for Module Federation to resolve
       runtimePlugins: enableLogging
         ? [
             [
-              createLoggingPlugin,
+              path.resolve(__dirname, './src/plugins/mf-logging.ts'),
               {
                 enabled: true,
-                logLevel: "debug",
+                logLevel: 'debug',
                 includeTimestamps: true,
               },
             ],
@@ -73,24 +78,23 @@ export default {
       shared: {
         react: {
           singleton: true,
-          requiredVersion: "19.2.0",
+          requiredVersion: '19.2.0',
           eager: true,
         },
-        "react-dom": {
+        'react-dom': {
           singleton: true,
-          requiredVersion: "19.2.0",
+          requiredVersion: '19.2.0',
           eager: true,
         },
-        "react-native-web": {
+        'react-native-web': {
           singleton: true,
-          requiredVersion: "0.21.2",
+          requiredVersion: '0.21.2',
           eager: true,
         },
       },
     }),
     new HtmlRspackPlugin({
-      template: "./public/index.html",
+      template: './public/index.html',
     }),
   ],
 };
-
