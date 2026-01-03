@@ -138,16 +138,16 @@ export default {
         './HelloRemote': './src/HelloRemote.tsx',
       },
       shared: {
-        react: { 
-          singleton: true, 
+        react: {
+          singleton: true,
           eager: true,
-          requiredVersion: '19.2.0',
+          requiredVersion: '19.1.0',
         },
         // Let MF handle react-native via the host's share
-        'react-native': { 
-          singleton: true, 
+        'react-native': {
+          singleton: true,
           eager: true,
-          requiredVersion: '^0.80.0',
+          requiredVersion: '0.80.0',
         },
         '@universal/shared-utils': { singleton: true, eager: true },
         '@universal/shared-hello-ui': { singleton: true, eager: true },
