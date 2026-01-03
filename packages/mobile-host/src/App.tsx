@@ -55,11 +55,24 @@ ScriptManager.shared.addResolver(async (scriptId, caller) => {
     return { url };
   }
 
-  // 3 (Optional) catch-all for future expose chunks
+  // 3 MFv2 catch-all for federation expose chunks
   if (scriptId.startsWith('__federation_expose_')) {
     const url = `${REMOTE_HOST}/${scriptId}.bundle`;
     console.log(
       '[ScriptManager resolver] resolved URL for generic expose chunk:',
+      scriptId,
+      url
+    );
+    return { url };
+  }
+
+  // 4 MFv1 catch-all: any chunk requested by HelloRemote container
+  // MF V1 uses chunk names like "src_HelloRemote_tsx" based on file paths
+  // Re.Pack outputs these as .index.bundle files
+  if (caller === 'HelloRemote') {
+    const url = `${REMOTE_HOST}/${scriptId}.index.bundle`;
+    console.log(
+      '[ScriptManager resolver] resolved URL for HelloRemote chunk:',
       scriptId,
       url
     );

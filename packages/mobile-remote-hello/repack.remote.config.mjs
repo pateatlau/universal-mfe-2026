@@ -69,51 +69,51 @@ export default {
     }),
 
     // Fix @swc/helpers internal path imports
-    // React Native code imports @swc/helpers/_/_* but these paths aren't exported
-    // Replace with @swc/helpers main package
+    // React Native code imports @swc/helpers/_/_* but these paths aren't directly exported
+    // Replace with the correct cjs path that exports { _ }
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_call_super$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_call_super.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_class_call_check$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_class_call_check.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_create_class$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_create_class.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_define_property$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_define_property.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_get$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_get.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_get_prototype_of$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_get_prototype_of.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_inherits$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_inherits.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_possible_constructor_return$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_possible_constructor_return.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_set$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_set.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_set_prototype_of$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_set_prototype_of.cjs'
     ),
     new rspack.NormalModuleReplacementPlugin(
       /^@swc\/helpers\/_\/_to_consumable_array$/,
-      '@swc/helpers'
+      '@swc/helpers/cjs/_to_consumable_array.cjs'
     ),
 
     // keep your RN devtools stubs
@@ -131,7 +131,9 @@ export default {
       )
     ),
 
-    new Repack.plugins.ModuleFederationPluginV2({
+    // Using ModuleFederationPlugin (V1) for stability with Re.Pack + ScriptManager
+    // Note: MF V2 has share scope issues with Re.Pack's dynamic loading
+    new Repack.plugins.ModuleFederationPlugin({
       name: 'HelloRemote',
       filename: 'HelloRemote.container.js.bundle',
       exposes: {
@@ -139,136 +141,16 @@ export default {
       },
       shared: {
         react: {
-          singleton: true,
-          eager: true,
+          ...Repack.Federated.SHARED_REACT,
           requiredVersion: '19.1.0',
         },
-        // Let MF handle react-native via the host's share
         'react-native': {
-          singleton: true,
-          eager: true,
+          ...Repack.Federated.SHARED_REACT_NATIVE,
           requiredVersion: '0.80.0',
         },
         '@universal/shared-utils': { singleton: true, eager: true },
         '@universal/shared-hello-ui': { singleton: true, eager: true },
       },
-      dts: false,
     }),
   ],
 };
-
-// import * as Repack from '@callstack/repack';
-// import rspack from '@rspack/core';
-// import path from 'node:path';
-
-// const dirname = Repack.getDirname(import.meta.url);
-// const platform = process.env.PLATFORM || 'android';
-
-// export default {
-//   context: dirname,
-//   mode: 'development',
-
-//   // Entry that bootstraps your remote (can be simple)
-//   entry: {
-//     // app: './src/main.ts',
-//     index: './src/main.ts',
-//   },
-//   output: {
-//     path: path.join(dirname, 'dist'),
-//     filename: '[name].js',
-//     // filename: '[name].bundle', // Maybe use this?
-//     // filename: 'HelloRemote.container.js.bundle',
-//     publicPath: '',
-//   },
-
-//   devServer: {
-//     port: 9004,
-//     headers: {
-//       'Access-Control-Allow-Origin': '*',
-//     },
-//     static: {
-//       directory: path.join(dirname, 'public'),
-//     },
-//   },
-
-//   devtool: false,
-
-//   resolve: {
-//     // RN-aware resolution
-//     ...Repack.getResolveOptions({
-//       platform,
-//       environment: 'react-native',
-//       enablePackageExports: true,
-//     }),
-
-//     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
-
-//     fallback: {
-//       util: false,
-//     },
-//   },
-
-//   module: {
-//     rules: [
-//       ...Repack.getJsTransformRules(),
-//       ...Repack.getAssetTransformRules(),
-//     ],
-//   },
-
-//   plugins: [
-//     new Repack.RepackPlugin({
-//       // platform: 'android',
-//       platform,
-//       hermes: true,
-//     }),
-
-//     // your devtools stubs – keep as-is
-//     new rspack.NormalModuleReplacementPlugin(
-//       /devsupport\/rndevtools\/ReactDevToolsSettingsManager/,
-//       path.join(dirname, 'src', 'stubs', 'ReactDevToolsSettingsManager.js')
-//     ),
-
-//     new rspack.NormalModuleReplacementPlugin(
-//       /devsupport\/rndevtools\/specs\/NativeReactDevToolsRuntimeSettingsModule/,
-//       path.join(
-//         dirname,
-//         'src',
-//         'stubs',
-//         'NativeReactDevToolsRuntimeSettingsModule.js'
-//       )
-//     ),
-
-//     new Repack.plugins.ModuleFederationPluginV2({
-//       // 👇 MUST match what host uses in Federated.importModule + prefetchScript
-//       name: 'HelloRemote',
-
-//       // 👇 MUST match ScriptManager resolver URL path
-//       filename: 'HelloRemote.container.js.bundle',
-
-//       // 👇 MUST match Federated.importModule('HelloRemote', './HelloRemote', 'default')
-//       exposes: {
-//         './HelloRemote': './src/HelloRemote.tsx',
-//       },
-
-//       shared: {
-//         react: {
-//           singleton: true,
-//           eager: true,
-//         },
-//         'react-native': {
-//           singleton: true,
-//           eager: true,
-//         },
-//         '@universal/shared-utils': {
-//           singleton: true,
-//           eager: true,
-//         },
-//         '@universal/shared-hello-ui': {
-//           singleton: true,
-//           eager: true,
-//         },
-//       },
-//       dts: false,
-//     }),
-//   ],
-// };

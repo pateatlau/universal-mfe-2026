@@ -90,28 +90,23 @@ export default {
         'NativeReactDevToolsRuntimeSettingsModule.js'
       )
     ),
-    new Repack.plugins.ModuleFederationPluginV2({
+    // Using ModuleFederationPlugin (V1) for stability with Re.Pack + ScriptManager
+    // Note: MF V2 has share scope issues with Re.Pack's dynamic loading
+    new Repack.plugins.ModuleFederationPlugin({
       name: 'MobileHost',
       remotes: {},
       shared: {
         react: {
-          singleton: true,
-          eager: true,
+          ...Repack.Federated.SHARED_REACT,
+          version: '19.1.0',
         },
         'react-native': {
-          singleton: true,
-          eager: true,
+          ...Repack.Federated.SHARED_REACT_NATIVE,
+          version: '0.80.0',
         },
-        '@universal/shared-utils': {
-          singleton: true,
-          eager: true,
-        },
-        '@universal/shared-hello-ui': {
-          singleton: true,
-          eager: true,
-        },
+        '@universal/shared-utils': { singleton: true, eager: true },
+        '@universal/shared-hello-ui': { singleton: true, eager: true },
       },
-      dts: false,
     }),
   ],
 };
