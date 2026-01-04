@@ -135,3 +135,69 @@ jobs:
           name: android-debug-apk
           path: packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
+
+  # iOS build job (Simulator only - no signing required)
+  build-ios:
+    name: Build iOS (Simulator)
+    runs-on: macos-14
+    needs: check
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.2'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Setup CocoaPods cache
+        uses: actions/cache@v4
+        with:
+          path: packages/mobile-host/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('packages/mobile-host/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Build mobile remote for iOS
+        run: yarn build:mobile:ios
+
+      - name: Install CocoaPods dependencies
+        working-directory: packages/mobile-host/ios
+        run: pod install
+
+      - name: Build iOS app for Simulator
+        working-directory: packages/mobile-host/ios
+        run: |
+          xcodebuild \
+            -workspace MobileHostTmp.xcworkspace \
+            -scheme MobileHostTmp \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -derivedDataPath build \
+            build
+
+      - name: Zip iOS app bundle
+        run: |
+          cd packages/mobile-host/ios/build/Build/Products/Debug-iphonesimulator
+          zip -r ../../../../ios-simulator-app.zip MobileHostTmp.app
+
+      - name: Upload iOS Simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: packages/mobile-host/ios/ios-simulator-app.zip
+          retention-days: 7

@@ -184,15 +184,20 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 - Gradle cache for faster builds
 - Uploads `android-debug-apk` artifact
 
-### Task 2.4: iOS Build Job
-- [ ] Add iOS build job to CI workflow
-  - [ ] Use macOS runner
-  - [ ] Setup Xcode 16.2
-  - [ ] Run pod install (Pods are cached in repo)
-  - [ ] Build mobile-remote-hello for iOS
-  - [ ] Build iOS app for Simulator (no signing required)
-  - [ ] Upload .app bundle as artifact
-  - [ ] Consider manual-trigger only to control macOS runner costs
+### Task 2.4: iOS Build Job ✅ COMPLETE
+- [x] Add iOS build job to CI workflow
+  - [x] Use macOS-14 runner (Apple Silicon)
+  - [x] Setup Xcode 16.2 via `maxim-lobanov/setup-xcode@v1`
+  - [x] Run pod install with CocoaPods cache
+  - [x] Build mobile-remote-hello for iOS
+  - [x] Build iOS app for Simulator (no signing required)
+  - [x] Upload zipped .app bundle as artifact (7 day retention)
+
+**Features:**
+- Depends on `check` job (runs after lint/test pass)
+- CocoaPods cache for faster builds
+- Builds for iPhone 16 Simulator
+- Uploads `ios-simulator-app` artifact (zipped .app bundle)
 
 ---
 
