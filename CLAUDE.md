@@ -80,6 +80,51 @@ The `@react-native-community/cli@19.1.2` used by RN 0.80.0 has a known vulnerabi
 
 The `ios/Pods/` directory is committed to ensure reproducible builds. This is intentional - it guarantees all developers use identical native dependencies without relying on CocoaPods CDN availability.
 
+## Yarn Workspace Hoisting & Symlinks
+
+### Why Symlinks Are Required
+
+Yarn Classic hoists shared dependencies to the root `node_modules/`. However, React Native's build systems (Gradle for Android, CocoaPods for iOS) expect dependencies in the package's local `node_modules/`. The `setup-symlinks.js` script creates symlinks to bridge this gap:
+
+```
+packages/mobile-host/node_modules/
+├── react-native -> ../../../node_modules/react-native
+├── @react-native -> ../../../node_modules/@react-native
+└── @callstack -> ../../../node_modules/@callstack
+```
+
+### Automatic Setup
+
+Symlinks are created automatically via `postinstall` in `packages/mobile-host/package.json`. If builds fail with "file not found" errors referencing `node_modules/react-native`, run:
+
+```bash
+cd packages/mobile-host
+node scripts/setup-symlinks.js
+```
+
+### Android Hoisted Paths
+
+The `android/app/build.gradle` explicitly configures paths to hoisted dependencies:
+
+```groovy
+react {
+    root = file("../../")
+    reactNativeDir = file("../../../../node_modules/react-native")
+    codegenDir = file("../../../../node_modules/@react-native/codegen")
+    cliFile = file("../../../../node_modules/react-native/cli.js")
+}
+```
+
+### Stale Cache Issues
+
+If Android builds fail with autolinking errors (wrong paths to dependencies), clear the caches:
+
+```bash
+yarn workspace @universal/mobile-host clean:android
+```
+
+This removes `android/build/`, `android/.gradle/`, and other generated files that may contain stale paths.
+
 ## Monorepo Structure
 
 ```
@@ -292,6 +337,8 @@ The codebase uses stub files to replace incompatible dependencies:
 6. **Missing React Native Web alias** - Web configs must alias react-native to react-native-web
 7. **Port conflicts** - Android uses port 8081, iOS uses port 8082 - they can run simultaneously
 8. **Manual Pod edits** - Never manually edit files in `ios/Pods/` - run `pod install` to regenerate
+9. **Missing symlinks** - If builds fail with "file not found" for react-native, run `node scripts/setup-symlinks.js` in mobile-host
+10. **Stale autolinking cache** - If Android builds reference wrong paths, run `yarn clean:android` to clear cached autolinking data
 
 ## Quick Reference for Common Tasks
 

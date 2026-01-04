@@ -5,6 +5,10 @@
   "scripts": {
     "postinstall": "node scripts/setup-symlinks.js",
     "kill:bundler": "lsof -ti:8081,8082 | xargs kill -9 2>/dev/null || true",
+    "clean:android": "rm -rf android/build android/.gradle android/app/.cxx android/app/build",
+    "clean:ios": "rm -rf ios/build",
+    "clean:ios:full": "rm -rf ios/build ios/Pods ios/Podfile.lock",
+    "clean": "yarn clean:android && yarn clean:ios",
     "start:bundler:android": "react-native start --platform android --port 8081",
     "start:bundler:ios": "react-native start --platform ios --port 8082",
     "android:app": "cd android && ./gradlew installDebug && adb shell am start -n com.mobilehosttmp/.MainActivity",
