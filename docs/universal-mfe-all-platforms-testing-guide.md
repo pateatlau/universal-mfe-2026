@@ -10,10 +10,12 @@ Quick reference for running and testing Web, Android, and iOS platforms.
 |---------|------|-------|
 | Web Shell | 9001 | Host |
 | Web Remote | 9003 | Remote |
-| Mobile Host (Android) | 8081 | |
-| Mobile Host (iOS) | 8082 | Separate port from Android |
-| Mobile Remote (Android) | 9004 | |
-| Mobile Remote (iOS) | 9005 | |
+| Mobile Host (Android) | 8081 | Metro bundler |
+| Mobile Host (iOS) | 8082 | Metro bundler (separate from Android) |
+| Mobile Remote (Android) | 9004 | Serves from `dist/android/` |
+| Mobile Remote (iOS) | 9005 | Serves from `dist/ios/` |
+
+**Note:** Android and iOS remote builds output to separate directories (`dist/android/`, `dist/ios/`) so both platforms can run simultaneously without interference.
 
 ---
 
@@ -147,6 +149,52 @@ yarn workspace @universal/mobile-host ios
 
 ---
 
+## Running Both Mobile Platforms Simultaneously
+
+Android and iOS can run at the same time since they use separate ports and output directories.
+
+### Build Both Remotes First
+
+```bash
+cd packages/mobile-remote-hello
+PLATFORM=android yarn build:remote
+PLATFORM=ios yarn build:remote
+```
+
+This creates:
+- `dist/android/` - Android bundles
+- `dist/ios/` - iOS bundles
+
+### Start All Servers (4 terminals)
+
+```bash
+# Terminal 1: Android remote (port 9004)
+cd packages/mobile-remote-hello
+PLATFORM=android yarn serve
+
+# Terminal 2: iOS remote (port 9005)
+cd packages/mobile-remote-hello
+PLATFORM=ios yarn serve
+
+# Terminal 3: Android Metro (port 8081)
+yarn workspace @universal/mobile-host start:bundler:android
+
+# Terminal 4: iOS Metro (port 8082)
+yarn workspace @universal/mobile-host start:bundler:ios
+```
+
+### Launch Apps
+
+```bash
+# Android (in separate terminal)
+cd packages/mobile-host/android && ./gradlew installDebug && adb shell am start -n com.mobilehosttmp/.MainActivity
+
+# iOS (in separate terminal)
+xcrun simctl launch booted com.universal.mobilehost
+```
+
+---
+
 ## Success Criteria
 
 | Platform | What to Check |
@@ -169,8 +217,11 @@ yarn workspace @universal/mobile-host ios
 ### Remote Won't Load
 
 1. Check remote server is running on correct port
-2. Android uses `10.0.2.2` internally to reach host machine
-3. iOS uses `localhost` directly
+2. Verify the correct platform bundle exists:
+   - Android: `curl -I http://localhost:9004/HelloRemote.container.js.bundle`
+   - iOS: `curl -I http://localhost:9005/HelloRemote.container.js.bundle`
+3. Android uses `10.0.2.2` internally to reach host machine
+4. iOS uses `localhost` directly
 
 ### Port Already in Use
 
@@ -184,6 +235,39 @@ kill -9 $(lsof -ti:PORT)   # Kill it
 ```bash
 adb devices                 # Check connection
 adb kill-server && adb start-server  # Restart ADB
+```
+
+### Android Build Fails with Path Errors
+
+```bash
+# Clear stale caches
+yarn workspace @universal/mobile-host clean:android
+```
+
+### iOS Build Fails with "file not found" Errors
+
+```bash
+# Recreate symlinks for hoisted dependencies
+cd packages/mobile-host
+node scripts/setup-symlinks.js
+```
+
+### Fresh Start (Nuclear Option)
+
+```bash
+# Kill all servers
+lsof -ti:9001,9003,9004,9005,8081,8082 | xargs kill -9 2>/dev/null
+
+# Clean everything
+yarn workspace @universal/mobile-host clean
+
+# Rebuild shared libraries
+yarn build:shared
+
+# Rebuild remote bundles for both platforms
+cd packages/mobile-remote-hello
+PLATFORM=android yarn build:remote
+PLATFORM=ios yarn build:remote
 ```
 
 ---
