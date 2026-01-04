@@ -41,10 +41,10 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
   override func bundleURL() -> URL? {
 #if DEBUG
     // For Re.Pack dev server, explicitly set the bundle URL
-    // Re.Pack serves bundles on port 8081 (iOS) or 8080 (Android)
+    // iOS uses port 8082, Android uses port 8081 - allows simultaneous development
     // iOS simulator can access localhost directly
     // IMPORTANT: Re.Pack requires the platform query parameter
-    let bundleURL = URL(string: "http://localhost:8081/index.bundle?platform=ios")
+    let bundleURL = URL(string: "http://localhost:8082/index.bundle?platform=ios")
     return bundleURL
 #else
     Bundle.main.url(forResource: "main", withExtension: "jsbundle")

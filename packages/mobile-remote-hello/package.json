@@ -8,19 +8,19 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@module-federation/enhanced": "^0.21.6",
-    "@swc/helpers": "^0.5.0",
+    "@module-federation/enhanced": "0.21.6",
+    "@swc/helpers": "0.5.17",
     "@universal/shared-hello-ui": "*",
     "@universal/shared-utils": "*",
-    "react": "19.2.0",
-    "react-native": "^0.80.0"
+    "react": "19.1.0",
+    "react-native": "0.80.0"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-typescript": "^7.25.0",
+    "@babel/plugin-syntax-typescript": "7.27.1",
     "@callstack/repack": "5.2.0",
-    "@react-native/babel-plugin-codegen": "^0.80.0",
-    "@rspack/cli": "^1.6.0",
-    "@types/react": "^19.0.0",
-    "typescript": "^5.9.0"
+    "@react-native/babel-plugin-codegen": "0.80.2",
+    "@rspack/cli": "1.6.5",
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
   }
 }
