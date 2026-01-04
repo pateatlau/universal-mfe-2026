@@ -33,8 +33,8 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 
 - [ ] **Testing Infrastructure Setup**
   - [ ] Jest configuration for unit tests
-  - [ ] ESLint configuration for linting
-  - [ ] TypeScript strict mode already enabled
+  - [x] ESLint configuration for linting ✅
+  - [x] TypeScript strict mode already enabled ✅
 
 - [x] **Root Package.json Scripts** ✅
   - [x] Add `build:shared` script
@@ -77,14 +77,22 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 - Added Module Federation remote type declarations for web-shell
 - Fixed React Native Web style type casting in web-shell
 
-### Task 1.2: ESLint Configuration
-- [ ] Create `.eslintrc.js` in root
-  - [ ] Configure TypeScript parser (`@typescript-eslint/parser`)
-  - [ ] Add React/React Native rules
-  - [ ] Add import ordering rules
-- [ ] Add ESLint dependencies to root package.json
-- [ ] Create `.eslintignore` for build outputs
-- [ ] Verify lint passes on all packages
+### Task 1.2: ESLint Configuration ✅ COMPLETE
+- [x] Create `eslint.config.mjs` in root (using modern flat config)
+  - [x] Configure TypeScript parser (`typescript-eslint`)
+  - [x] Add React/React Hooks rules
+  - [x] Configure Node.js globals for config files and scripts
+- [x] Add ESLint dependencies to root package.json
+- [x] Configure ignores for build outputs and generated files
+- [x] Verify lint passes on all packages (0 errors, warnings only)
+
+**Dependencies added:**
+- eslint@9.28.0
+- @eslint/js@9.28.0
+- typescript-eslint@8.33.1
+- eslint-plugin-react@7.37.5
+- eslint-plugin-react-hooks@5.2.0
+- globals@16.2.0
 
 ### Task 1.3: Jest Configuration
 - [ ] Create `jest.config.js` in root

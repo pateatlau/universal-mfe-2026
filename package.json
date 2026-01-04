@@ -15,12 +15,18 @@
     "build:mobile:android": "yarn workspace @universal/mobile-remote-hello build:remote",
     "build:mobile:ios": "PLATFORM=ios yarn workspace @universal/mobile-remote-hello build:remote",
     "typecheck": "yarn workspaces run typecheck",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint": "eslint .",
     "test": "jest"
   },
   "devDependencies": {
     "@babel/core": "7.28.5",
     "@callstack/repack": "5.2.0",
-    "typescript": "5.9.3"
+    "@eslint/js": "9.28.0",
+    "eslint": "9.28.0",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "globals": "16.2.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.33.1"
   }
 }
