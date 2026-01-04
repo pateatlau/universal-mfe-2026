@@ -90,19 +90,24 @@ export default {
         'NativeReactDevToolsRuntimeSettingsModule.js'
       )
     ),
-    // Using ModuleFederationPlugin (V1) for stability with Re.Pack + ScriptManager
-    // Note: MF V2 has share scope issues with Re.Pack's dynamic loading
-    new Repack.plugins.ModuleFederationPlugin({
+    // Using ModuleFederationPluginV2 for Module Federation 2.0 support
+    // MF V2 provides enhanced runtime with better share scope handling
+    // Runtime plugins (CorePlugin, ResolverPlugin, PrefetchPlugin) are included by default
+    new Repack.plugins.ModuleFederationPluginV2({
       name: 'MobileHost',
-      remotes: {},
+      remotes: {}, // Empty - remotes are loaded dynamically via ScriptManager
+      // Disable DTS plugin - not compatible with React Native/Hermes environment
+      dts: false,
       shared: {
         react: {
-          ...Repack.Federated.SHARED_REACT,
-          version: '19.1.0',
+          singleton: true,
+          eager: true,
+          requiredVersion: '19.1.0',
         },
         'react-native': {
-          ...Repack.Federated.SHARED_REACT_NATIVE,
-          version: '0.80.0',
+          singleton: true,
+          eager: true,
+          requiredVersion: '0.80.0',
         },
         '@universal/shared-utils': { singleton: true, eager: true },
         '@universal/shared-hello-ui': { singleton: true, eager: true },
