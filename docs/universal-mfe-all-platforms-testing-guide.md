@@ -74,10 +74,10 @@ curl -s -I http://localhost:9001 | head -1                  # 200 OK
 # Terminal 1: Build and serve Android remote (port 9004)
 cd packages/mobile-remote-hello
 PLATFORM=android yarn build:remote
-PLATFORM=android yarn serve
+yarn serve:android  # Auto-kills stale process on port 9004
 
 # Terminal 2: Android host bundler (port 8081)
-yarn workspace @universal/mobile-host start:bundler:android
+yarn workspace @universal/mobile-host start:bundler:android  # Auto-kills stale process
 ```
 
 ### Verify Servers
@@ -115,10 +115,10 @@ yarn workspace @universal/mobile-host android
 # Terminal 1: Build and serve iOS remote (port 9005)
 cd packages/mobile-remote-hello
 PLATFORM=ios yarn build:remote
-PLATFORM=ios yarn serve
+yarn serve:ios  # Auto-kills stale process on port 9005
 
 # Terminal 2: iOS host bundler (port 8082)
-yarn workspace @universal/mobile-host start:bundler:ios
+yarn workspace @universal/mobile-host start:bundler:ios  # Auto-kills stale process
 ```
 
 ### Verify Servers
@@ -168,20 +168,22 @@ This creates:
 ### Start All Servers (4 terminals)
 
 ```bash
-# Terminal 1: Android remote (port 9004)
+# Terminal 1: Android remote (port 9004) - auto-kills stale process
 cd packages/mobile-remote-hello
-PLATFORM=android yarn serve
+yarn serve:android
 
-# Terminal 2: iOS remote (port 9005)
+# Terminal 2: iOS remote (port 9005) - auto-kills stale process
 cd packages/mobile-remote-hello
-PLATFORM=ios yarn serve
+yarn serve:ios
 
-# Terminal 3: Android Metro (port 8081)
+# Terminal 3: Android Metro (port 8081) - auto-kills stale process
 yarn workspace @universal/mobile-host start:bundler:android
 
-# Terminal 4: iOS Metro (port 8082)
+# Terminal 4: iOS Metro (port 8082) - auto-kills stale process
 yarn workspace @universal/mobile-host start:bundler:ios
 ```
+
+**Note:** All start scripts now automatically kill any existing process on the target port before starting, preventing stale server issues.
 
 ### Launch Apps
 

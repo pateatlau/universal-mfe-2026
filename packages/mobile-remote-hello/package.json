@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "build:remote": "rspack build --config ./repack.remote.config.mjs",
+    "kill:android": "lsof -ti:9004 | xargs kill -9 2>/dev/null || true",
+    "kill:ios": "lsof -ti:9005 | xargs kill -9 2>/dev/null || true",
     "serve": "rspack serve --config ./repack.remote.config.mjs",
+    "serve:android": "yarn kill:android && PLATFORM=android yarn serve",
+    "serve:ios": "yarn kill:ios && PLATFORM=ios yarn serve",
     "clean": "rm -rf dist"
   },
   "dependencies": {
