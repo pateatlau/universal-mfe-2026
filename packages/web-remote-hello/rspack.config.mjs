@@ -22,7 +22,7 @@ export default {
   resolve: {
     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
     alias: {
-      'react-native': 'react-native-web',
+      'react-native$': path.resolve(__dirname, 'node_modules/react-native-web'),
       // Replace AsyncStorage with web-compatible stub
       '@react-native-async-storage/async-storage': path.join(
         __dirname,

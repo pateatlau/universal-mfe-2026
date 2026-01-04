@@ -7,19 +7,20 @@
     "build": "npx rspack build --config ./rspack.config.mjs"
   },
   "dependencies": {
+    "@universal/shared-hello-ui": "*",
+    "@universal/shared-utils": "*",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-native-web": "0.21.2",
-    "@universal/shared-utils": "*",
-    "@universal/shared-hello-ui": "*"
+    "react-native-web": "0.21.2"
   },
   "devDependencies": {
     "@module-federation/enhanced": "0.21.6",
-    "@rspack/cli": "^1.6.0",
-    "@rspack/core": "^1.6.0",
-    "@rspack/dev-server": "^1.1.4",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "typescript": "^5.9.0"
+    "@rspack/cli": "1.6.5",
+    "@rspack/core": "1.6.5",
+    "@rspack/dev-server": "1.1.4",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "react-native-web": "0.21.2",
+    "typescript": "5.9.3"
   }
 }

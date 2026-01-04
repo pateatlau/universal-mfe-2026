@@ -3,29 +3,31 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "node scripts/setup-symlinks.js",
+    "kill:bundler": "lsof -ti:8081,8082 | xargs kill -9 2>/dev/null || true",
     "start:bundler:android": "react-native start --platform android --port 8081",
+    "start:bundler:ios": "react-native start --platform ios --port 8082",
     "android:app": "cd android && ./gradlew installDebug && adb shell am start -n com.mobilehosttmp/.MainActivity",
-    "android": "yarn start:bundler:android & yarn android:app",
-    "start:bundler:ios": "react-native start --platform ios --port 8081",
-    "ios:app": "cd ios && xcodebuild -workspace MobileHostTmp.xcworkspace -scheme MobileHostTmp -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' -derivedDataPath ./build build && xcrun simctl install 'iPhone 15' ./build/Build/Products/Debug-iphonesimulator/MobileHostTmp.app && xcrun simctl launch 'iPhone 15' com.universal.mobilehost",
+    "android": "yarn kill:bundler && yarn start:bundler:android & yarn android:app",
+    "ios:app": "cd ios && xcodebuild -workspace MobileHostTmp.xcworkspace -scheme MobileHostTmp -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16' -derivedDataPath ./build build && xcrun simctl install 'iPhone 16' ./build/Build/Products/Debug-iphonesimulator/MobileHostTmp.app && xcrun simctl launch 'iPhone 16' com.universal.mobilehost",
     "ios": "yarn start:bundler:ios & yarn ios:app",
-    "ios:simulator": "react-native run-ios --simulator=\"iPhone 15\"",
+    "ios:simulator": "react-native run-ios --simulator=\"iPhone 16\"",
     "build:android": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res",
     "build:ios": "react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle --assets-dest ios"
   },
   "dependencies": {
     "@callstack/repack": "5.2.0",
-    "@module-federation/enhanced": "^0.21.6",
-    "@swc/helpers": "^0.5.0",
-    "react": "19.2.0",
-    "react-native": "^0.80.0"
+    "@module-federation/enhanced": "0.21.6",
+    "@swc/helpers": "0.5.17",
+    "react": "19.1.0",
+    "react-native": "0.80.0"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-typescript": "^7.25.0",
-    "@react-native-community/cli": "^19.0.0",
-    "@react-native/babel-plugin-codegen": "^0.80.0",
-    "@rspack/cli": "^1.6.0",
-    "@types/react": "^19.0.0",
-    "typescript": "^5.9.0"
+    "@babel/plugin-syntax-typescript": "7.27.1",
+    "@react-native-community/cli": "19.1.2",
+    "@react-native/babel-plugin-codegen": "0.80.2",
+    "@rspack/cli": "1.6.5",
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
   }
 }
