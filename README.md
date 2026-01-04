@@ -102,6 +102,31 @@ yarn workspace @universal/mobile-host ios
 - **Exact Versions** - No `^` or `~` for core dependencies
 - **Hermes Required** - Mobile uses Hermes for dynamic bundle execution
 - **DTS Disabled** - `dts: false` required in mobile MF configs (incompatible with Hermes)
+- **Platform Independence** - Android/iOS use separate build outputs (`dist/android/`, `dist/ios/`)
+
+## Troubleshooting
+
+### Clean Scripts
+
+```bash
+# Clear Android caches (fixes autolinking errors)
+yarn workspace @universal/mobile-host clean:android
+
+# Clear iOS build
+yarn workspace @universal/mobile-host clean:ios
+
+# Clear both platforms
+yarn workspace @universal/mobile-host clean
+```
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| Android path errors | Run `clean:android` to clear stale caches |
+| iOS "file not found" | Run `node scripts/setup-symlinks.js` in mobile-host |
+| Remote not loading | Verify server running: `curl -I http://localhost:900X/HelloRemote.container.js.bundle` |
+| Port in use | Kill process: `lsof -ti:PORT \| xargs kill -9` |
 
 ## License
 
