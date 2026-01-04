@@ -19,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.1.0
         with:
           node-version-file: '.nvmrc'
           cache: 'yarn'
@@ -50,10 +50,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.1.0
         with:
           node-version-file: '.nvmrc'
           cache: 'yarn'
@@ -68,14 +68,14 @@ jobs:
         run: yarn build:web
 
       - name: Upload web-shell artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-shell-dist
           path: packages/web-shell/dist/
           retention-days: 7
 
       - name: Upload web-remote-hello artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-remote-hello-dist
           path: packages/web-remote-hello/dist/
@@ -89,10 +89,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.1
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5.1.0
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -101,13 +101,13 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.1.0
         with:
           node-version-file: '.nvmrc'
           cache: 'yarn'
 
       - name: Setup Gradle cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -130,7 +130,7 @@ jobs:
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload Android APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: android-debug-apk
           path: packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk
@@ -144,21 +144,21 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.1
 
       - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+        uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
           xcode-version: '16.2'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.1.0
         with:
           node-version-file: '.nvmrc'
           cache: 'yarn'
 
       - name: Setup CocoaPods cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/Library/Caches/CocoaPods
           key: ${{ runner.os }}-cocoapods-${{ hashFiles('packages/mobile-host/ios/Podfile.lock') }}
@@ -195,13 +195,17 @@ jobs:
             2>&1 | tee build.log || (tail -100 build.log && exit 1)
 
       - name: Zip iOS app bundle
+        working-directory: packages/mobile-host/ios/build/Build/Products/Debug-iphonesimulator
         run: |
-          cd packages/mobile-host/ios/build/Build/Products/Debug-iphonesimulator
-          zip -r ../../../../ios-simulator-app.zip MobileHostTmp.app
+          if [ ! -d "MobileHostTmp.app" ]; then
+            echo "Error: MobileHostTmp.app bundle not found"
+            exit 1
+          fi
+          zip -r ios-simulator-app.zip MobileHostTmp.app
 
       - name: Upload iOS Simulator app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ios-simulator-app
-          path: packages/mobile-host/ios/ios-simulator-app.zip
+          path: packages/mobile-host/ios/build/Build/Products/Debug-iphonesimulator/ios-simulator-app.zip
           retention-days: 7
