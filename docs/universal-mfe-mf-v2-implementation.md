@@ -82,6 +82,8 @@ new Repack.plugins.ModuleFederationPluginV2({
 import * as Repack from '@callstack/repack';
 import path from 'node:path';
 
+// Get directory name in ESM (Re.Pack provides a helper for this)
+const dirname = Repack.getDirname(import.meta.url);
 const platform = process.env.PLATFORM || 'android';
 const devServerPort = platform === 'ios' ? 9005 : 9004;
 // CRITICAL: Separate output directories per platform

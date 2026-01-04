@@ -93,9 +93,11 @@ curl -s -I http://localhost:8081/index.bundle?platform=android | head -1    # 20
 # Ensure emulator is running
 adb devices
 
-# Build, install, and launch
+# Build, install, and launch (waits for bundler to be ready)
 yarn workspace @universal/mobile-host android
 ```
+
+**Note:** The `android` script automatically starts the Metro bundler, waits for it to be ready, then builds and launches the app.
 
 ### Test
 
@@ -137,9 +139,11 @@ xcrun simctl list devices | grep "Booted"
 # Install pods (if needed)
 cd packages/mobile-host/ios && pod install && cd ../../..
 
-# Build, install, and launch
+# Build, install, and launch (waits for bundler to be ready)
 yarn workspace @universal/mobile-host ios
 ```
+
+**Note:** The `ios` script automatically starts the Metro bundler, waits for it to be ready, then builds and launches the app.
 
 ### Test
 
