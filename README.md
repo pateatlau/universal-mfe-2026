@@ -36,7 +36,7 @@ packages/
 ### Setup
 
 ```bash
-yarn install
+yarn install      # Required: hoists @react-native/gradle-plugin to root node_modules
 yarn build:shared
 ```
 
