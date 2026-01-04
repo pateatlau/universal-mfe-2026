@@ -65,13 +65,28 @@ All versions are exact (no `^` or `~`) to ensure reproducibility.
 | Mobile Remote (Android) | 9004 |
 | Mobile Remote (iOS) | 9005 |
 
+## Security Considerations
+
+### Development Server Security (CVE-2025-11953)
+
+The `@react-native-community/cli@19.1.2` used by RN 0.80.0 has a known vulnerability (CVE-2025-11953) affecting the Metro dev server. This is a **development-time only** vulnerability and does not affect production builds.
+
+**Mitigations:**
+- The dev server only runs locally during development
+- For additional security, bind Metro to localhost: `react-native start --host 127.0.0.1`
+- Upgrade to `@react-native-community/cli@20.0.0+` when compatible with your RN version
+
+### Pods Directory
+
+The `ios/Pods/` directory is committed to ensure reproducible builds. This is intentional - it guarantees all developers use identical native dependencies without relying on CocoaPods CDN availability.
+
 ## Monorepo Structure
 
 ```
 packages/
 ├── web-shell/                    # Web host (Rspack + MF v2, port 9001)
 ├── web-remote-hello/             # Web remote module (Rspack + MF v2, port 9003)
-├── mobile-host/                  # Mobile host (Re.Pack + MF v2, port 8081)
+├── mobile-host/                  # Mobile host (Re.Pack + MF v2, Android: 8081, iOS: 8082)
 ├── mobile-remote-hello/          # Mobile remote (Re.Pack + MF v2, ports 9004/9005)
 ├── shared-utils/                 # Pure TypeScript utilities (platform-agnostic)
 ├── shared-hello-ui/              # Universal React Native UI components
@@ -80,8 +95,12 @@ packages/
 
 ## Common Development Commands
 
-### Build Shared Libraries (Required First)
+### Initial Setup (Required First)
 ```bash
+# Install dependencies - hoists @react-native/gradle-plugin to root node_modules
+# This is required before Android Gradle builds will work
+yarn install
+
 # Build all shared libraries
 yarn build:shared
 
@@ -213,9 +232,10 @@ Location: `packages/shared-utils/src/`
 
 - Web Shell: 9001
 - Web Remote: 9003
+- Mobile Host (Android): 8081
+- Mobile Host (iOS): 8082
 - Mobile Remote (Android): 9004
 - Mobile Remote (iOS): 9005
-- Mobile Host: 8081 (both iOS and Android)
 
 ## Stub Files Pattern
 
@@ -270,7 +290,8 @@ The codebase uses stub files to replace incompatible dependencies:
 4. **Module Federation misconfiguration** - Shared deps must be singletons with eager loading
 5. **Network configuration errors** - Android needs `10.0.2.2`, iOS uses `localhost`
 6. **Missing React Native Web alias** - Web configs must alias react-native to react-native-web
-7. **Port conflicts** - Mobile host cannot run iOS and Android simultaneously (both use 8081)
+7. **Port conflicts** - Android uses port 8081, iOS uses port 8082 - they can run simultaneously
+8. **Manual Pod edits** - Never manually edit files in `ios/Pods/` - run `pod install` to regenerate
 
 ## Quick Reference for Common Tasks
 
@@ -303,3 +324,9 @@ The codebase uses stub files to replace incompatible dependencies:
 2. Update `repack.remote.config.mjs` with MF configuration
 3. Add ScriptManager resolver entry in mobile-host's `App.tsx`
 4. Use platform-specific ports (9004 Android, 9005 iOS)
+
+**Update React Native version:**
+1. Update `react-native` version in all mobile package.json files
+2. Run `yarn install` to update node_modules
+3. Run `cd packages/mobile-host/ios && pod install` to regenerate Pods
+4. Never manually edit files in `ios/Pods/` directory
