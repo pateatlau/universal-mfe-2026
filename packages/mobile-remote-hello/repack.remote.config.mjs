@@ -131,25 +131,30 @@ export default {
       )
     ),
 
-    // Using ModuleFederationPlugin (V1) for stability with Re.Pack + ScriptManager
-    // Note: MF V2 has share scope issues with Re.Pack's dynamic loading
-    new Repack.plugins.ModuleFederationPlugin({
+    // Using ModuleFederationPluginV2 for Module Federation 2.0 support
+    // MF V2 provides enhanced runtime with better share scope handling
+    // Remote modules use eager: false to defer loading until host initializes share scope
+    new Repack.plugins.ModuleFederationPluginV2({
       name: 'HelloRemote',
       filename: 'HelloRemote.container.js.bundle',
+      // Disable DTS plugin - not compatible with React Native/Hermes environment
+      dts: false,
       exposes: {
         './HelloRemote': './src/HelloRemote.tsx',
       },
       shared: {
         react: {
-          ...Repack.Federated.SHARED_REACT,
+          singleton: true,
+          eager: false, // Remote defers to host's eager loading
           requiredVersion: '19.1.0',
         },
         'react-native': {
-          ...Repack.Federated.SHARED_REACT_NATIVE,
+          singleton: true,
+          eager: false, // Remote defers to host's eager loading
           requiredVersion: '0.80.0',
         },
-        '@universal/shared-utils': { singleton: true, eager: true },
-        '@universal/shared-hello-ui': { singleton: true, eager: true },
+        '@universal/shared-utils': { singleton: true, eager: false },
+        '@universal/shared-hello-ui': { singleton: true, eager: false },
       },
     }),
   ],

@@ -38,37 +38,28 @@ ScriptManager.shared.addResolver(async (scriptId, caller) => {
 
   const REMOTE_HOST = getRemoteHost();
 
-  // 1 Main container bundle for the remote
+  // 1. Main container bundle for the remote
   if (scriptId === 'HelloRemote') {
     const url = `${REMOTE_HOST}/HelloRemote.container.js.bundle`;
     console.log('[ScriptManager resolver] resolved URL for HelloRemote:', url);
     return { url };
   }
 
-  // 2 MFv2 expose chunk for HelloRemote
-  if (scriptId === '__federation_expose_HelloRemote') {
-    const url = `${REMOTE_HOST}/__federation_expose_HelloRemote.bundle`;
-    console.log(
-      '[ScriptManager resolver] resolved URL for __federation_expose_HelloRemote:',
-      url
-    );
-    return { url };
-  }
-
-  // 3 MFv2 catch-all for federation expose chunks
+  // 2. MF V2 expose chunks (e.g., __federation_expose_HelloRemote)
+  // Re.Pack outputs these with .index.bundle extension
   if (scriptId.startsWith('__federation_expose_')) {
-    const url = `${REMOTE_HOST}/${scriptId}.bundle`;
+    const url = `${REMOTE_HOST}/${scriptId}.index.bundle`;
     console.log(
-      '[ScriptManager resolver] resolved URL for generic expose chunk:',
+      '[ScriptManager resolver] resolved URL for federation expose chunk:',
       scriptId,
       url
     );
     return { url };
   }
 
-  // 4 MFv1 catch-all: any chunk requested by HelloRemote container
-  // MF V1 uses chunk names like "src_HelloRemote_tsx" based on file paths
-  // Re.Pack outputs these as .index.bundle files
+  // 3. All other chunks requested by HelloRemote container
+  // This handles async chunks like vendors-*, src_*, etc.
+  // Re.Pack outputs these with .index.bundle extension
   if (caller === 'HelloRemote') {
     const url = `${REMOTE_HOST}/${scriptId}.index.bundle`;
     console.log(
