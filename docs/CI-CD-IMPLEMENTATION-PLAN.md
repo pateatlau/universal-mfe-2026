@@ -145,15 +145,19 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 
 ## Phase 2: GitHub Actions CI
 
-### Task 2.1: Basic CI Workflow
-- [ ] Create `.github/workflows/ci.yml`
-  - [ ] Trigger on push to main and pull requests
-  - [ ] Setup Node.js 24.x with caching
-  - [ ] Install dependencies with Yarn
-  - [ ] Run type checking
-  - [ ] Run linting
-  - [ ] Run unit tests
-  - [ ] Build shared packages
+### Task 2.1: Basic CI Workflow ✅ COMPLETE
+- [x] Create `.github/workflows/ci.yml`
+  - [x] Trigger on push to main/develop and pull requests
+  - [x] Setup Node.js via `.nvmrc` with Yarn caching
+  - [x] Install dependencies with Yarn (frozen lockfile)
+  - [x] Run type checking
+  - [x] Run linting
+  - [x] Run unit tests with coverage
+  - [x] Build shared packages
+
+**Features:**
+- Concurrency control (cancels in-progress runs for same branch)
+- Uses `ubuntu-latest` runner (free tier)
 
 ### Task 2.2: Web Build Job
 - [ ] Add web build job to CI workflow
