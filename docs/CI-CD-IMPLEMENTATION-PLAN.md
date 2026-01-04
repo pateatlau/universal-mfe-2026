@@ -31,8 +31,8 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
   - [ ] GitHub Actions enabled for the repository
   - [ ] Sufficient Actions minutes (free tier: 2,000 mins/month for public repos)
 
-- [ ] **Testing Infrastructure Setup**
-  - [ ] Jest configuration for unit tests
+- [x] **Testing Infrastructure Setup** ✅
+  - [x] Jest configuration for unit tests ✅
   - [x] ESLint configuration for linting ✅
   - [x] Prettier configuration for formatting ✅
   - [x] TypeScript strict mode already enabled ✅
@@ -114,15 +114,23 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 - `yarn format` - Check formatting (exits non-zero if files need formatting)
 - `yarn format:fix` - Auto-fix formatting issues
 
-### Task 1.4: Jest Configuration
-- [ ] Create `jest.config.js` in root
-  - [ ] Configure TypeScript transform
-  - [ ] Setup workspace projects
-  - [ ] Configure coverage thresholds
-- [ ] Add Jest dependencies to root package.json
-- [ ] Create sample tests for shared-utils
-- [ ] Create sample tests for shared-hello-ui
-- [ ] Verify tests pass locally
+### Task 1.4: Jest Configuration ✅ COMPLETE
+- [x] Create `jest.config.js` in root
+  - [x] Configure TypeScript transform (ts-jest)
+  - [x] Setup workspace projects
+  - [x] Configure coverage thresholds (50% minimum)
+- [x] Add Jest dependencies to root package.json
+- [x] Create sample tests for shared-utils
+- [x] Verify tests pass locally (6 tests, 100% coverage)
+
+**Dependencies added:**
+- jest@29.7.0
+- ts-jest@29.3.4
+- @types/jest@29.5.14
+
+**Notes:**
+- Only shared-utils has unit tests (pure TypeScript)
+- shared-hello-ui requires full RN runtime for testing (deferred to E2E - Task 4.5)
 
 ### Task 1.5: TypeScript Validation Script
 - [ ] Add `typecheck` script that runs `tsc --noEmit`
@@ -236,6 +244,25 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 - [ ] Add dependency vulnerability scanning (npm audit)
 - [ ] Add CodeQL analysis for JavaScript/TypeScript
 - [ ] Enable GitHub secret scanning alerts
+
+### Task 4.5: E2E Testing (Future)
+- [ ] Evaluate E2E testing frameworks
+  - [ ] Mobile: Detox vs Maestro
+  - [ ] Web: Playwright vs Cypress
+- [ ] Configure E2E test workflow
+  - [ ] Trigger on merge to develop/main branches only
+  - [ ] Optional: Manual trigger to control costs
+  - [ ] Separate workflow file for E2E tests
+- [ ] Web E2E setup
+  - [ ] Install and configure chosen framework
+  - [ ] Create basic smoke tests for web-shell
+  - [ ] Test remote module loading
+- [ ] Mobile E2E setup (higher cost - macOS runners)
+  - [ ] Install and configure chosen framework
+  - [ ] Create basic smoke tests for Android
+  - [ ] Create basic smoke tests for iOS Simulator
+  - [ ] Consider running only on release tags to minimize costs
+- [ ] NOTE: This task may increase GitHub Actions costs beyond $0/month due to macOS runner usage for mobile E2E tests
 
 ---
 
