@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build shared packages
+        run: yarn build:shared
+
       - name: Run type checking
         run: yarn typecheck
 
@@ -38,9 +41,6 @@ jobs:
 
       - name: Run unit tests
         run: yarn test --coverage
-
-      - name: Build shared packages
-        run: yarn build:shared
 
   # Web build job
   build-web:
