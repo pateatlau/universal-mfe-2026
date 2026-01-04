@@ -170,15 +170,19 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 - Depends on `check` job (runs after lint/test pass)
 - Uploads `web-shell-dist` and `web-remote-hello-dist` artifacts
 
-### Task 2.3: Android Build Job
-- [ ] Add Android build job to CI workflow
-  - [ ] Setup Java 17 (required for Gradle 8.14.1)
-  - [ ] Setup Android SDK
-  - [ ] Run symlink setup
-  - [ ] Build mobile-remote-hello for Android
-  - [ ] Build Android APK (debug)
-  - [ ] Upload APK as artifact
-  - [ ] Cache Gradle dependencies
+### Task 2.3: Android Build Job ✅ COMPLETE
+- [x] Add Android build job to CI workflow
+  - [x] Setup Java 17 (Temurin distribution)
+  - [x] Setup Android SDK via `android-actions/setup-android@v3`
+  - [x] Build mobile-remote-hello for Android
+  - [x] Build Android APK (debug)
+  - [x] Upload APK as artifact (7 day retention)
+  - [x] Cache Gradle dependencies
+
+**Features:**
+- Depends on `check` job (runs after lint/test pass)
+- Gradle cache for faster builds
+- Uploads `android-debug-apk` artifact
 
 ### Task 2.4: iOS Build Job
 - [ ] Add iOS build job to CI workflow
