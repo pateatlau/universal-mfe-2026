@@ -160,10 +160,10 @@ jobs:
       - name: Setup CocoaPods cache
         uses: actions/cache@v4
         with:
-          path: packages/mobile-host/ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('packages/mobile-host/ios/Podfile.lock') }}
+          path: ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-cocoapods-${{ hashFiles('packages/mobile-host/ios/Podfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pods-
+            ${{ runner.os }}-cocoapods-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -176,7 +176,10 @@ jobs:
 
       - name: Install CocoaPods dependencies
         working-directory: packages/mobile-host/ios
-        run: pod install
+        run: |
+          # Remove committed Pods to regenerate with CI paths
+          rm -rf Pods
+          pod install
 
       - name: Build iOS app for Simulator
         working-directory: packages/mobile-host/ios
@@ -188,7 +191,8 @@ jobs:
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -derivedDataPath build \
-            build
+            build \
+            2>&1 | tee build.log || (tail -100 build.log && exit 1)
 
       - name: Zip iOS app bundle
         run: |
