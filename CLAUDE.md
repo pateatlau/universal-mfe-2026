@@ -377,3 +377,17 @@ The codebase uses stub files to replace incompatible dependencies:
 2. Run `yarn install` to update node_modules
 3. Run `cd packages/mobile-host/ios && pod install` to regenerate Pods
 4. Never manually edit files in `ios/Pods/` directory
+
+## CI/CD Implementation Workflow
+
+When implementing CI/CD tasks (or any multi-step implementation plan), follow this strict workflow:
+
+1. **Implement the current task only**
+2. **Perform all applicable tests** - Run commands to verify the implementation works
+3. **Wait for manual verification** - The user will manually verify the changes
+4. **Debug if needed** - If issues are found, fix and re-test, including manual verification
+5. **Update implementation plan status** - Only after manual verification passes
+6. **Commit the changes** - Only after manual verification passes
+7. **Ask for confirmation** - Explicitly ask "Do you want me to proceed to the next task?" and WAIT for user response
+
+**CRITICAL:** Do NOT proceed to the next task until the user explicitly confirms. Speed is not the priority - correct, complete, testable, and verifiable implementations are the most important metrics.
