@@ -6,6 +6,8 @@ const dirname = Repack.getDirname(import.meta.url);
 const platform = process.env.PLATFORM || 'android';
 // Use separate ports for Android (9004) and iOS (9005) to allow simultaneous testing
 const devServerPort = platform === 'ios' ? 9005 : 9004;
+// Use separate output directories per platform to prevent builds from overwriting each other
+const outputDir = path.join(dirname, 'dist', platform);
 
 export default {
   context: dirname,
@@ -17,7 +19,7 @@ export default {
   },
 
   output: {
-    path: path.join(dirname, 'dist'),
+    path: outputDir,
     // RN-style entry bundle; we don't care much about this one
     filename: 'index.bundle',
     publicPath: '',
@@ -31,9 +33,7 @@ export default {
       'Access-Control-Allow-Origin': '*',
     },
     static: {
-      // directory: path.join(dirname, 'public'),
-      directory: path.join(dirname, 'dist'),
-      // publicPath: '/',
+      directory: outputDir,
     },
   },
 
