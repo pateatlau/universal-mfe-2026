@@ -41,3 +41,42 @@ jobs:
 
       - name: Build shared packages
         run: yarn build:shared
+
+  # Web build job
+  build-web:
+    name: Build Web
+    runs-on: ubuntu-latest
+    needs: check
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Build web packages
+        run: yarn build:web
+
+      - name: Upload web-shell artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-shell-dist
+          path: packages/web-shell/dist/
+          retention-days: 7
+
+      - name: Upload web-remote-hello artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-remote-hello-dist
+          path: packages/web-remote-hello/dist/
+          retention-days: 7

@@ -159,12 +159,16 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 - Concurrency control (cancels in-progress runs for same branch)
 - Uses `ubuntu-latest` runner (free tier)
 
-### Task 2.2: Web Build Job
-- [ ] Add web build job to CI workflow
-  - [ ] Build web-shell
-  - [ ] Build web-remote-hello
-  - [ ] Upload build artifacts
-  - [ ] Cache node_modules and build outputs
+### Task 2.2: Web Build Job ✅ COMPLETE
+- [x] Add web build job to CI workflow
+  - [x] Build web-shell
+  - [x] Build web-remote-hello
+  - [x] Upload build artifacts (7 day retention)
+  - [x] Yarn cache via setup-node action
+
+**Features:**
+- Depends on `check` job (runs after lint/test pass)
+- Uploads `web-shell-dist` and `web-remote-hello-dist` artifacts
 
 ### Task 2.3: Android Build Job
 - [ ] Add Android build job to CI workflow
