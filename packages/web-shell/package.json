@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "npx rspack serve --config ./rspack.config.mjs",
-    "build": "npx rspack build --config ./rspack.config.mjs"
+    "build": "npx rspack build --config ./rspack.config.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "react": "19.2.0",

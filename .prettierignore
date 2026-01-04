@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.bundle
+
+# Android
+**/android/build/
+**/android/.gradle/
+.gradle/
+
+# iOS - all Pods and Xcode artifacts
+**/ios/Pods/
+**/ios/build/
+**/*.xcworkspace/
+**/*.xcodeproj/
+
+# Coverage
+coverage/
+
+# Generated files
+**/@mf-types/
+**/generated/
+**/__generated__/
+
+# Lock files
+yarn.lock
+package-lock.json
+
+# Other
+.DS_Store
+*.log
