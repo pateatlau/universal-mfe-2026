@@ -15,21 +15,44 @@ const path = require('path');
 const ROOT_DIR = path.resolve(__dirname, '..');
 let hasErrors = false;
 
+/**
+ * Log an error message and mark the validation as failed.
+ *
+ * Logs the provided message prefixed with a red cross and sets the module-level `hasErrors` flag to true.
+ * @param {string} message - The error message to log.
+ */
 function error(message) {
   console.error(`❌ ${message}`);
   hasErrors = true;
 }
 
+/**
+ * Displays a success message prefixed with a checkmark.
+ * @param {string} message - Human-readable message describing the successful outcome.
+ */
 function success(message) {
   console.log(`✅ ${message}`);
 }
 
+/**
+ * Log a warning message prefixed with a warning emoji.
+ * @param {string} message - The warning text to display.
+ */
 function warn(message) {
   console.warn(`⚠️  ${message}`);
 }
 
 /**
- * Check that all dependencies use exact versions (no ^ or ~)
+ * Verify that dependencies in selected package.json files use exact versions.
+ *
+ * Scans a predefined list of package.json files and examines `dependencies`,
+ * `devDependencies`, and `peerDependencies` for version ranges (e.g., `^`, `~`,
+ * `>=`, `<=`, `*`, or whitespace-containing values). Internal workspace
+ * dependencies with names matching workspace prefixes are allowed to use `*`
+ * or `workspace:*` and are skipped. If any ranged versions are found the
+ * function logs each offending entry and sets the global `hasErrors` flag;
+ * otherwise it logs a success message including the total number of checked
+ * dependencies.
  */
 function checkExactVersions() {
   console.log('\n📦 Checking for exact dependency versions...\n');
@@ -93,7 +116,9 @@ function checkExactVersions() {
 }
 
 /**
- * Check that Node.js version matches .nvmrc
+ * Verifies the running Node.js version matches the version specified in the repository's .nvmrc.
+ *
+ * Reports an error if `.nvmrc` is missing or if the versions differ, and reports success when they match.
  */
 function checkNodeVersion() {
   console.log('\n🟢 Checking Node.js version...\n');
@@ -115,7 +140,9 @@ function checkNodeVersion() {
 }
 
 /**
- * Check that Yarn version matches packageManager field
+ * Validates that the installed Yarn version matches the version declared in the root package.json `packageManager` field.
+ *
+ * If `packageManager` is missing or not in the `yarn@<semver>` format, records an error; if the installed Yarn version cannot be determined or does not match the declared version, records an error; if they match, records success.
  */
 function checkYarnVersion() {
   console.log('\n🧶 Checking Yarn version...\n');
