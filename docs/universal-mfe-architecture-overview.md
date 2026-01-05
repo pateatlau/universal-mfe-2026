@@ -67,7 +67,7 @@ Uses React Native Web to render shared RN components
 
 Mobile Host
 
-Bundled by Re.Pack
+Bundled by Re.Pack (which uses Rspack internally as of v5.x)
 
 Uses Module Federation v2
 
@@ -278,7 +278,7 @@ React Native 0.80.x
 
 Hermes
 
-Re.Pack 5.2.x
+Re.Pack 5.2.x (uses Rspack internally)
 
 ModuleFederationPluginV2
 

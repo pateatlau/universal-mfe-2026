@@ -772,7 +772,47 @@ packages/
 
 ---
 
-## 10. Next Steps
+## 10. Testing Strategy
+
+### 10.1 Unit Testing - Jest (Unified Approach)
+
+**Decision:** Use Jest for all packages (web, mobile, and shared)
+
+**Rationale:**
+- **Maximum code sharing** - Core Universal MFE Platform goal
+- **Consistency** - Same framework, patterns, utilities everywhere
+- **Required for React Native** - Jest is the standard for RN testing
+- **Shared infrastructure** - Shared configs, utilities, patterns across all packages
+
+**Implementation:**
+- Jest 29.7.x for all packages
+- `@testing-library/react` for web components
+- `@testing-library/react-native` for mobile components
+- Shared Jest configuration and test utilities
+- ts-jest for TypeScript support
+
+**Alternative Considered:**
+- Vitest for web (rejected - would break code sharing goal and require maintaining two test frameworks)
+
+---
+
+### 10.2 E2E Testing - Maestro
+
+**Decision:** Use Maestro for mobile E2E testing
+
+**Rationale:**
+- **Simpler setup** - YAML-based, no code required
+- **Modern** - Built for modern mobile testing
+- **Better developer experience** - Easier to write and maintain
+- **Cross-platform** - Works on iOS and Android
+- **No native dependencies** - Easier CI/CD setup
+
+**Alternative Considered:**
+- Detox (rejected - more complex setup, harder to maintain, more CI/CD overhead)
+
+---
+
+## 11. Next Steps
 
 1. **Review and Approve:** Review this document and approve the approach
 2. **Kickoff:** Start Phase 1 (Foundation & Setup)
