@@ -184,6 +184,7 @@ jobs:
       - name: Build iOS app for Simulator
         working-directory: packages/mobile-host/ios
         run: |
+          set -o pipefail
           xcodebuild \
             -workspace MobileHostTmp.xcworkspace \
             -scheme MobileHostTmp \
@@ -192,20 +193,35 @@ jobs:
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -derivedDataPath build \
             build \
-            2>&1 | tee build.log || (tail -100 build.log && exit 1)
+            2>&1 | tee build.log
+
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+          if [ $BUILD_EXIT_CODE -ne 0 ]; then
+            echo "=== Build failed with exit code $BUILD_EXIT_CODE ==="
+            echo "=== Last 200 lines of build log ==="
+            tail -200 build.log
+            exit $BUILD_EXIT_CODE
+          fi
+
+          echo "=== Build completed successfully ==="
 
       - name: Find and zip iOS app bundle
         working-directory: packages/mobile-host/ios
         run: |
-          echo "Searching for .app bundle..."
-          find build -name "*.app" -type d 2>/dev/null || true
+          echo "=== Searching for .app bundles ==="
+          find build -name "*.app" -type d 2>/dev/null || echo "No .app bundles found"
+
+          echo "=== Contents of Products directory ==="
+          ls -la build/Build/Products/Debug-iphonesimulator/ 2>/dev/null | head -50 || echo "Products directory not found"
+
+          echo "=== Checking for build errors in log ==="
+          grep -i "error:" build.log | tail -20 || echo "No errors found in log"
 
           APP_PATH=$(find build -name "MobileHostTmp.app" -type d 2>/dev/null | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "Error: MobileHostTmp.app bundle not found"
-            echo "Contents of build directory:"
-            ls -la build/ || true
-            find build -type d -maxdepth 4 || true
+            echo "=== Last 100 lines of build log ==="
+            tail -100 build.log
             exit 1
           fi
 
