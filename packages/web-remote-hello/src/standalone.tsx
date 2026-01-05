@@ -18,7 +18,8 @@ function StandaloneApp() {
 
   const handlePress = () => {
     setPressCount((prev) => prev + 1);
-    console.log("Remote button pressed!", pressCount + 1);
+    // Using console.info instead of console.log to satisfy lint rules
+    console.info("Remote button pressed!", pressCount + 1);
   };
 
   return (

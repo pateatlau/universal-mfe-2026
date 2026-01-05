@@ -3,6 +3,15 @@ import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
 
+// TODO: App Icons - The AppIcon.appiconset contains icon size definitions but no actual image files.
+// Required icon sizes for iOS:
+// - 20x20 @2x, @3x (Notification)
+// - 29x29 @2x, @3x (Settings)
+// - 40x40 @2x, @3x (Spotlight)
+// - 60x60 @2x, @3x (App Icon)
+// - 1024x1024 @1x (App Store)
+// Add PNG files to Images.xcassets/AppIcon.appiconset/ and update Contents.json with "filename" entries.
+
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
   var window: UIWindow?

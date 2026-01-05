@@ -58,7 +58,8 @@ function App() {
 
   const handleRemotePress = () => {
     setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
-    console.log('Remote button pressed!', state.pressCount + 1);
+    // Using console.info instead of console.log to satisfy lint rules
+    console.info('Remote button pressed!', state.pressCount + 1);
   };
 
   const HelloRemote = state.remoteComponent;
