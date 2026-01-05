@@ -109,9 +109,16 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
-            ## iOS Simulator App
+            ## iOS Simulator App (Debug Build)
 
             Download the iOS Simulator app bundle below.
+
+            > **⚠️ Important:** This is a debug build that requires the Metro bundler to be running on your development machine. It is not a standalone production app.
+
+            ### Prerequisites
+            1. Clone the repository and run `yarn install`
+            2. Start the Metro bundler: `yarn workspace @universal/mobile-host start:bundler:ios`
+            3. Start the remote server: `yarn workspace @universal/mobile-remote-hello serve:ios`
 
             ### Installation
             1. Download `ios-simulator-app.zip`
@@ -121,13 +128,16 @@ jobs:
                xcrun simctl install booted MobileHostTmp.app
                xcrun simctl launch booted com.universal.mobilehost
                ```
+            4. The app will connect to Metro bundler at `http://localhost:8082`
 
             ### Requirements
             - macOS with Xcode installed
             - iOS Simulator (iPhone 16 recommended)
 
+            See the [README](https://github.com/pateatlau/universal-mfe-yarn-seed#mobile-build-limitations) for more details.
+
             ---
-            *This is a Simulator-only build. It cannot run on physical iOS devices.*
+            *This is a Simulator-only debug build. For production builds without Metro dependency, see Phase 5 in the CI/CD Implementation Plan.*
           files: |
             packages/mobile-host/ios/ios-simulator-app.zip
           draft: false

@@ -70,17 +70,28 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
-            ## Android APK
+            ## Android APK (Debug Build)
 
             Download the debug APK below to install on your Android device or emulator.
+
+            > **⚠️ Important:** This is a debug build that requires the Metro bundler to be running on your development machine. It is not a standalone production APK.
+
+            ### Prerequisites
+            1. Clone the repository and run `yarn install`
+            2. Start the Metro bundler: `yarn workspace @universal/mobile-host start:bundler:android`
+            3. Start the remote server: `yarn workspace @universal/mobile-remote-hello serve:android`
+            4. Ensure your device/emulator can reach your machine (same network or USB debugging)
 
             ### Installation
             1. Download `app-debug.apk`
             2. Enable "Install from unknown sources" on your device
             3. Open the APK to install
+            4. The app will connect to Metro bundler at `http://10.0.2.2:8081` (emulator) or your machine's IP (physical device)
+
+            See the [README](https://github.com/pateatlau/universal-mfe-yarn-seed#mobile-build-limitations) for more details.
 
             ---
-            *This is a debug build for testing purposes.*
+            *For production builds without Metro dependency, see Phase 5 in the CI/CD Implementation Plan.*
           files: |
             packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk
           draft: false
