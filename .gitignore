@@ -20,9 +20,6 @@ packages/mobile-remote-hello/android/.gradle/
 packages/mobile-remote-hello/android/build/
 packages/mobile-remote-hello/android/app/build/
 
-# Android debug keystore (auto-generated)
-packages/mobile-remote-hello/android/app/debug.keystore
-
 # iOS local environment (contains machine-specific paths)
 packages/mobile-host/ios/.xcode.env.local
 packages/mobile-remote-hello/ios/.xcode.env.local
