@@ -23,6 +23,15 @@ interface AppState {
   pressCount: number;
 }
 
+/**
+ * Root React component that renders the web shell UI and dynamically loads a remote Module Federation component.
+ *
+ * Manages loading and error state for the remote module, tracks how many times the remote's button is pressed,
+ * and conditionally renders the load button, loading indicator, error UI, the loaded remote component (passed
+ * a `name` prop and an `onPress` handler), and a local press counter.
+ *
+ * @returns The root React element for the app.
+ */
 function App() {
   const [state, setState] = useState<AppState>({
     remoteComponent: null,

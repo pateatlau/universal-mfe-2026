@@ -12,6 +12,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import HelloRemote from './HelloRemote';
 
+/**
+ * Renders a standalone React Native entry point that hosts the HelloRemote component and displays a press counter.
+ *
+ * The component maintains a local `pressCount` state, increments it each time the remote's `onPress` is invoked, logs the updated count to the console, and conditionally shows a counter badge after the first press. It always renders a header and the HelloRemote component with `name="Mobile User"` and `onPress` bound to the internal handler.
+ *
+ * @returns The root JSX element for the App component.
+ */
 function App() {
   const [pressCount, setPressCount] = useState(0);
 

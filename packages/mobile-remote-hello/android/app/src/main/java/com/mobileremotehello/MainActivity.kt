@@ -8,15 +8,17 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 class MainActivity : ReactActivity() {
 
   /**
-   * Returns the name of the main component registered from JavaScript. This is used to schedule
-   * rendering of the component.
-   */
+ * Identifies the main JavaScript component to render.
+ *
+ * @return The registered main JavaScript component name.
+ */
   override fun getMainComponentName(): String = "MobileRemoteHello"
 
   /**
-   * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]
-   * which allows you to enable New Architecture with a single boolean flags [fabricEnabled]
-   */
+       * Creates the activity's ReactActivityDelegate for hosting the JavaScript component.
+       *
+       * @return The configured ReactActivityDelegate for this activity's main component; enables Fabric when `fabricEnabled` is true.
+       */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 }
