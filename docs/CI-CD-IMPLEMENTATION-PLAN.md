@@ -304,10 +304,28 @@ git push --tags
 - Rspack persistent caching not added - builds complete in ~5s without it
 - Build timing groups added to ci.yml for better GitHub Actions log visibility
 
-### Task 4.2: PR Checks
-- [ ] Add required status checks for PRs
-- [ ] Configure branch protection rules on main
-- [ ] Add PR comment with build status/artifact links
+### Task 4.2: PR Checks ✅ COMPLETE
+- [x] Add required status checks for PRs (manual GitHub UI configuration)
+- [x] Configure branch protection rules on main (manual GitHub UI configuration)
+- [x] Add PR comment with build status/artifact links (automated via `pr-summary` job)
+
+**Automated (ci.yml):**
+- Added `pr-summary` job that runs after all builds complete on PRs
+- Posts a comment with build status table and link to download artifacts
+- Updates existing comment on subsequent pushes (doesn't spam)
+
+**Manual GitHub Configuration Required:**
+To enable branch protection, go to **Settings → Branches → Add branch protection rule**:
+1. Branch name pattern: `main`
+2. Enable: "Require a pull request before merging"
+3. Enable: "Require status checks to pass before merging"
+4. Required status checks:
+   - `Lint, Typecheck, Test`
+   - `Build Web`
+   - `Build Android`
+   - `Build iOS (Simulator)`
+5. Enable: "Require branches to be up to date before merging" (optional)
+6. Enable: "Do not allow bypassing the above settings" (recommended)
 
 ### Task 4.3: Version Management
 - [ ] Add version validation check
