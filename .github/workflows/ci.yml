@@ -177,9 +177,9 @@ jobs:
       - name: Install CocoaPods dependencies
         working-directory: packages/mobile-host/ios
         run: |
-          # Remove committed Pods to regenerate with CI paths
-          rm -rf Pods
-          pod install
+          # Clean and reinstall pods for CI environment
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
 
       - name: Build iOS app for Simulator
         working-directory: packages/mobile-host/ios
