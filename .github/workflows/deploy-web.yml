@@ -1,0 +1,128 @@
+name: Deploy Web to Vercel
+
+on:
+  push:
+    branches: [main]
+
+# Cancel in-progress deployments for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+jobs:
+  # Deploy web-remote-hello first (no dependencies on other deployments)
+  deploy-web-remote:
+    name: Deploy Web Remote
+    runs-on: ubuntu-latest
+
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.deployment-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Build web-remote-hello
+        working-directory: packages/web-remote-hello
+        run: yarn build
+
+      - name: Pull Vercel environment
+        working-directory: packages/web-remote-hello
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_REMOTE }}
+
+      - name: Deploy to Vercel
+        id: deploy
+        working-directory: packages/web-remote-hello
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | grep -E '^https://' | tail -1)
+          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_REMOTE }}
+
+  # Deploy web-shell after web-remote-hello (needs the remote URL)
+  deploy-web-shell:
+    name: Deploy Web Shell
+    runs-on: ubuntu-latest
+    needs: deploy-web-remote
+
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.deployment-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Build web-shell
+        working-directory: packages/web-shell
+        run: yarn build
+        env:
+          REMOTE_HELLO_URL: ${{ needs.deploy-web-remote.outputs.deployment-url }}
+
+      - name: Pull Vercel environment
+        working-directory: packages/web-shell
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_SHELL }}
+
+      - name: Deploy to Vercel
+        id: deploy
+        working-directory: packages/web-shell
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | grep -E '^https://' | tail -1)
+          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_SHELL }}
+
+  # Summary job to output deployment URLs
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-web-remote, deploy-web-shell]
+
+    steps:
+      - name: Print deployment URLs
+        run: |
+          echo "## Deployment Complete! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| web-remote-hello | ${{ needs.deploy-web-remote.outputs.deployment-url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| web-shell | ${{ needs.deploy-web-shell.outputs.deployment-url }} |" >> $GITHUB_STEP_SUMMARY
