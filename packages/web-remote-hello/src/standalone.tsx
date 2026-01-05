@@ -13,6 +13,13 @@ import { createRoot } from "react-dom/client";
 import { View, Text, StyleSheet } from "react-native";
 import HelloRemote from "./HelloRemote";
 
+/**
+ * Renders a standalone testing UI for the HelloRemote component that includes a header and a press counter.
+ *
+ * The component increments an internal press counter each time the remote's action is triggered and displays the total presses when greater than zero.
+ *
+ * @returns The React element for the standalone testing interface.
+ */
 function StandaloneApp() {
   const [pressCount, setPressCount] = useState(0);
 
@@ -107,4 +114,3 @@ root.render(
     <StandaloneApp />
   </React.StrictMode>
 );
-

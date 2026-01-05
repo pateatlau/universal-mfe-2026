@@ -10,6 +10,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   var reactNativeDelegate: ReactNativeDelegate?
   var reactNativeFactory: RCTReactNativeFactory?
 
+  /// Configures the app window, initializes the React Native delegate and factory, and starts the "MobileRemoteHello" React Native module.
+  /// - Parameters:
+  ///   - application: The singleton application instance.
+  ///   - launchOptions: Launch options provided at launch; forwarded to the React Native runtime.
+  /// - Returns: `true` to indicate successful launch.
   func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -34,10 +39,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
+  /// Provides the JavaScript bundle URL used by the given React Native bridge.
+  /// - Parameter bridge: The React Native bridge requesting the bundle URL.
+  /// - Returns: A `URL?` pointing to the JavaScript bundle to load, or `nil` if no bundle is available.
   override func sourceURL(for bridge: RCTBridge) -> URL? {
     self.bundleURL()
   }
 
+  /// Provides the JavaScript bundle URL used to initialize the React Native bridge.
+  /// 
+  /// In DEBUG builds this points to the Re.Pack dev server URL for the iOS platform; in non-DEBUG builds it points to the embedded `main.jsbundle` resource in the app bundle.
+  /// - Returns: The URL of the JavaScript bundle, or `nil` if no bundle URL is available.
   override func bundleURL() -> URL? {
 #if DEBUG
     // For Re.Pack dev server, explicitly set the bundle URL
