@@ -133,6 +133,7 @@ For standalone production builds, see [Phase 5 in CI/CD Implementation Plan](doc
 | [MF V2 Implementation](docs/universal-mfe-mf-v2-implementation.md) | Configuration reference and troubleshooting |
 | [Testing Guide](docs/universal-mfe-all-platforms-testing-guide.md) | Quick reference for all platforms |
 | [Architecture Overview](docs/universal-mfe-architecture-overview.md) | System design and patterns |
+| [POC-1 Roadmap](docs/universal-mfe-poc-1-requirements.md) | Future features (Auth, Payments, Navigation, Testing) |
 | [CLAUDE.md](CLAUDE.md) | Development guidelines and constraints |
 
 ## Key Constraints
