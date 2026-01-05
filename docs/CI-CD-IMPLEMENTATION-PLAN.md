@@ -327,11 +327,20 @@ To enable branch protection, go to **Settings → Branches → Add branch protec
 5. Enable: "Require branches to be up to date before merging" (optional)
 6. Enable: "Do not allow bypassing the above settings" (recommended)
 
-### Task 4.3: Version Management
-- [ ] Add version validation check
-  - [ ] Verify no `^` or `~` in dependencies
-  - [ ] Verify Node.js version matches .nvmrc
-  - [ ] Verify Yarn version matches packageManager
+### Task 4.3: Version Management ✅ COMPLETE
+- [x] Add version validation check
+  - [x] Verify no `^` or `~` in dependencies
+  - [x] Verify Node.js version matches .nvmrc
+  - [x] Verify Yarn version matches packageManager
+
+**Implementation:**
+- Created `scripts/validate-versions.js` - validates:
+  - All dependencies use exact versions (no `^`, `~`, `>=`, `*`)
+  - Internal workspace deps (`@universal/*`) are allowed to use `*`
+  - Node.js version matches `.nvmrc`
+  - Yarn version matches `packageManager` field in package.json
+- Added `yarn validate:versions` script to root package.json
+- Added validation step to CI workflow (runs after install, before build)
 
 ### Task 4.4: Security Scanning (Optional)
 - [ ] Add dependency vulnerability scanning (npm audit)

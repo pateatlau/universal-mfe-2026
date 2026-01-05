@@ -33,6 +33,12 @@ jobs:
           yarn install --frozen-lockfile
           echo "::endgroup::"
 
+      - name: Validate versions
+        run: |
+          echo "::group::Validating versions"
+          yarn validate:versions
+          echo "::endgroup::"
+
       - name: Build shared packages
         run: |
           echo "::group::Building shared packages"
