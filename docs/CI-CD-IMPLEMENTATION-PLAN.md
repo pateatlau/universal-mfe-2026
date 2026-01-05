@@ -1,7 +1,7 @@
 # CI/CD Implementation Plan
 
-**Status:** Phase 3 Complete - All Platforms Deployed
-**Last Updated:** 2026-01-05
+**Status:** Phase 5 Complete - Standalone Mode CI/CD Added
+**Last Updated:** 2026-01-06
 **Target:** POC with minimal costs / free tier options
 
 ---
@@ -377,37 +377,95 @@ To enable branch protection, go to **Settings → Branches → Add branch protec
 
 ---
 
-## Phase 5: Production Mobile Builds (Future)
+## Phase 5: Standalone Mode CI/CD
+
+Standalone mode allows mobile-remote-hello to run as an independent "Super App" without the host shell. This is useful for testing remotes in isolation and demonstrating the Module Federation concept.
+
+### Task 5.1: Add Standalone Build Scripts ✅ COMPLETE
+- [x] `build:standalone` script in mobile-remote-hello package.json
+- [x] `rspack.standalone.config.mjs` configuration
+- [x] Platform-specific dist outputs: `dist/standalone/android/`, `dist/standalone/ios/`
+- [x] Port configuration: Android 8083, iOS 8084
+- [x] Kill scripts for standalone bundlers
+
+**Note:** This task was completed prior to CI/CD implementation.
+
+### Task 5.2: Add Standalone Android Build to CI ✅ COMPLETE
+- [x] Add `build-standalone-android` job to `.github/workflows/ci.yml`
+  - [x] Build standalone bundle for Android
+  - [x] Build standalone Android APK (debug)
+  - [x] Upload APK as artifact (`standalone-android-debug-apk`)
+- [x] Depends on `check` job
+- [x] Uses existing Java 17, Android SDK, Gradle caching setup
+
+### Task 5.3: Add Standalone iOS Build to CI ✅ COMPLETE
+- [x] Add `build-standalone-ios` job to `.github/workflows/ci.yml`
+  - [x] Use macOS-14 runner with Xcode 16.2
+  - [x] Build standalone bundle for iOS
+  - [x] Run pod install with clean slate
+  - [x] Build standalone iOS app for Simulator
+  - [x] Zip and upload .app bundle as artifact (`standalone-ios-simulator-app`)
+- [x] Depends on `check` job
+- [x] Uses existing CocoaPods caching setup
+
+### Task 5.4: Update Deploy Android Workflow ✅ COMPLETE
+- [x] Update `.github/workflows/deploy-android.yml` to include standalone APK
+  - [x] Build both host and standalone APKs
+  - [x] Rename APKs: `mobile-host-debug.apk`, `mobile-remote-standalone-debug.apk`
+  - [x] Add both APKs to GitHub Release
+  - [x] Update release body with standalone instructions
+
+### Task 5.5: Update Deploy iOS Workflow ✅ COMPLETE
+- [x] Update `.github/workflows/deploy-ios.yml` to include standalone app
+  - [x] Build both host and standalone iOS apps
+  - [x] Rename zips: `mobile-host-simulator.zip`, `mobile-remote-standalone-simulator.zip`
+  - [x] Add both zips to GitHub Release
+  - [x] Update release body with standalone instructions
+
+### Task 5.6: Update PR Summary Comment ✅ COMPLETE
+- [x] Update `pr-summary` job in ci.yml
+  - [x] Add standalone build status rows to table
+  - [x] Add standalone artifacts to artifacts table
+  - [x] Add `build-standalone-android` and `build-standalone-ios` to needs array
+
+### Task 5.7: Update Documentation ✅ COMPLETE
+- [x] Update `docs/CI-CD-IMPLEMENTATION-PLAN.md` with Phase 5
+- [x] Update Workflow Files Summary table
+- [x] Update Success Criteria section
+
+---
+
+## Phase 6: Production Mobile Builds (Future)
 
 These tasks are required for fully standalone mobile apps that work without a dev server.
 
-### Task 5.1: Android Release Build
+### Task 6.1: Android Release Build
 - [ ] Create release signing keystore
 - [ ] Configure `android/app/build.gradle` for release signing
 - [ ] Update workflow to use `assembleRelease` instead of `assembleDebug`
 - [ ] Configure ProGuard/R8 minification (optional)
 - [ ] Test standalone APK on physical device
 
-### Task 5.2: Android Play Store Deployment (Optional)
+### Task 6.2: Android Play Store Deployment (Optional)
 - [ ] Create Google Play Developer account ($25 one-time)
 - [ ] Generate Play Store service account for CI/CD
 - [ ] Configure Fastlane or gradle-play-publisher for automated uploads
 - [ ] Setup internal/beta/production tracks
 
-### Task 5.3: iOS Release Build
+### Task 6.3: iOS Release Build
 - [ ] Create Apple Developer account ($99/year)
 - [ ] Generate distribution certificate and provisioning profiles
 - [ ] Configure Xcode project for release signing
 - [ ] Update workflow to build for device (not simulator)
 - [ ] Archive and export IPA
 
-### Task 5.4: iOS TestFlight/App Store Deployment (Optional)
+### Task 6.4: iOS TestFlight/App Store Deployment (Optional)
 - [ ] Configure App Store Connect API key for CI/CD
 - [ ] Setup Fastlane for automated uploads
 - [ ] Configure TestFlight for beta testing
 - [ ] Setup App Store submission workflow
 
-### Cost Impact of Phase 5
+### Cost Impact of Phase 6
 | Item | Cost |
 |------|------|
 | Apple Developer Account | $99/year |
@@ -420,11 +478,11 @@ These tasks are required for fully standalone mobile apps that work without a de
 
 | File | Purpose | Trigger |
 |------|---------|---------|
-| `.github/workflows/ci.yml` | Build, lint, test, audit | Push, PR |
+| `.github/workflows/ci.yml` | Build, lint, test, audit (host + standalone) | Push, PR |
 | `.github/workflows/codeql.yml` | CodeQL security analysis | Push, PR, Weekly |
 | `.github/workflows/deploy-web.yml` | Deploy to Vercel | Push to main |
-| `.github/workflows/deploy-android.yml` | Build APK & release | Tag v* |
-| `.github/workflows/deploy-ios.yml` | Build Simulator .app & release | Tag v* |
+| `.github/workflows/deploy-android.yml` | Build host + standalone APKs & release | Tag v* |
+| `.github/workflows/deploy-ios.yml` | Build host + standalone Simulator apps & release | Tag v* |
 
 ---
 
@@ -447,11 +505,14 @@ These tasks are required for fully standalone mobile apps that work without a de
   - Remote: https://universal-mfe-2026-remote.vercel.app/
   - Shell: https://universal-mfe-2026-shell.vercel.app/
 - [x] Tagged releases automatically build and publish Android APK ✅
-  - https://github.com/pateatlau/universal-mfe-2026/releases/download/v1.0.0/app-debug.apk
+  - Host: `mobile-host-debug.apk`
+  - Standalone: `mobile-remote-standalone-debug.apk`
 - [x] Tagged releases automatically build and publish iOS Simulator app ✅
-  - https://github.com/pateatlau/universal-mfe-2026/releases/download/v1.0.0/ios-simulator-app.zip
+  - Host: `mobile-host-simulator.zip`
+  - Standalone: `mobile-remote-standalone-simulator.zip`
 - [x] Build times under 10 minutes for full CI ✅
 - [x] Zero cost for CI/CD ($0/month) ✅
+- [x] Standalone mode builds included in CI and deploy workflows ✅
 
 ---
 
@@ -499,4 +560,13 @@ These tasks are required for fully standalone mobile apps that work without a de
 - Task 4.4: Security scanning (yarn audit, CodeQL) ✅
 - Task 4.5: E2E Testing - Future
 
-**Phase 5: FUTURE** - Production mobile builds (requires signing setup and developer accounts)
+**Phase 5: COMPLETE** - Standalone mode CI/CD
+- Task 5.1: Standalone build scripts (already implemented) ✅
+- Task 5.2: Standalone Android CI build ✅
+- Task 5.3: Standalone iOS CI build ✅
+- Task 5.4: Update deploy-android workflow (host + standalone) ✅
+- Task 5.5: Update deploy-ios workflow (host + standalone) ✅
+- Task 5.6: Update PR summary comment ✅
+- Task 5.7: Update documentation ✅
+
+**Phase 6: FUTURE** - Production mobile builds (requires signing setup and developer accounts)
