@@ -8,10 +8,16 @@ dist/
 build/
 *.tsbuildinfo
 
+# Test coverage
+coverage/
+
 # Android build artifacts
 packages/mobile-host/android/app/.cxx/
 packages/mobile-host/android/.gradle/
 packages/mobile-host/android/build/
+
+# iOS local environment (contains machine-specific paths)
+packages/mobile-host/ios/.xcode.env.local
 
 # IDE
 .vscode/

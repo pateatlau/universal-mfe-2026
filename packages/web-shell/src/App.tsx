@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    minHeight: '100vh',
+    minHeight: '100vh' as unknown as number, // Web-only CSS value
     backgroundColor: '#f5f5f5',
   },
   header: {
