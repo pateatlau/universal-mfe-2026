@@ -28,19 +28,49 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Validate versions
+        run: |
+          echo "::group::Validating versions"
+          yarn validate:versions
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       - name: Run type checking
-        run: yarn typecheck
+        run: |
+          echo "::group::Type checking"
+          yarn typecheck
+          echo "::endgroup::"
 
       - name: Run linting
-        run: yarn lint
+        run: |
+          echo "::group::Linting"
+          yarn lint
+          echo "::endgroup::"
 
       - name: Run unit tests
-        run: yarn test --coverage
+        run: |
+          echo "::group::Running unit tests"
+          yarn test --coverage
+          echo "::endgroup::"
+
+      - name: Security audit
+        run: |
+          echo "::group::Security audit"
+          # Run yarn audit, but don't fail on vulnerabilities (informational)
+          # Use --groups to check both dependencies and devDependencies
+          yarn audit --groups dependencies || true
+          echo "::endgroup::"
+        continue-on-error: true
 
   # Web build job
   build-web:
@@ -59,13 +89,22 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       - name: Build web packages
-        run: yarn build:web
+        run: |
+          echo "::group::Building web packages"
+          yarn build:web
+          echo "::endgroup::"
 
       - name: Upload web-shell artifact
         uses: actions/upload-artifact@v6
@@ -117,17 +156,29 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       - name: Build mobile remote for Android
-        run: yarn build:mobile:android
+        run: |
+          echo "::group::Building mobile remote for Android"
+          yarn build:mobile:android
+          echo "::endgroup::"
 
       - name: Build Android APK (debug)
         working-directory: packages/mobile-host/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          echo "::group::Building Android APK"
+          ./gradlew assembleDebug --no-daemon
+          echo "::endgroup::"
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v6
@@ -166,24 +217,36 @@ jobs:
             ${{ runner.os }}-cocoapods-
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       - name: Build mobile remote for iOS
-        run: yarn build:mobile:ios
+        run: |
+          echo "::group::Building mobile remote for iOS"
+          yarn build:mobile:ios
+          echo "::endgroup::"
 
       - name: Install CocoaPods dependencies
         working-directory: packages/mobile-host/ios
         run: |
+          echo "::group::Installing CocoaPods"
           # Clean and reinstall pods for CI environment
           rm -rf Pods Podfile.lock
           pod install --repo-update
+          echo "::endgroup::"
 
       - name: Build iOS app for Simulator
         working-directory: packages/mobile-host/ios
         run: |
+          echo "::group::Building iOS app"
           set -o pipefail
           xcodebuild \
             -workspace MobileHostTmp.xcworkspace \
@@ -197,6 +260,7 @@ jobs:
 
           BUILD_EXIT_CODE=${PIPESTATUS[0]}
           if [ $BUILD_EXIT_CODE -ne 0 ]; then
+            echo "::endgroup::"
             echo "=== Build failed with exit code $BUILD_EXIT_CODE ==="
             echo "=== Last 200 lines of build log ==="
             tail -200 build.log
@@ -204,6 +268,7 @@ jobs:
           fi
 
           echo "=== Build completed successfully ==="
+          echo "::endgroup::"
 
       - name: Find and zip iOS app bundle
         working-directory: packages/mobile-host/ios
@@ -236,3 +301,102 @@ jobs:
           name: ios-simulator-app
           path: packages/mobile-host/ios/ios-simulator-app.zip
           retention-days: 7
+
+  # PR Summary comment (only on pull requests)
+  pr-summary:
+    name: PR Summary
+    runs-on: ubuntu-latest
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [check, build-web, build-android, build-ios]
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Post PR comment with build summary
+        uses: actions/github-script@v7
+        env:
+          CHECK_RESULT: ${{ needs.check.result }}
+          BUILD_WEB_RESULT: ${{ needs.build-web.result }}
+          BUILD_ANDROID_RESULT: ${{ needs.build-android.result }}
+          BUILD_IOS_RESULT: ${{ needs.build-ios.result }}
+        with:
+          script: |
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+
+            // Get job results from environment
+            const results = {
+              check: process.env.CHECK_RESULT,
+              web: process.env.BUILD_WEB_RESULT,
+              android: process.env.BUILD_ANDROID_RESULT,
+              ios: process.env.BUILD_IOS_RESULT
+            };
+
+            // Helper to get status emoji
+            const getStatus = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'failure') return '❌';
+              if (result === 'cancelled') return '⏹️';
+              if (result === 'skipped') return '⏭️';
+              return '❓';
+            };
+
+            // Check if all passed
+            const allPassed = Object.values(results).every(r => r === 'success');
+            const headerEmoji = allPassed ? '✅' : '❌';
+            const headerText = allPassed ? 'All checks passed successfully!' : 'Some checks failed or were skipped.';
+
+            const body = `## CI Build Summary ${headerEmoji}
+
+            ${headerText}
+
+            ### Build Status
+            | Job | Status |
+            |-----|--------|
+            | 🔍 Lint, Typecheck, Test | ${getStatus(results.check)} ${results.check} |
+            | 🌐 Build Web | ${getStatus(results.web)} ${results.web} |
+            | 🤖 Build Android | ${getStatus(results.android)} ${results.android} |
+            | 🍎 Build iOS | ${getStatus(results.ios)} ${results.ios} |
+
+            ### Artifacts
+            ${allPassed ? `📦 [Download artifacts from workflow run](${runUrl}#artifacts)
+
+            | Platform | Artifact |
+            |----------|----------|
+            | Web Shell | \`web-shell-dist\` |
+            | Web Remote | \`web-remote-hello-dist\` |
+            | Android | \`android-debug-apk\` |
+            | iOS | \`ios-simulator-app\` |` : `⚠️ Some builds failed - artifacts may be incomplete.
+
+            📦 [View workflow run](${runUrl})`}
+
+            ---
+            *Artifacts are available for 7 days*`;
+
+            // Find existing comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('## CI Build Summary')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }

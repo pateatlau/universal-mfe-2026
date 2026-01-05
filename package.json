@@ -18,7 +18,8 @@
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "test": "jest"
+    "test": "jest",
+    "validate:versions": "node scripts/validate-versions.js"
   },
   "devDependencies": {
     "@babel/core": "7.28.5",
