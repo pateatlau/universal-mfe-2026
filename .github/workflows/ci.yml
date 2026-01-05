@@ -63,6 +63,15 @@ jobs:
           yarn test --coverage
           echo "::endgroup::"
 
+      - name: Security audit
+        run: |
+          echo "::group::Security audit"
+          # Run yarn audit, but don't fail on vulnerabilities (informational)
+          # Use --groups to check both dependencies and devDependencies
+          yarn audit --groups dependencies || true
+          echo "::endgroup::"
+        continue-on-error: true
+
   # Web build job
   build-web:
     name: Build Web

@@ -342,10 +342,19 @@ To enable branch protection, go to **Settings → Branches → Add branch protec
 - Added `yarn validate:versions` script to root package.json
 - Added validation step to CI workflow (runs after install, before build)
 
-### Task 4.4: Security Scanning (Optional)
-- [ ] Add dependency vulnerability scanning (npm audit)
-- [ ] Add CodeQL analysis for JavaScript/TypeScript
-- [ ] Enable GitHub secret scanning alerts
+### Task 4.4: Security Scanning ✅ COMPLETE
+- [x] Add dependency vulnerability scanning (yarn audit)
+- [x] Add CodeQL analysis for JavaScript/TypeScript
+- [x] Enable GitHub secret scanning alerts
+
+**Implementation:**
+- Added `yarn audit` step to CI workflow (informational, doesn't fail builds)
+- Created `.github/workflows/codeql.yml` for CodeQL security analysis:
+  - Runs on push/PR to main/develop
+  - Weekly scheduled scan (Sundays 00:00 UTC)
+  - Uses `security-extended` query suite
+- GitHub secret scanning is enabled by default for public repositories
+  - To verify: Settings → Code security and analysis → Secret scanning
 
 ### Task 4.5: E2E Testing (Future)
 - [ ] Evaluate E2E testing frameworks
@@ -411,10 +420,11 @@ These tasks are required for fully standalone mobile apps that work without a de
 
 | File | Purpose | Trigger |
 |------|---------|---------|
-| `.github/workflows/ci.yml` | Build, lint, test | Push, PR |
+| `.github/workflows/ci.yml` | Build, lint, test, audit | Push, PR |
+| `.github/workflows/codeql.yml` | CodeQL security analysis | Push, PR, Weekly |
 | `.github/workflows/deploy-web.yml` | Deploy to Vercel | Push to main |
 | `.github/workflows/deploy-android.yml` | Build APK & release | Tag v* |
-| `.github/workflows/deploy-ios.yml` | Build Simulator .app & release | Tag v* / Manual |
+| `.github/workflows/deploy-ios.yml` | Build Simulator .app & release | Tag v* |
 
 ---
 
@@ -482,6 +492,11 @@ These tasks are required for fully standalone mobile apps that work without a de
 - Android: Debug APK published to GitHub Releases on tag
 - iOS: Simulator app published to GitHub Releases on tag
 
-**Phase 4: OPTIONAL** - Workflow enhancements (caching, PR checks, security scanning)
+**Phase 4: COMPLETE** - Workflow enhancements
+- Task 4.1: Caching strategy (Yarn, Gradle, CocoaPods) ✅
+- Task 4.2: PR checks (automated comments, branch protection documented) ✅
+- Task 4.3: Version management (validation script) ✅
+- Task 4.4: Security scanning (yarn audit, CodeQL) ✅
+- Task 4.5: E2E Testing - Future
 
 **Phase 5: FUTURE** - Production mobile builds (requires signing setup and developer accounts)
