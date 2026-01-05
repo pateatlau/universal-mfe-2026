@@ -55,7 +55,27 @@ jobs:
         id: deploy
         working-directory: packages/web-remote-hello
         run: |
-          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | grep -E '^https://' | tail -1)
+          echo "Running Vercel deploy..."
+          CLI_OUTPUT=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
+          DEPLOYMENT_URL=$(echo "$CLI_OUTPUT" | grep -E '^https://' | tail -1)
+
+          # Validate the URL is non-empty and well-formed
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "::error::Failed to extract deployment URL from Vercel CLI output"
+            echo "=== Full Vercel CLI output ==="
+            echo "$CLI_OUTPUT"
+            echo "=============================="
+            exit 1
+          fi
+
+          if ! echo "$DEPLOYMENT_URL" | grep -qE '^https://[a-zA-Z0-9]'; then
+            echo "::error::Deployment URL is malformed: $DEPLOYMENT_URL"
+            echo "=== Full Vercel CLI output ==="
+            echo "$CLI_OUTPUT"
+            echo "=============================="
+            exit 1
+          fi
+
           echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
           echo "Deployed to: $DEPLOYMENT_URL"
         env:
@@ -105,7 +125,27 @@ jobs:
         id: deploy
         working-directory: packages/web-shell
         run: |
-          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | grep -E '^https://' | tail -1)
+          echo "Running Vercel deploy..."
+          CLI_OUTPUT=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
+          DEPLOYMENT_URL=$(echo "$CLI_OUTPUT" | grep -E '^https://' | tail -1)
+
+          # Validate the URL is non-empty and well-formed
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "::error::Failed to extract deployment URL from Vercel CLI output"
+            echo "=== Full Vercel CLI output ==="
+            echo "$CLI_OUTPUT"
+            echo "=============================="
+            exit 1
+          fi
+
+          if ! echo "$DEPLOYMENT_URL" | grep -qE '^https://[a-zA-Z0-9]'; then
+            echo "::error::Deployment URL is malformed: $DEPLOYMENT_URL"
+            echo "=== Full Vercel CLI output ==="
+            echo "$CLI_OUTPUT"
+            echo "=============================="
+            exit 1
+          fi
+
           echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
           echo "Deployed to: $DEPLOYMENT_URL"
         env:

@@ -1,7 +1,7 @@
 # CI/CD Implementation Plan
 
-**Status:** Draft
-**Last Updated:** 2026-01-04
+**Status:** In Progress
+**Last Updated:** 2026-01-05
 **Target:** POC with minimal costs / free tier options
 
 ---
@@ -92,7 +92,7 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 - @eslint/js@9.28.0
 - typescript-eslint@8.33.1
 - eslint-plugin-react@7.37.5
-- eslint-plugin-react-hooks@5.2.0
+- eslint-plugin-react-hooks@7.0.1 (upgraded from 5.2.0 for ESLint 9 compatibility)
 - globals@16.2.0
 
 ### Task 1.3: Prettier Configuration ✅ COMPLETE
@@ -187,7 +187,7 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 ### Task 2.4: iOS Build Job ✅ COMPLETE
 - [x] Add iOS build job to CI workflow
   - [x] Use macOS-14 runner (Apple Silicon)
-  - [x] Setup Xcode 16.2 via `maxim-lobanov/setup-xcode@v1`
+  - [x] Setup Xcode 16.2 via `maxim-lobanov/setup-xcode@v1.6.0`
   - [x] Run pod install with CocoaPods cache
   - [x] Build mobile-remote-hello for iOS
   - [x] Build iOS app for Simulator (no signing required)
@@ -195,29 +195,50 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 
 **Features:**
 - Depends on `check` job (runs after lint/test pass)
-- CocoaPods cache for faster builds
+- CocoaPods download cache (`~/Library/Caches/CocoaPods`)
 - Builds for iPhone 16 Simulator
 - Uploads `ios-simulator-app` artifact (zipped .app bundle)
+
+**CI Fixes Applied:**
+- Removed `.xcode.env.local` from git (contained hardcoded local Node.js path)
+- Added `.xcode.env.local` to `.gitignore` (machine-specific, should not be versioned)
+- Clean pod install in CI: `rm -rf Pods Podfile.lock && pod install --repo-update`
+- Dynamic .app bundle path detection in zip step
+
+**GitHub Actions Updated to Latest Versions:**
+- actions/checkout: v6.0.1
+- actions/setup-node: v6.1.0
+- actions/upload-artifact: v6
+- actions/cache: v5
+- actions/setup-java: v5.1.0
+- maxim-lobanov/setup-xcode: v1.6.0
 
 ---
 
 ## Phase 3: Deployment (CD)
 
-### Task 3.1: Web Deployment (Vercel)
-- [ ] Create Vercel project for web-shell
-- [ ] Create Vercel project for web-remote-hello
-- [ ] Configure build settings in Vercel dashboard
-  - [ ] Build command: `yarn build`
-  - [ ] Output directory: `dist`
-  - [ ] Install command: `yarn install`
-- [ ] Add VERCEL_TOKEN to GitHub secrets
-- [ ] Add VERCEL_ORG_ID to GitHub secrets
-- [ ] Add VERCEL_PROJECT_ID for each project
-- [ ] Create `.github/workflows/deploy-web.yml`
-  - [ ] Trigger on push to main
-  - [ ] Deploy web-remote-hello first (remote before host)
-  - [ ] Deploy web-shell after remote is deployed
-- [ ] Configure preview deployments for PRs
+### Task 3.1: Web Deployment (Vercel) ✅ COMPLETE
+- [x] Create Vercel project for web-shell
+- [x] Create Vercel project for web-remote-hello
+- [x] Configure build settings in Vercel dashboard
+  - [x] Set "Ignored Build Step" to "Don't build anything" (GitHub Actions handles builds)
+  - [x] Output directory: `dist`
+- [x] Add VERCEL_TOKEN to GitHub secrets
+- [x] Add VERCEL_ORG_ID to GitHub secrets
+- [x] Add VERCEL_PROJECT_ID_WEB_SHELL to GitHub secrets
+- [x] Add VERCEL_PROJECT_ID_WEB_REMOTE to GitHub secrets
+- [x] Create `.github/workflows/deploy-web.yml`
+  - [x] Trigger on push to main
+  - [x] Deploy web-remote-hello first (remote before host)
+  - [x] Deploy web-shell after remote is deployed
+  - [x] Pass REMOTE_HELLO_URL env var to inject remote URL at build time
+- [x] Update web-shell rspack.config.mjs to support REMOTE_HELLO_URL env var
+
+**Notes:**
+- Vercel auto-deployments disabled ("Don't build anything") - GitHub Actions handles all builds
+- web-shell uses `REMOTE_HELLO_URL` env var (defaults to localhost:9003 for dev)
+- Deployment summary outputs URLs to GitHub Actions job summary
+- Vercel CLI output URL extraction includes validation (non-empty, well-formed https://) with error handling
 
 ### Task 3.2: Android Deployment (GitHub Releases)
 - [ ] Create `.github/workflows/deploy-android.yml`
@@ -339,12 +360,12 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 
 ## Success Criteria
 
-- [ ] All PRs automatically run lint, typecheck, and tests
-- [ ] Main branch automatically deploys web apps to Vercel
+- [x] All PRs automatically run lint, typecheck, and tests ✅
+- [ ] Main branch automatically deploys web apps to Vercel (workflow ready, pending first deploy)
 - [ ] Tagged releases automatically build and publish Android APK
 - [ ] Tagged releases automatically build and publish iOS Simulator app
-- [ ] Build times under 10 minutes for full CI
-- [ ] Zero cost for CI/CD ($0/month)
+- [x] Build times under 10 minutes for full CI ✅
+- [x] Zero cost for CI/CD ($0/month) ✅
 
 ---
 
