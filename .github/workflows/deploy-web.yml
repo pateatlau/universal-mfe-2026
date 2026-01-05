@@ -51,22 +51,16 @@ jobs:
         run: |
           echo "Running Vercel deploy..."
           CLI_OUTPUT=$(vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
-          DEPLOYMENT_URL=$(echo "$CLI_OUTPUT" | grep -E '^https://' | tail -1)
+          echo "=== Full Vercel CLI output ==="
+          echo "$CLI_OUTPUT"
+          echo "=============================="
 
-          # Validate the URL is non-empty and well-formed
+          # Extract just the URL (https://...vercel.app) - stop at first non-URL character
+          DEPLOYMENT_URL=$(echo "$CLI_OUTPUT" | grep -oE 'https://[a-zA-Z0-9._-]+\.vercel\.app' | tail -1)
+
+          # Validate the URL is non-empty
           if [ -z "$DEPLOYMENT_URL" ]; then
             echo "::error::Failed to extract deployment URL from Vercel CLI output"
-            echo "=== Full Vercel CLI output ==="
-            echo "$CLI_OUTPUT"
-            echo "=============================="
-            exit 1
-          fi
-
-          if ! echo "$DEPLOYMENT_URL" | grep -qE '^https://[a-zA-Z0-9]'; then
-            echo "::error::Deployment URL is malformed: $DEPLOYMENT_URL"
-            echo "=== Full Vercel CLI output ==="
-            echo "$CLI_OUTPUT"
-            echo "=============================="
             exit 1
           fi
 
@@ -115,22 +109,16 @@ jobs:
         run: |
           echo "Running Vercel deploy..."
           CLI_OUTPUT=$(vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
-          DEPLOYMENT_URL=$(echo "$CLI_OUTPUT" | grep -E '^https://' | tail -1)
+          echo "=== Full Vercel CLI output ==="
+          echo "$CLI_OUTPUT"
+          echo "=============================="
 
-          # Validate the URL is non-empty and well-formed
+          # Extract just the URL (https://...vercel.app) - stop at first non-URL character
+          DEPLOYMENT_URL=$(echo "$CLI_OUTPUT" | grep -oE 'https://[a-zA-Z0-9._-]+\.vercel\.app' | tail -1)
+
+          # Validate the URL is non-empty
           if [ -z "$DEPLOYMENT_URL" ]; then
             echo "::error::Failed to extract deployment URL from Vercel CLI output"
-            echo "=== Full Vercel CLI output ==="
-            echo "$CLI_OUTPUT"
-            echo "=============================="
-            exit 1
-          fi
-
-          if ! echo "$DEPLOYMENT_URL" | grep -qE '^https://[a-zA-Z0-9]'; then
-            echo "::error::Deployment URL is malformed: $DEPLOYMENT_URL"
-            echo "=== Full Vercel CLI output ==="
-            echo "$CLI_OUTPUT"
-            echo "=============================="
             exit 1
           fi
 
