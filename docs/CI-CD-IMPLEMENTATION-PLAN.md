@@ -26,16 +26,16 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 
 ### CI Pre-requisites
 
-- [ ] **GitHub Repository Access**
-  - [ ] Repository is hosted on GitHub (confirmed)
-  - [ ] GitHub Actions enabled for the repository
-  - [ ] Sufficient Actions minutes (free tier: 2,000 mins/month for public repos)
+- [x] **GitHub Repository Access** ✅
+  - [x] Repository is hosted on GitHub
+  - [x] GitHub Actions enabled for the repository
+  - [x] Sufficient Actions minutes (free tier: 2,000 mins/month for public repos)
 
 - [x] **Testing Infrastructure Setup** ✅
-  - [x] Jest configuration for unit tests ✅
-  - [x] ESLint configuration for linting ✅
-  - [x] Prettier configuration for formatting ✅
-  - [x] TypeScript strict mode already enabled ✅
+  - [x] Jest configuration for unit tests
+  - [x] ESLint configuration for linting
+  - [x] Prettier configuration for formatting
+  - [x] TypeScript strict mode already enabled
 
 - [x] **Root Package.json Scripts** ✅
   - [x] Add `build:shared` script
@@ -45,19 +45,19 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 
 ### CD Pre-requisites
 
-- [ ] **Web Deployment (Vercel)**
-  - [ ] Create Vercel account (free tier)
-  - [ ] Link GitHub repository to Vercel
-  - [ ] Add VERCEL_TOKEN to GitHub secrets
+- [x] **Web Deployment (Vercel)** ✅
+  - [x] Create Vercel account (free tier)
+  - [x] Link GitHub repository to Vercel
+  - [x] Add VERCEL_TOKEN to GitHub secrets
 
-- [ ] **Android Deployment (GitHub Releases)**
-  - [ ] Debug keystore available (default Android debug keystore)
-  - [ ] No external accounts required
+- [x] **Android Deployment (GitHub Releases)** ✅
+  - [x] Debug keystore available (default Android debug keystore)
+  - [x] No external accounts required
 
-- [ ] **iOS Deployment (Simulator Build)**
-  - [ ] macOS runner available (GitHub Actions provides this)
-  - [ ] Xcode 16.2 available on runner
-  - [ ] No signing certificates required (simulator-only)
+- [x] **iOS Deployment (Simulator Build)** ✅
+  - [x] macOS runner available (GitHub Actions provides this)
+  - [x] Xcode 16.2 available on runner
+  - [x] No signing certificates required (simulator-only)
 
 ---
 
@@ -285,12 +285,24 @@ git push --tags
 
 ## Phase 4: Workflow Enhancements
 
-### Task 4.1: Caching Strategy
-- [ ] Cache node_modules with yarn.lock hash
-- [ ] Cache Gradle dependencies (~/.gradle/caches)
-- [ ] Cache CocoaPods (already in repo, but cache derived data)
-- [ ] Cache Rspack build outputs
-- [ ] Measure and optimize build times
+### Task 4.1: Caching Strategy ✅ COMPLETE
+- [x] Cache node_modules with yarn.lock hash (via `actions/setup-node` with `cache: 'yarn'`)
+- [x] Cache Gradle dependencies (~/.gradle/caches and ~/.gradle/wrapper)
+- [x] Cache CocoaPods download cache (~/Library/Caches/CocoaPods)
+- [x] Rspack build outputs - Not cached (marginal benefit, builds are fast ~5s)
+- [x] Add build timing annotations (`::group::` / `::endgroup::` for collapsible logs)
+
+**Caching summary:**
+| Workflow | Yarn | Gradle | CocoaPods |
+|----------|------|--------|-----------|
+| ci.yml | ✅ | ✅ | ✅ |
+| deploy-web.yml | ✅ | N/A | N/A |
+| deploy-android.yml | ✅ | ✅ | N/A |
+| deploy-ios.yml | ✅ | N/A | ✅ |
+
+**Notes:**
+- Rspack persistent caching not added - builds complete in ~5s without it
+- Build timing groups added to ci.yml for better GitHub Actions log visibility
 
 ### Task 4.2: PR Checks
 - [ ] Add required status checks for PRs
@@ -329,6 +341,45 @@ git push --tags
 
 ---
 
+## Phase 5: Production Mobile Builds (Future)
+
+These tasks are required for fully standalone mobile apps that work without a dev server.
+
+### Task 5.1: Android Release Build
+- [ ] Create release signing keystore
+- [ ] Configure `android/app/build.gradle` for release signing
+- [ ] Update workflow to use `assembleRelease` instead of `assembleDebug`
+- [ ] Configure ProGuard/R8 minification (optional)
+- [ ] Test standalone APK on physical device
+
+### Task 5.2: Android Play Store Deployment (Optional)
+- [ ] Create Google Play Developer account ($25 one-time)
+- [ ] Generate Play Store service account for CI/CD
+- [ ] Configure Fastlane or gradle-play-publisher for automated uploads
+- [ ] Setup internal/beta/production tracks
+
+### Task 5.3: iOS Release Build
+- [ ] Create Apple Developer account ($99/year)
+- [ ] Generate distribution certificate and provisioning profiles
+- [ ] Configure Xcode project for release signing
+- [ ] Update workflow to build for device (not simulator)
+- [ ] Archive and export IPA
+
+### Task 5.4: iOS TestFlight/App Store Deployment (Optional)
+- [ ] Configure App Store Connect API key for CI/CD
+- [ ] Setup Fastlane for automated uploads
+- [ ] Configure TestFlight for beta testing
+- [ ] Setup App Store submission workflow
+
+### Cost Impact of Phase 5
+| Item | Cost |
+|------|------|
+| Apple Developer Account | $99/year |
+| Google Play Developer Account | $25 one-time |
+| GitHub Actions (macOS minutes for iOS) | May exceed free tier |
+
+---
+
 ## Workflow Files Summary
 
 | File | Purpose | Trigger |
@@ -349,32 +400,6 @@ git push --tags
 | Vercel | 100 GB bandwidth | ~5 GB | $0 |
 | GitHub Releases | Unlimited | ~10 releases | $0 |
 | **Total** | | | **$0/month** |
-
----
-
-## Implementation Order
-
-### Week 1: Foundation
-1. Root package.json scripts
-2. ESLint setup
-3. Jest setup
-4. Basic CI workflow (lint + typecheck + test)
-
-### Week 2: Build Automation
-1. Web build job
-2. Android build job
-3. iOS build job (simulator)
-4. Artifact uploads
-
-### Week 3: Deployment
-1. Web deployment (Vercel)
-2. Android deployment (GitHub Releases)
-3. iOS deployment (GitHub Releases - simulator)
-
-### Week 4: Polish
-1. Caching optimization
-2. PR checks and branch protection
-3. Documentation updates
 
 ---
 
@@ -420,45 +445,6 @@ git push --tags
 - Remote modules must be deployed before or with host
 - Web: Deploy web-remote-hello → web-shell
 - Mobile: Remote bundles are loaded at runtime from configured URLs
-
----
-
-## Phase 5: Production Mobile Builds (Future)
-
-These tasks are required for fully standalone mobile apps that work without a dev server.
-
-### Task 5.1: Android Release Build
-- [ ] Create release signing keystore
-- [ ] Configure `android/app/build.gradle` for release signing
-- [ ] Update workflow to use `assembleRelease` instead of `assembleDebug`
-- [ ] Configure ProGuard/R8 minification (optional)
-- [ ] Test standalone APK on physical device
-
-### Task 5.2: Android Play Store Deployment (Optional)
-- [ ] Create Google Play Developer account ($25 one-time)
-- [ ] Generate Play Store service account for CI/CD
-- [ ] Configure Fastlane or gradle-play-publisher for automated uploads
-- [ ] Setup internal/beta/production tracks
-
-### Task 5.3: iOS Release Build
-- [ ] Create Apple Developer account ($99/year)
-- [ ] Generate distribution certificate and provisioning profiles
-- [ ] Configure Xcode project for release signing
-- [ ] Update workflow to build for device (not simulator)
-- [ ] Archive and export IPA
-
-### Task 5.4: iOS TestFlight/App Store Deployment (Optional)
-- [ ] Configure App Store Connect API key for CI/CD
-- [ ] Setup Fastlane for automated uploads
-- [ ] Configure TestFlight for beta testing
-- [ ] Setup App Store submission workflow
-
-### Cost Impact of Phase 5
-| Item | Cost |
-|------|------|
-| Apple Developer Account | $99/year |
-| Google Play Developer Account | $25 one-time |
-| GitHub Actions (macOS minutes for iOS) | May exceed free tier |
 
 ---
 

@@ -28,19 +28,34 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       - name: Run type checking
-        run: yarn typecheck
+        run: |
+          echo "::group::Type checking"
+          yarn typecheck
+          echo "::endgroup::"
 
       - name: Run linting
-        run: yarn lint
+        run: |
+          echo "::group::Linting"
+          yarn lint
+          echo "::endgroup::"
 
       - name: Run unit tests
-        run: yarn test --coverage
+        run: |
+          echo "::group::Running unit tests"
+          yarn test --coverage
+          echo "::endgroup::"
 
   # Web build job
   build-web:
@@ -59,13 +74,22 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       - name: Build web packages
-        run: yarn build:web
+        run: |
+          echo "::group::Building web packages"
+          yarn build:web
+          echo "::endgroup::"
 
       - name: Upload web-shell artifact
         uses: actions/upload-artifact@v6
@@ -117,17 +141,29 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       - name: Build mobile remote for Android
-        run: yarn build:mobile:android
+        run: |
+          echo "::group::Building mobile remote for Android"
+          yarn build:mobile:android
+          echo "::endgroup::"
 
       - name: Build Android APK (debug)
         working-directory: packages/mobile-host/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          echo "::group::Building Android APK"
+          ./gradlew assembleDebug --no-daemon
+          echo "::endgroup::"
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v6
@@ -166,24 +202,36 @@ jobs:
             ${{ runner.os }}-cocoapods-
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       - name: Build mobile remote for iOS
-        run: yarn build:mobile:ios
+        run: |
+          echo "::group::Building mobile remote for iOS"
+          yarn build:mobile:ios
+          echo "::endgroup::"
 
       - name: Install CocoaPods dependencies
         working-directory: packages/mobile-host/ios
         run: |
+          echo "::group::Installing CocoaPods"
           # Clean and reinstall pods for CI environment
           rm -rf Pods Podfile.lock
           pod install --repo-update
+          echo "::endgroup::"
 
       - name: Build iOS app for Simulator
         working-directory: packages/mobile-host/ios
         run: |
+          echo "::group::Building iOS app"
           set -o pipefail
           xcodebuild \
             -workspace MobileHostTmp.xcworkspace \
@@ -197,6 +245,7 @@ jobs:
 
           BUILD_EXIT_CODE=${PIPESTATUS[0]}
           if [ $BUILD_EXIT_CODE -ne 0 ]; then
+            echo "::endgroup::"
             echo "=== Build failed with exit code $BUILD_EXIT_CODE ==="
             echo "=== Last 200 lines of build log ==="
             tail -200 build.log
@@ -204,6 +253,7 @@ jobs:
           fi
 
           echo "=== Build completed successfully ==="
+          echo "::endgroup::"
 
       - name: Find and zip iOS app bundle
         working-directory: packages/mobile-host/ios
