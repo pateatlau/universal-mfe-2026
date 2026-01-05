@@ -80,6 +80,13 @@ interface AppState {
   pressCount: number;
 }
 
+/**
+ * Root React component for the mobile host app that dynamically loads and renders a remote federated component and exposes a press counter.
+ *
+ * Renders a static header, a control to load the remote component (with retry), visual loading and error states, the remote component (when loaded) with a provided `name` prop and press handler, and a counter showing how many times the remote component's button was pressed.
+ *
+ * @returns The rendered React element tree for the app.
+ */
 function App() {
   const [state, setState] = useState<AppState>({
     remoteComponent: null,
