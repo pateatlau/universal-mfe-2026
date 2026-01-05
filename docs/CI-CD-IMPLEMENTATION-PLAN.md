@@ -259,16 +259,27 @@ git push --tags
 - Uses default Android debug keystore (no signing setup required)
 - APK is attached as a downloadable asset on the GitHub Release page
 
-### Task 3.3: iOS Deployment (Simulator Build)
-- [ ] Create `.github/workflows/deploy-ios.yml`
-  - [ ] Trigger on tag push (v*) or manual dispatch
-  - [ ] Use macOS runner
-  - [ ] Build shared packages
-  - [ ] Build mobile-remote-hello for iOS
-  - [ ] Build iOS app for Simulator
-  - [ ] Zip .app bundle
-  - [ ] Upload to GitHub Release
-  - [ ] NOTE: Simulator builds cannot run on real devices
+### Task 3.3: iOS Deployment (Simulator Build) ✅ COMPLETE
+- [x] Create `.github/workflows/deploy-ios.yml`
+  - [x] Trigger on tag push (v*)
+  - [x] Use macOS-14 runner (Apple Silicon)
+  - [x] Build shared packages
+  - [x] Build mobile-remote-hello for iOS
+  - [x] Build iOS app for Simulator
+  - [x] Zip .app bundle
+  - [x] Create GitHub Release via softprops/action-gh-release@v2
+  - [x] Upload zipped .app as release asset
+
+**Usage:**
+```bash
+git tag v1.0.0
+git push --tags
+```
+
+**Notes:**
+- Simulator-only build (cannot run on physical iOS devices)
+- No Apple Developer account or code signing required
+- Users can drag .app to Simulator or use `xcrun simctl install`
 
 ---
 
