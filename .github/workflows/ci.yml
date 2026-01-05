@@ -306,7 +306,7 @@ jobs:
   pr-summary:
     name: PR Summary
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: ${{ always() && github.event_name == 'pull_request' }}
     needs: [check, build-web, build-android, build-ios]
 
     permissions:
@@ -315,23 +315,60 @@ jobs:
     steps:
       - name: Post PR comment with build summary
         uses: actions/github-script@v7
+        env:
+          CHECK_RESULT: ${{ needs.check.result }}
+          BUILD_WEB_RESULT: ${{ needs.build-web.result }}
+          BUILD_ANDROID_RESULT: ${{ needs.build-android.result }}
+          BUILD_IOS_RESULT: ${{ needs.build-ios.result }}
         with:
           script: |
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 
-            const body = `## CI Build Summary ✅
+            // Get job results from environment
+            const results = {
+              check: process.env.CHECK_RESULT,
+              web: process.env.BUILD_WEB_RESULT,
+              android: process.env.BUILD_ANDROID_RESULT,
+              ios: process.env.BUILD_IOS_RESULT
+            };
 
-            All checks passed successfully!
+            // Helper to get status emoji
+            const getStatus = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'failure') return '❌';
+              if (result === 'cancelled') return '⏹️';
+              if (result === 'skipped') return '⏭️';
+              return '❓';
+            };
 
-            ### Build Artifacts
-            | Platform | Artifact | Status |
-            |----------|----------|--------|
-            | 🌐 Web Shell | \`web-shell-dist\` | ✅ Built |
-            | 🌐 Web Remote | \`web-remote-hello-dist\` | ✅ Built |
-            | 🤖 Android | \`android-debug-apk\` | ✅ Built |
-            | 🍎 iOS | \`ios-simulator-app\` | ✅ Built |
+            // Check if all passed
+            const allPassed = Object.values(results).every(r => r === 'success');
+            const headerEmoji = allPassed ? '✅' : '❌';
+            const headerText = allPassed ? 'All checks passed successfully!' : 'Some checks failed or were skipped.';
 
-            📦 [Download artifacts from workflow run](${runUrl}#artifacts)
+            const body = `## CI Build Summary ${headerEmoji}
+
+            ${headerText}
+
+            ### Build Status
+            | Job | Status |
+            |-----|--------|
+            | 🔍 Lint, Typecheck, Test | ${getStatus(results.check)} ${results.check} |
+            | 🌐 Build Web | ${getStatus(results.web)} ${results.web} |
+            | 🤖 Build Android | ${getStatus(results.android)} ${results.android} |
+            | 🍎 Build iOS | ${getStatus(results.ios)} ${results.ios} |
+
+            ### Artifacts
+            ${allPassed ? `📦 [Download artifacts from workflow run](${runUrl}#artifacts)
+
+            | Platform | Artifact |
+            |----------|----------|
+            | Web Shell | \`web-shell-dist\` |
+            | Web Remote | \`web-remote-hello-dist\` |
+            | Android | \`android-debug-apk\` |
+            | iOS | \`ios-simulator-app\` |` : `⚠️ Some builds failed - artifacts may be incomplete.
+
+            📦 [View workflow run](${runUrl})`}
 
             ---
             *Artifacts are available for 7 days*`;
