@@ -240,15 +240,24 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 - Deployment summary outputs URLs to GitHub Actions job summary
 - Vercel CLI output URL extraction includes validation (non-empty, well-formed https://) with error handling
 
-### Task 3.2: Android Deployment (GitHub Releases)
-- [ ] Create `.github/workflows/deploy-android.yml`
-  - [ ] Trigger on tag push (v*)
-  - [ ] Build shared packages
-  - [ ] Build mobile-remote-hello for Android
-  - [ ] Build Android APK (debug for POC)
-  - [ ] Create GitHub Release
-  - [ ] Upload APK as release asset
-  - [ ] Generate release notes from commits
+### Task 3.2: Android Deployment (GitHub Releases) ✅ COMPLETE
+- [x] Create `.github/workflows/deploy-android.yml`
+  - [x] Trigger on tag push (v*)
+  - [x] Build shared packages
+  - [x] Build mobile-remote-hello for Android
+  - [x] Build Android APK (debug for POC)
+  - [x] Create GitHub Release via softprops/action-gh-release@v2
+  - [x] Upload APK as release asset
+
+**Usage:**
+```bash
+git tag v1.0.0
+git push --tags
+```
+
+**Notes:**
+- Uses default Android debug keystore (no signing setup required)
+- APK is attached as a downloadable asset on the GitHub Release page
 
 ### Task 3.3: iOS Deployment (Simulator Build)
 - [ ] Create `.github/workflows/deploy-ios.yml`
