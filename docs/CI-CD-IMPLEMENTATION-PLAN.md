@@ -1,6 +1,6 @@
 # CI/CD Implementation Plan
 
-**Status:** In Progress
+**Status:** Phase 3 Complete - All Platforms Deployed
 **Last Updated:** 2026-01-05
 **Target:** POC with minimal costs / free tier options
 
@@ -381,9 +381,13 @@ git push --tags
 ## Success Criteria
 
 - [x] All PRs automatically run lint, typecheck, and tests ✅
-- [ ] Main branch automatically deploys web apps to Vercel (workflow ready, pending first deploy)
-- [ ] Tagged releases automatically build and publish Android APK
-- [ ] Tagged releases automatically build and publish iOS Simulator app
+- [x] Main branch automatically deploys web apps to Vercel ✅
+  - Remote: https://universal-mfe-2026-remote.vercel.app/
+  - Shell: https://universal-mfe-2026-shell.vercel.app/
+- [x] Tagged releases automatically build and publish Android APK ✅
+  - https://github.com/pateatlau/universal-mfe-2026/releases/download/v1.0.0/app-debug.apk
+- [x] Tagged releases automatically build and publish iOS Simulator app ✅
+  - https://github.com/pateatlau/universal-mfe-2026/releases/download/v1.0.0/ios-simulator-app.zip
 - [x] Build times under 10 minutes for full CI ✅
 - [x] Zero cost for CI/CD ($0/month) ✅
 
@@ -391,18 +395,20 @@ git push --tags
 
 ## Notes
 
-### iOS Simulator Limitations
-The iOS deployment produces a Simulator-only build (.app bundle):
-- Can only run in Xcode iOS Simulator
-- Cannot be installed on real iOS devices
-- No code signing required
-- Useful for developers to test without Xcode setup
+### Current Mobile Build Limitations
 
-To test on real devices in the future, you would need:
-- Apple Developer account ($99/year)
-- Code signing certificates
-- Provisioning profiles
-- TestFlight distribution
+**Both Android and iOS builds are DEBUG builds** that require a Metro bundler running to load the JavaScript bundle. They are NOT standalone production builds.
+
+**Android APK (`app-debug.apk`):**
+- Requires Metro dev server running on `http://10.0.2.2:8081` (emulator) or `http://localhost:8081` (device via USB)
+- Will crash with "Could not open file" error without Metro running
+- Useful for: Development testing with Metro, CI/CD pipeline validation
+
+**iOS Simulator App (`ios-simulator-app.zip`):**
+- Can only run in Xcode iOS Simulator (not on physical devices)
+- Requires Metro dev server running on `http://localhost:8082`
+- No code signing required (Simulator-only)
+- Useful for: Development testing, CI/CD pipeline validation
 
 ### React Native Specific Considerations
 - Symlinks must be setup after yarn install (`postinstall` hook handles this)
@@ -415,8 +421,54 @@ To test on real devices in the future, you would need:
 - Web: Deploy web-remote-hello → web-shell
 - Mobile: Remote bundles are loaded at runtime from configured URLs
 
-### Future Production Considerations
-When moving to production:
-- Android: Create release keystore, configure Google Play upload
-- iOS: Setup Apple Developer account, code signing, TestFlight
-- Web: Configure custom domain, CDN caching headers
+---
+
+## Phase 5: Production Mobile Builds (Future)
+
+These tasks are required for fully standalone mobile apps that work without a dev server.
+
+### Task 5.1: Android Release Build
+- [ ] Create release signing keystore
+- [ ] Configure `android/app/build.gradle` for release signing
+- [ ] Update workflow to use `assembleRelease` instead of `assembleDebug`
+- [ ] Configure ProGuard/R8 minification (optional)
+- [ ] Test standalone APK on physical device
+
+### Task 5.2: Android Play Store Deployment (Optional)
+- [ ] Create Google Play Developer account ($25 one-time)
+- [ ] Generate Play Store service account for CI/CD
+- [ ] Configure Fastlane or gradle-play-publisher for automated uploads
+- [ ] Setup internal/beta/production tracks
+
+### Task 5.3: iOS Release Build
+- [ ] Create Apple Developer account ($99/year)
+- [ ] Generate distribution certificate and provisioning profiles
+- [ ] Configure Xcode project for release signing
+- [ ] Update workflow to build for device (not simulator)
+- [ ] Archive and export IPA
+
+### Task 5.4: iOS TestFlight/App Store Deployment (Optional)
+- [ ] Configure App Store Connect API key for CI/CD
+- [ ] Setup Fastlane for automated uploads
+- [ ] Configure TestFlight for beta testing
+- [ ] Setup App Store submission workflow
+
+### Cost Impact of Phase 5
+| Item | Cost |
+|------|------|
+| Apple Developer Account | $99/year |
+| Google Play Developer Account | $25 one-time |
+| GitHub Actions (macOS minutes for iOS) | May exceed free tier |
+
+---
+
+## Summary
+
+**Phase 1-3: COMPLETE** - Full CI/CD pipeline for all platforms
+- Web: Automated deployment to Vercel on push to main
+- Android: Debug APK published to GitHub Releases on tag
+- iOS: Simulator app published to GitHub Releases on tag
+
+**Phase 4: OPTIONAL** - Workflow enhancements (caching, PR checks, security scanning)
+
+**Phase 5: FUTURE** - Production mobile builds (requires signing setup and developer accounts)
