@@ -4,21 +4,64 @@
  * Web shell application that dynamically loads remote components.
  *
  * Uses React Native Web to render universal RN components.
+ * Uses manual loading pattern with error handling for consistency with mobile.
  */
 
-import React, { Suspense, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 
-// Dynamic import of remote - NO static imports allowed
-const HelloRemote = React.lazy(() => import('hello_remote/HelloRemote'));
+interface AppState {
+  remoteComponent: React.ComponentType<any> | null;
+  loading: boolean;
+  error: string | null;
+  pressCount: number;
+}
 
 function App() {
-  const [pressCount, setPressCount] = useState(0);
+  const [state, setState] = useState<AppState>({
+    remoteComponent: null,
+    loading: false,
+    error: null,
+    pressCount: 0,
+  });
 
-  const handlePress = () => {
-    setPressCount((prev) => prev + 1);
-    console.log('Button pressed!', pressCount + 1);
+  const loadRemote = async () => {
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+
+    try {
+      // Dynamic import of remote module via Module Federation
+      const RemoteModule = await import('hello_remote/HelloRemote');
+
+      // Extract the default export (HelloRemote component)
+      const HelloRemote = RemoteModule.default || RemoteModule;
+
+      setState((prev) => ({
+        ...prev,
+        remoteComponent: HelloRemote,
+        loading: false,
+      }));
+    } catch (error) {
+      console.error('Failed to load remote:', error);
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }));
+    }
   };
+
+  const handleRemotePress = () => {
+    setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
+    console.log('Remote button pressed!', state.pressCount + 1);
+  };
+
+  const HelloRemote = state.remoteComponent;
 
   return (
     <View style={styles.container}>
@@ -30,25 +73,39 @@ function App() {
       </View>
 
       <View style={styles.content}>
-        <Suspense
-          fallback={
-            <View style={styles.loading}>
-              <Text style={styles.loadingText}>
-                Loading remote component...
-              </Text>
-            </View>
-          }
-        >
-          <HelloRemote
-            name="Web User"
-            onPress={handlePress}
-          />
-        </Suspense>
+        {!HelloRemote && !state.loading && !state.error && (
+          <Pressable style={styles.loadButton} onPress={loadRemote}>
+            <Text style={styles.loadButtonText}>Load Remote Component</Text>
+          </Pressable>
+        )}
 
-        {pressCount > 0 && (
+        {state.loading && (
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Loading remote component...</Text>
+          </View>
+        )}
+
+        {state.error && (
+          <View style={styles.error}>
+            <Text style={styles.errorText}>Error: {state.error}</Text>
+            <Pressable style={styles.retryButton} onPress={loadRemote}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {HelloRemote && (
+          <View style={styles.remoteContainer}>
+            <HelloRemote name="Web User" onPress={handleRemotePress} />
+          </View>
+        )}
+
+        {state.pressCount > 0 && (
           <View style={styles.counter}>
             <Text style={styles.counterText}>
-              Button pressed {pressCount} time{pressCount !== 1 ? 's' : ''}
+              Remote button pressed {state.pressCount} time
+              {state.pressCount !== 1 ? 's' : ''}
             </Text>
           </View>
         )}
@@ -88,13 +145,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  loadButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 24,
+  },
+  loadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   loading: {
-    padding: 24,
     alignItems: 'center',
+    padding: 24,
   },
   loadingText: {
+    marginTop: 12,
     fontSize: 16,
     color: '#999',
+  },
+  error: {
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#d32f2f',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#d32f2f',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  remoteContainer: {
+    width: '100%',
+    alignItems: 'center',
   },
   counter: {
     marginTop: 24,

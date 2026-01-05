@@ -137,11 +137,8 @@ function App() {
       </View>
 
       <View style={styles.content}>
-        {!HelloRemote && !state.loading && (
-          <Pressable
-            style={styles.loadButton}
-            onPress={loadRemote}
-          >
+        {!HelloRemote && !state.loading && !state.error && (
+          <Pressable style={styles.loadButton} onPress={loadRemote}>
             <Text style={styles.loadButtonText}>Load Remote Component</Text>
           </Pressable>
         )}
