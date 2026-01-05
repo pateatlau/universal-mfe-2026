@@ -41,13 +41,15 @@ jobs:
       - name: Build shared packages
         run: yarn build:shared
 
-      - name: Build web-remote-hello
-        working-directory: packages/web-remote-hello
-        run: yarn build
-
       - name: Pull Vercel environment
         working-directory: packages/web-remote-hello
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_REMOTE }}
+
+      - name: Build for Vercel
+        working-directory: packages/web-remote-hello
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_REMOTE }}
 
@@ -109,17 +111,18 @@ jobs:
       - name: Build shared packages
         run: yarn build:shared
 
-      - name: Build web-shell
-        working-directory: packages/web-shell
-        run: yarn build
-        env:
-          REMOTE_HELLO_URL: ${{ needs.deploy-web-remote.outputs.deployment-url }}
-
       - name: Pull Vercel environment
         working-directory: packages/web-shell
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_SHELL }}
+
+      - name: Build for Vercel
+        working-directory: packages/web-shell
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_SHELL }}
+          REMOTE_HELLO_URL: ${{ needs.deploy-web-remote.outputs.deployment-url }}
 
       - name: Deploy to Vercel
         id: deploy

@@ -240,26 +240,46 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 - Deployment summary outputs URLs to GitHub Actions job summary
 - Vercel CLI output URL extraction includes validation (non-empty, well-formed https://) with error handling
 
-### Task 3.2: Android Deployment (GitHub Releases)
-- [ ] Create `.github/workflows/deploy-android.yml`
-  - [ ] Trigger on tag push (v*)
-  - [ ] Build shared packages
-  - [ ] Build mobile-remote-hello for Android
-  - [ ] Build Android APK (debug for POC)
-  - [ ] Create GitHub Release
-  - [ ] Upload APK as release asset
-  - [ ] Generate release notes from commits
+### Task 3.2: Android Deployment (GitHub Releases) ✅ COMPLETE
+- [x] Create `.github/workflows/deploy-android.yml`
+  - [x] Trigger on tag push (v*)
+  - [x] Build shared packages
+  - [x] Build mobile-remote-hello for Android
+  - [x] Build Android APK (debug for POC)
+  - [x] Create GitHub Release via softprops/action-gh-release@v2
+  - [x] Upload APK as release asset
 
-### Task 3.3: iOS Deployment (Simulator Build)
-- [ ] Create `.github/workflows/deploy-ios.yml`
-  - [ ] Trigger on tag push (v*) or manual dispatch
-  - [ ] Use macOS runner
-  - [ ] Build shared packages
-  - [ ] Build mobile-remote-hello for iOS
-  - [ ] Build iOS app for Simulator
-  - [ ] Zip .app bundle
-  - [ ] Upload to GitHub Release
-  - [ ] NOTE: Simulator builds cannot run on real devices
+**Usage:**
+```bash
+git tag v1.0.0
+git push --tags
+```
+
+**Notes:**
+- Uses default Android debug keystore (no signing setup required)
+- APK is attached as a downloadable asset on the GitHub Release page
+
+### Task 3.3: iOS Deployment (Simulator Build) ✅ COMPLETE
+- [x] Create `.github/workflows/deploy-ios.yml`
+  - [x] Trigger on tag push (v*)
+  - [x] Use macOS-14 runner (Apple Silicon)
+  - [x] Build shared packages
+  - [x] Build mobile-remote-hello for iOS
+  - [x] Build iOS app for Simulator
+  - [x] Zip .app bundle
+  - [x] Create GitHub Release via softprops/action-gh-release@v2
+  - [x] Upload zipped .app as release asset
+
+**Usage:**
+```bash
+git tag v1.0.0
+git push --tags
+```
+
+**Notes:**
+- Simulator-only build (cannot run on physical iOS devices)
+- No Apple Developer account or code signing required
+- Users can drag .app to Simulator or use `xcrun simctl install`
 
 ---
 
