@@ -12,6 +12,9 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 const enableLogging =
   process.env.ENABLE_MF_LOGGING !== 'false' && isDevelopment;
 
+// Remote URL configuration - use environment variable for production, localhost for development
+const remoteHelloUrl = process.env.REMOTE_HELLO_URL || 'http://localhost:9003';
+
 export default {
   entry: './src/index.tsx',
   mode: 'development',
@@ -59,7 +62,7 @@ export default {
     new ModuleFederationPlugin({
       name: 'web_shell',
       remotes: {
-        hello_remote: 'hello_remote@http://localhost:9003/remoteEntry.js',
+        hello_remote: `hello_remote@${remoteHelloUrl}/remoteEntry.js`,
       },
       // Conditionally enable logging plugin (development only, safe to disable)
       // Note: Must use string path, not function reference, for Module Federation to resolve
