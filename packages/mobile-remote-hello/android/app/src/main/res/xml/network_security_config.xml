@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network Security Configuration for mobile-remote-hello standalone app.
+
+  Debug builds: Allow cleartext traffic to localhost and 10.0.2.2 (Android emulator)
+  for Metro bundler connectivity on port 8083.
+
+  Release builds: Cleartext traffic is disallowed by default (uses HTTPS only).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Debug/development: Allow cleartext for Metro bundler -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- localhost for iOS simulator and direct device connections -->
+        <domain includeSubdomains="false">localhost</domain>
+        <!-- 10.0.2.2 is the host machine from Android emulator -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <!-- 10.0.3.2 is for Genymotion emulator -->
+        <domain includeSubdomains="false">10.0.3.2</domain>
+    </domain-config>
+</network-security-config>

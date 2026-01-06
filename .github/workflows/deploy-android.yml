@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   deploy-android:
-    name: Build and Release Android APK
+    name: Build and Release Android APKs
     runs-on: ubuntu-latest
 
     steps:
@@ -53,12 +53,31 @@ jobs:
       - name: Build shared packages
         run: yarn build:shared
 
-      - name: Build mobile remote for Android
+      # Build Host App
+      - name: Build mobile remote for Android (MF bundles)
         run: yarn build:mobile:android
 
-      - name: Build Android APK (debug)
+      - name: Build Host Android APK (debug)
         working-directory: packages/mobile-host/android
         run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename Host APK
+        run: |
+          mv packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk \
+             packages/mobile-host/android/app/build/outputs/apk/debug/mobile-host-debug.apk
+
+      # Build Standalone App
+      - name: Build standalone bundle for Android
+        run: PLATFORM=android yarn workspace @universal/mobile-remote-hello build:standalone
+
+      - name: Build Standalone Android APK (debug)
+        working-directory: packages/mobile-remote-hello/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename Standalone APK
+        run: |
+          mv packages/mobile-remote-hello/android/app/build/outputs/apk/debug/app-debug.apk \
+             packages/mobile-remote-hello/android/app/build/outputs/apk/debug/mobile-remote-standalone-debug.apk
 
       - name: Get tag name
         id: tag
@@ -70,30 +89,57 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
-            ## Android APK (Debug Build)
+            ## Android APKs (Debug Builds)
 
-            Download the debug APK below to install on your Android device or emulator.
+            Download the debug APKs below to install on your Android device or emulator.
 
-            > **⚠️ Important:** This is a debug build that requires the Metro bundler to be running on your development machine. It is not a standalone production APK.
+            > **⚠️ Important:** These are debug builds that require the Metro bundler to be running on your development machine. They are not standalone production APKs.
 
-            ### Prerequisites
+            ---
+
+            ### 🏠 Host App (`mobile-host-debug.apk`)
+
+            The main shell app that loads remote modules via Module Federation.
+
+            **Prerequisites:**
             1. Clone the repository and run `yarn install`
             2. Start the Metro bundler: `yarn workspace @universal/mobile-host start:bundler:android`
             3. Start the remote server: `yarn workspace @universal/mobile-remote-hello serve:android`
             4. Ensure your device/emulator can reach your machine (same network or USB debugging)
 
-            ### Installation
-            1. Download `app-debug.apk`
+            **Installation:**
+            1. Download `mobile-host-debug.apk`
             2. Enable "Install from unknown sources" on your device
             3. Open the APK to install
-            4. The app will connect to Metro bundler at `http://10.0.2.2:8081` (emulator) or your machine's IP (physical device)
+            4. The app connects to Metro at `http://10.0.2.2:8081` (emulator) or your machine's IP
+
+            ---
+
+            ### 📱 Standalone Remote App (`mobile-remote-standalone-debug.apk`)
+
+            The remote module running as an independent "Super App" without the host shell.
+
+            **Prerequisites:**
+            1. Clone the repository and run `yarn install`
+            2. Start the standalone bundler: `yarn workspace @universal/mobile-remote-hello start:bundler:android`
+            3. Ensure your device/emulator can reach your machine
+
+            **Installation:**
+            1. Download `mobile-remote-standalone-debug.apk`
+            2. Enable "Install from unknown sources" on your device
+            3. Open the APK to install
+            4. The app connects to Metro at `http://10.0.2.2:8083` (emulator) or your machine's IP
+
+            **Note:** Host and Standalone apps can run simultaneously on different emulators (ports 8081 vs 8083).
+
+            ---
 
             See the [README](https://github.com/pateatlau/universal-mfe-yarn-seed#mobile-build-limitations) for more details.
 
-            ---
             *For production builds without Metro dependency, see Phase 5 in the CI/CD Implementation Plan.*
           files: |
-            packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk
+            packages/mobile-host/android/app/build/outputs/apk/debug/mobile-host-debug.apk
+            packages/mobile-remote-hello/android/app/build/outputs/apk/debug/mobile-remote-standalone-debug.apk
           draft: false
           prerelease: false
         env:

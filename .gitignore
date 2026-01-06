@@ -15,9 +15,18 @@ coverage/
 packages/mobile-host/android/app/.cxx/
 packages/mobile-host/android/.gradle/
 packages/mobile-host/android/build/
+packages/mobile-remote-hello/android/app/.cxx/
+packages/mobile-remote-hello/android/.gradle/
+packages/mobile-remote-hello/android/build/
+packages/mobile-remote-hello/android/app/build/
 
 # iOS local environment (contains machine-specific paths)
 packages/mobile-host/ios/.xcode.env.local
+packages/mobile-remote-hello/ios/.xcode.env.local
+
+# iOS build outputs
+packages/mobile-remote-hello/ios/build/
+packages/mobile-remote-hello/ios/Pods/
 
 # IDE
 .vscode/
