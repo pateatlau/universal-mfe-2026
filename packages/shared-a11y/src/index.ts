@@ -84,3 +84,7 @@ export {
   visuallyHiddenStyle,
   type VisuallyHiddenProps,
 } from './components';
+
+// Testing utilities
+// Note: Import from '@universal/shared-a11y/testing' for test setup
+export { a11yMatchers, extendExpectWithA11yMatchers } from './testing';

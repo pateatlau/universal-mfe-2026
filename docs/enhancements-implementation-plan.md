@@ -412,10 +412,36 @@ Build accessible components from the ground up, ensuring WCAG 2.1 AA compliance 
 - Verified: `yarn typecheck` - 14 tasks pass
 - Verified: `yarn lint:architecture` - 0 errors
 
-### Task 3.4: Create accessibility testing utilities
-**Files to create:**
+### Task 3.4: Create accessibility testing utilities ✅ COMPLETE
+**Files created:**
 - `packages/shared-a11y/src/testing/a11yMatchers.ts` - Custom Jest matchers for a11y
-- `packages/shared-a11y/src/testing/index.ts`
+- `packages/shared-a11y/src/testing/index.ts` - Testing utilities barrel export
+
+**Files modified:**
+- `packages/shared-a11y/src/index.ts` - Added testing exports
+
+**Custom Jest matchers provided:**
+- `toHaveAccessibilityRole(role)` - Verify element has expected role
+- `toHaveAccessibilityLabel(label, options?)` - Verify label (supports partial match)
+- `toHaveAccessibilityHint(hint)` - Verify element has expected hint
+- `toHaveAccessibilityState(state)` - Verify disabled, selected, checked, etc.
+- `toHaveAccessibilityValue(value)` - Verify value for sliders, progress bars
+- `toBeAccessible()` - Verify basic accessibility requirements
+- `toHaveMinimumTouchTarget(minSize?)` - Verify 44x44px touch target
+
+**Usage:**
+```ts
+import { extendExpectWithA11yMatchers } from '@universal/shared-a11y/testing';
+extendExpectWithA11yMatchers();
+
+expect(button).toHaveAccessibilityRole('button');
+expect(button).toBeAccessible();
+```
+
+**Notes:**
+- Verified: `yarn workspace @universal/shared-a11y build` - Success
+- Verified: `yarn typecheck` - 14 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
 
 ### Task 3.5: Update build configuration
 **Files to modify:**
