@@ -156,21 +156,29 @@ Added Turborepo cache step to all 6 CI jobs:
 - Jobs on same SHA share cache (check → build-web, etc.)
 - YAML syntax validated
 
-### Task 1.6: Add architecture enforcement rules
+### Task 1.6: Add architecture enforcement rules ✅ COMPLETE
 **Purpose:** Automatically enforce architectural boundaries to prevent drift over time.
 
-**Files to create:**
+**Files created:**
+- `eslint-rules/index.js` - Plugin entry point
 - `eslint-rules/no-cross-mfe-imports.js` - Custom ESLint rule to prevent direct MFE-to-MFE imports
 - `eslint-rules/no-dom-in-shared.js` - Custom ESLint rule to prevent DOM usage in shared packages
 
-**Files to modify:**
-- `eslint.config.mjs` - add architecture enforcement rules
-- `package.json` (root) - add `lint:architecture` script
+**Files modified:**
+- `eslint.config.mjs` - added architecture enforcement rules as `architecture` plugin
+- `package.json` (root) - added `lint:architecture` script
 
 **Rules enforced:**
-- No direct imports between remote MFEs (must use event bus)
-- No DOM elements (`div`, `span`, `button`) in `shared-*` packages
-- No `window`, `document`, `localStorage` direct usage in shared packages (use abstractions)
+| Rule | Purpose |
+|------|---------|
+| `architecture/no-cross-mfe-imports` | Prevents `web-remote-*` or `mobile-remote-*` packages from importing each other |
+| `architecture/no-dom-in-shared` | Prevents DOM elements (`div`, `span`, etc.) and browser globals (`window`, `document`, `localStorage`) in `shared-*` packages |
+
+**Notes:**
+- Rules are automatically applied to all packages via eslint.config.mjs
+- `yarn lint:architecture` runs architecture checks independently
+- Tested with intentional violations - rules correctly flag errors
+- Existing codebase passes with 0 architecture errors
 
 ### Task 1.7: Update documentation
 **Files to modify:**

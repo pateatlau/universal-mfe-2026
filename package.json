@@ -16,6 +16,7 @@
     "build:mobile:ios": "PLATFORM=ios yarn workspace @universal/mobile-remote-hello build:remote",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
+    "lint:architecture": "eslint 'packages/**/*.{ts,tsx}' --ignore-pattern '**/dist/**' --ignore-pattern '**/node_modules/**'",
     "format": "turbo run format",
     "format:check": "turbo run format:check",
     "test": "turbo run test",
