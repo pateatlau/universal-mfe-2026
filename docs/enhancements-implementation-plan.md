@@ -234,13 +234,23 @@ All Turborepo migration tasks completed:
 - Verified: `yarn workspace @universal/shared-design-tokens build` - Success
 - Verified: `yarn build:shared` - Turborepo includes new package (3 packages built)
 
-### Task 2.2: Create shared-theme-context package
-**Files to create:**
+### Task 2.2: Create shared-theme-context package ✅ COMPLETE
+**Files created:**
 - `packages/shared-theme-context/package.json`
 - `packages/shared-theme-context/tsconfig.json`
-- `packages/shared-theme-context/src/ThemeProvider.tsx`
-- `packages/shared-theme-context/src/useTheme.ts`
-- `packages/shared-theme-context/src/index.ts`
+- `packages/shared-theme-context/src/ThemeProvider.tsx` - Context provider with theme state and toggle
+- `packages/shared-theme-context/src/useTheme.ts` - Hooks (useTheme, useThemeTokens, useThemeColors, useThemeSpacing)
+- `packages/shared-theme-context/src/index.ts` - Main entry point
+
+**API provided:**
+- `ThemeProvider` - Context provider with `defaultTheme` and `onThemeChange` props
+- `useTheme()` - Returns `{ theme, themeName, isDark, toggleTheme, setTheme }`
+- `useThemeTokens()` - Convenience hook for theme object
+- `useThemeColors()` - Convenience hook for color tokens
+- `useThemeSpacing()` - Convenience hook for spacing tokens
+
+**Notes:**
+- Verified: `yarn build:shared` - 4 packages built (design-tokens → theme-context dependency order correct)
 
 ### Task 2.3: Update shared-hello-ui to use theming
 **Files to modify:**
