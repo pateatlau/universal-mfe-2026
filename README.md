@@ -8,8 +8,10 @@ A production-ready microfrontend architecture enabling code sharing across Web, 
 |----------|-----|
 | Web Shell | https://universal-mfe-2026-shell.vercel.app/ |
 | Web Remote | https://universal-mfe-2026-remote.vercel.app/ |
-| Android APK | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) |
-| iOS Simulator | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) |
+| Android APK (Host) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-host-debug.apk` |
+| Android APK (Standalone) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-remote-standalone-debug.apk` |
+| iOS Simulator (Host) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-host-simulator.zip` |
+| iOS Simulator (Standalone) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-remote-standalone-simulator.zip` |
 
 ## Platform Status
 
@@ -26,7 +28,7 @@ packages/
 ├── web-shell/              # Web host (port 9001)
 ├── web-remote-hello/       # Web remote (port 9003)
 ├── mobile-host/            # Mobile host (Android: 8081, iOS: 8082)
-├── mobile-remote-hello/    # Mobile remote (Android: 9004, iOS: 9005)
+├── mobile-remote-hello/    # Mobile remote (MF: 9004/9005, Standalone: 8083/8084)
 ├── shared-utils/           # TypeScript utilities
 └── shared-hello-ui/        # Universal React Native components
 ```
@@ -83,6 +85,26 @@ PLATFORM=ios yarn build:remote && PLATFORM=ios yarn serve
 yarn workspace @universal/mobile-host ios
 ```
 
+### Standalone Mode ("Super App")
+
+The remote module can run independently as a standalone app without the host shell:
+
+```bash
+# Android Standalone (port 8083)
+cd packages/mobile-remote-hello
+PLATFORM=android yarn build:standalone
+yarn start:bundler:android
+# In another terminal: yarn android
+
+# iOS Standalone (port 8084)
+cd packages/mobile-remote-hello
+PLATFORM=ios yarn build:standalone
+yarn start:bundler:ios
+# In another terminal: yarn ios
+```
+
+Host and standalone apps can run simultaneously on different emulators/simulators.
+
 ## Tech Stack
 
 | Component | Version |
@@ -100,10 +122,10 @@ yarn workspace @universal/mobile-host ios
 
 | Workflow | Trigger | Action |
 |----------|---------|--------|
-| CI | Push/PR to main/develop | Lint, typecheck, test, build all platforms |
+| CI | Push/PR to main/develop | Lint, typecheck, test, build all platforms (host + standalone) |
 | Deploy Web | Push to main | Deploy to Vercel (remote first, then shell) |
-| Deploy Android | Tag push (v*) | Build APK, create GitHub Release |
-| Deploy iOS | Tag push (v*) | Build Simulator app, create GitHub Release |
+| Deploy Android | Tag push (v*) | Build host + standalone APKs, create GitHub Release |
+| Deploy iOS | Tag push (v*) | Build host + standalone Simulator apps, create GitHub Release |
 
 ### Creating a Release
 
@@ -118,12 +140,14 @@ git push --tags
 
 Current mobile builds are **debug builds** that require Metro bundler running:
 
-| Platform | Artifact | Limitation |
+| Platform | Artifact | Metro Port |
 |----------|----------|------------|
-| Android | `app-debug.apk` | Requires Metro on port 8081 |
-| iOS | `ios-simulator-app.zip` | Simulator only, requires Metro on port 8082 |
+| Android (Host) | `mobile-host-debug.apk` | 8081 |
+| Android (Standalone) | `mobile-remote-standalone-debug.apk` | 8083 |
+| iOS (Host) | `mobile-host-simulator.zip` | 8082 |
+| iOS (Standalone) | `mobile-remote-standalone-simulator.zip` | 8084 |
 
-For standalone production builds, see [Phase 5 in CI/CD Implementation Plan](docs/CI-CD-IMPLEMENTATION-PLAN.md#phase-5-production-mobile-builds-future).
+For production builds without Metro dependency, see [Phase 6 in CI/CD Implementation Plan](docs/CI-CD-IMPLEMENTATION-PLAN.md#phase-6-production-mobile-builds-future).
 
 ## Documentation
 
