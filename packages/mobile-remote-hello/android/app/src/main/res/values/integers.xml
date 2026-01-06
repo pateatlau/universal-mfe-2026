@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Override the default React Native dev server port (8081) -->
+    <!-- Using 8083 for mobile-remote-hello standalone to avoid conflict with mobile-host (8081) -->
+    <integer name="react_native_dev_server_port">8083</integer>
+</resources>

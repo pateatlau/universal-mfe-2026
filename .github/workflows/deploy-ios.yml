@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   deploy-ios:
-    name: Build and Release iOS Simulator App
+    name: Build and Release iOS Simulator Apps
     runs-on: macos-14
 
     steps:
@@ -37,9 +37,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/Library/Caches/CocoaPods
-          key: ${{ runner.os }}-cocoapods-${{ hashFiles('packages/mobile-host/ios/Podfile.lock') }}
+          key: ${{ runner.os }}-cocoapods-deploy-${{ hashFiles('packages/mobile-host/ios/Podfile.lock', 'packages/mobile-remote-hello/ios/Podfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cocoapods-
+            ${{ runner.os }}-cocoapods-deploy-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -47,17 +47,18 @@ jobs:
       - name: Build shared packages
         run: yarn build:shared
 
-      - name: Build mobile remote for iOS
+      # Build Host App
+      - name: Build mobile remote for iOS (MF bundles)
         run: yarn build:mobile:ios
 
-      - name: Install CocoaPods dependencies
+      - name: Install CocoaPods for Host
         working-directory: packages/mobile-host/ios
         run: |
           # Clean and reinstall pods for CI environment
           rm -rf Pods Podfile.lock
           pod install --repo-update
 
-      - name: Build iOS app for Simulator
+      - name: Build Host iOS app for Simulator
         working-directory: packages/mobile-host/ios
         run: |
           set -o pipefail
@@ -79,17 +80,15 @@ jobs:
             exit $BUILD_EXIT_CODE
           fi
 
-          echo "=== Build completed successfully ==="
+          echo "=== Host build completed successfully ==="
 
-      - name: Find and zip iOS app bundle
+      - name: Zip Host iOS app bundle
         working-directory: packages/mobile-host/ios
         run: |
           APP_PATH=$(find build -name "MobileHostTmp.app" -type d 2>/dev/null | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "Error: MobileHostTmp.app bundle not found"
-            echo "=== Searching for .app bundles ==="
             find build -name "*.app" -type d 2>/dev/null || echo "No .app bundles found"
-            echo "=== Last 100 lines of build log ==="
             tail -100 build.log
             exit 1
           fi
@@ -97,7 +96,58 @@ jobs:
           echo "Found app at: $APP_PATH"
           APP_DIR=$(dirname "$APP_PATH")
           cd "$APP_DIR"
-          zip -r "$GITHUB_WORKSPACE/packages/mobile-host/ios/ios-simulator-app.zip" MobileHostTmp.app
+          zip -r "$GITHUB_WORKSPACE/packages/mobile-host/ios/mobile-host-simulator.zip" MobileHostTmp.app
+
+      # Build Standalone App
+      - name: Build standalone bundle for iOS
+        run: PLATFORM=ios yarn workspace @universal/mobile-remote-hello build:standalone
+
+      - name: Install CocoaPods for Standalone
+        working-directory: packages/mobile-remote-hello/ios
+        run: |
+          # Clean and reinstall pods for CI environment
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+
+      - name: Build Standalone iOS app for Simulator
+        working-directory: packages/mobile-remote-hello/ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace MobileRemoteHello.xcworkspace \
+            -scheme MobileRemoteHello \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -derivedDataPath build \
+            build \
+            2>&1 | tee build.log
+
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+          if [ $BUILD_EXIT_CODE -ne 0 ]; then
+            echo "=== Build failed with exit code $BUILD_EXIT_CODE ==="
+            echo "=== Last 200 lines of build log ==="
+            tail -200 build.log
+            exit $BUILD_EXIT_CODE
+          fi
+
+          echo "=== Standalone build completed successfully ==="
+
+      - name: Zip Standalone iOS app bundle
+        working-directory: packages/mobile-remote-hello/ios
+        run: |
+          APP_PATH=$(find build -name "MobileRemoteHello.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: MobileRemoteHello.app bundle not found"
+            find build -name "*.app" -type d 2>/dev/null || echo "No .app bundles found"
+            tail -100 build.log
+            exit 1
+          fi
+
+          echo "Found app at: $APP_PATH"
+          APP_DIR=$(dirname "$APP_PATH")
+          cd "$APP_DIR"
+          zip -r "$GITHUB_WORKSPACE/packages/mobile-remote-hello/ios/mobile-remote-standalone-simulator.zip" MobileRemoteHello.app
 
       - name: Get tag name
         id: tag
@@ -109,26 +159,56 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
-            ## iOS Simulator App (Debug Build)
+            ## iOS Simulator Apps (Debug Builds)
 
-            Download the iOS Simulator app bundle below.
+            Download the iOS Simulator app bundles below.
 
-            > **⚠️ Important:** This is a debug build that requires the Metro bundler to be running on your development machine. It is not a standalone production app.
+            > **⚠️ Important:** These are debug builds that require the Metro bundler to be running on your development machine. They are not standalone production apps.
 
-            ### Prerequisites
+            ---
+
+            ### 🏠 Host App (`mobile-host-simulator.zip`)
+
+            The main shell app that loads remote modules via Module Federation.
+
+            **Prerequisites:**
             1. Clone the repository and run `yarn install`
             2. Start the Metro bundler: `yarn workspace @universal/mobile-host start:bundler:ios`
             3. Start the remote server: `yarn workspace @universal/mobile-remote-hello serve:ios`
 
-            ### Installation
-            1. Download `ios-simulator-app.zip`
+            **Installation:**
+            1. Download `mobile-host-simulator.zip`
             2. Unzip to get `MobileHostTmp.app`
             3. Drag the .app to an open iOS Simulator, or run:
                ```bash
                xcrun simctl install booted MobileHostTmp.app
                xcrun simctl launch booted com.universal.mobilehost
                ```
-            4. The app will connect to Metro bundler at `http://localhost:8082`
+            4. The app connects to Metro at `http://localhost:8082`
+
+            ---
+
+            ### 📲 Standalone Remote App (`mobile-remote-standalone-simulator.zip`)
+
+            The remote module running as an independent "Super App" without the host shell.
+
+            **Prerequisites:**
+            1. Clone the repository and run `yarn install`
+            2. Start the standalone bundler: `yarn workspace @universal/mobile-remote-hello start:bundler:ios`
+
+            **Installation:**
+            1. Download `mobile-remote-standalone-simulator.zip`
+            2. Unzip to get `MobileRemoteHello.app`
+            3. Drag the .app to an open iOS Simulator, or run:
+               ```bash
+               xcrun simctl install booted MobileRemoteHello.app
+               xcrun simctl launch booted com.mobileremotehello
+               ```
+            4. The app connects to Metro at `http://localhost:8084`
+
+            **Note:** Host and Standalone apps can run simultaneously on different simulators (ports 8082 vs 8084).
+
+            ---
 
             ### Requirements
             - macOS with Xcode installed
@@ -136,10 +216,10 @@ jobs:
 
             See the [README](https://github.com/pateatlau/universal-mfe-yarn-seed#mobile-build-limitations) for more details.
 
-            ---
-            *This is a Simulator-only debug build. For production builds without Metro dependency, see Phase 5 in the CI/CD Implementation Plan.*
+            *For production builds without Metro dependency, see Phase 5 in the CI/CD Implementation Plan.*
           files: |
-            packages/mobile-host/ios/ios-simulator-app.zip
+            packages/mobile-host/ios/mobile-host-simulator.zip
+            packages/mobile-remote-hello/ios/mobile-remote-standalone-simulator.zip
           draft: false
           prerelease: false
         env:
