@@ -21,6 +21,9 @@ export interface SemanticColors {
   surface: {
     background: string;
     foreground: string;
+    primary: string; // Primary surface (header, cards)
+    secondary: string; // Secondary surface
+    tertiary: string; // Tertiary surface (subtle backgrounds)
     card: string;
     cardHover: string;
     elevated: string;
@@ -82,8 +85,11 @@ export interface SemanticColors {
  */
 export const lightColors: SemanticColors = {
   surface: {
-    background: colors.white,
-    foreground: colors.gray[50],
+    background: colors.gray[50],
+    foreground: colors.white,
+    primary: colors.white,
+    secondary: colors.gray[50],
+    tertiary: colors.gray[100],
     card: colors.white,
     cardHover: colors.gray[50],
     elevated: colors.white,
@@ -142,6 +148,9 @@ export const darkColors: SemanticColors = {
   surface: {
     background: colors.gray[900],
     foreground: colors.gray[800],
+    primary: colors.gray[800],
+    secondary: colors.gray[800],
+    tertiary: colors.gray[700],
     card: colors.gray[800],
     cardHover: colors.gray[700],
     elevated: colors.gray[700],

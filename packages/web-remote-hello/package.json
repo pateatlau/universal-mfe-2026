@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@universal/shared-hello-ui": "*",
+    "@universal/shared-theme-context": "*",
     "@universal/shared-utils": "*",
     "react": "19.2.0",
     "react-dom": "19.2.0",

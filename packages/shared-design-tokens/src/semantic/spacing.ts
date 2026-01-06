@@ -25,6 +25,7 @@ export interface SemanticSpacing {
     padding: number;
     paddingSmall: number;
     paddingLarge: number;
+    borderRadius: number;
   };
 
   // Element spacing
@@ -39,13 +40,17 @@ export interface SemanticSpacing {
     paddingHorizontal: number;
     paddingVertical: number;
     gap: number;
+    borderRadius: number;
   };
 
   // Button spacing
   button: {
     paddingHorizontal: number;
+    paddingHorizontalSmall: number;
     paddingVertical: number;
+    paddingVerticalSmall: number;
     gap: number;
+    borderRadius: number;
   };
 }
 
@@ -55,7 +60,7 @@ export interface SemanticSpacing {
  */
 export const semanticSpacing: SemanticSpacing = {
   layout: {
-    screenPadding: spacing[4], // 16
+    screenPadding: spacing[6], // 24
     sectionGap: spacing[8], // 32
     contentPadding: spacing[6], // 24
     cardPadding: spacing[4], // 16
@@ -66,6 +71,7 @@ export const semanticSpacing: SemanticSpacing = {
     padding: spacing[4], // 16
     paddingSmall: spacing[2], // 8
     paddingLarge: spacing[6], // 24
+    borderRadius: spacing[2], // 8
   },
 
   element: {
@@ -78,11 +84,15 @@ export const semanticSpacing: SemanticSpacing = {
     paddingHorizontal: spacing[3], // 12
     paddingVertical: spacing[2], // 8
     gap: spacing[2], // 8
+    borderRadius: spacing[2], // 8
   },
 
   button: {
-    paddingHorizontal: spacing[4], // 16
-    paddingVertical: spacing[2], // 8
+    paddingHorizontal: spacing[6], // 24
+    paddingHorizontalSmall: spacing[5], // 20
+    paddingVertical: spacing[3], // 12
+    paddingVerticalSmall: spacing[2], // 8
     gap: spacing[2], // 8
+    borderRadius: spacing[2], // 8
   },
 };

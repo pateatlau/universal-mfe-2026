@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { HelloUniversal } from '@universal/shared-hello-ui';
+import { ThemeProvider } from '@universal/shared-theme-context';
 
 export interface HelloRemoteProps {
   name?: string;
@@ -17,12 +18,14 @@ export interface HelloRemoteProps {
 
 /**
  * HelloRemote - Mobile remote component exposed via MFv2
+ *
+ * Wraps HelloUniversal with ThemeProvider since remote modules load
+ * as separate bundles and don't inherit context from the host.
  */
 export default function HelloRemote({ name, onPress }: HelloRemoteProps) {
   return (
-    <HelloUniversal
-      name={name}
-      onPress={onPress}
-    />
+    <ThemeProvider>
+      <HelloUniversal name={name} onPress={onPress} />
+    </ThemeProvider>
   );
 }

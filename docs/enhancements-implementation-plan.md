@@ -273,12 +273,44 @@ All Turborepo migration tasks completed:
 - Verified: `yarn build:shared` - 4 packages built successfully
 - Verified: `yarn workspace @universal/shared-hello-ui typecheck` - passes
 
-### Task 2.4: Integrate theming into host applications
-**Files to modify:**
-- `packages/web-shell/package.json`
-- `packages/web-shell/src/App.tsx`
-- `packages/mobile-host/package.json`
-- `packages/mobile-host/src/App.tsx`
+### Task 2.4: Integrate theming into host applications ✅ COMPLETE
+**Files modified:**
+
+**Semantic tokens enhanced:**
+- `packages/shared-design-tokens/src/semantic/colors.ts` - Added `surface.primary`, `surface.secondary`, `surface.tertiary`
+- `packages/shared-design-tokens/src/semantic/spacing.ts` - Added `component.borderRadius`, `input.borderRadius`, `button.borderRadius`, `button.paddingHorizontalSmall`, `button.paddingVerticalSmall`
+
+**Host applications:**
+- `packages/web-shell/package.json` - Added `@universal/shared-theme-context` dependency
+- `packages/web-shell/src/App.tsx` - Wrapped with `ThemeProvider`, added theme toggle button, updated all styles to use theme tokens
+- `packages/mobile-host/package.json` - Added `@universal/shared-theme-context` dependency
+- `packages/mobile-host/src/App.tsx` - Wrapped with `ThemeProvider`, added theme toggle button, updated all styles to use theme tokens
+
+**Remote modules (ThemeProvider wrapper for MFE independence):**
+- `packages/web-remote-hello/package.json` - Added `@universal/shared-theme-context` dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Wrapped `HelloUniversal` with `ThemeProvider`
+- `packages/mobile-remote-hello/package.json` - Added `@universal/shared-theme-context` dependency
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Wrapped `HelloUniversal` with `ThemeProvider`
+
+**Standalone mode (theme toggle added):**
+- `packages/web-remote-hello/src/standalone.tsx` - Added `ThemeProvider`, theme toggle, themed styles
+- `packages/mobile-remote-hello/src/App.tsx` - Added `ThemeProvider`, theme toggle, themed styles
+
+**Notes:**
+- Verified: `yarn typecheck` - All 12 tasks pass
+- Verified: `yarn lint:architecture` - No architecture rule violations
+- Verified: Web shell, web remote standalone, mobile host (iOS/Android), mobile remote standalone all work with theming
+
+**TODO - Theme Synchronization Discussion:**
+Remote MFE components have their own `ThemeProvider` and do NOT sync with the host's theme. This is intentional for MFE independence (each remote can be deployed independently with its own default theme). However, this means:
+- Host toggles theme → only host UI changes
+- Remote component stays on its default theme (light)
+
+**Future options to discuss:**
+1. **Accept current behavior** - Each MFE is independent, consistent with MFE principles
+2. **Theme via props** - Pass `themeName` prop from host to remote, remote uses it as `defaultTheme`
+3. **Shared state** - Use event bus (Phase 5) to broadcast theme changes, remotes subscribe
+4. **Context bridging** - Advanced: Share React context across MF boundaries (complex, requires MF shared config)
 
 ### Task 2.5: Update build scripts
 **Files to modify:**
