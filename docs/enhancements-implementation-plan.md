@@ -55,18 +55,23 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 ### Task 1.1: Install and configure Turborepo
 **Files to create:**
 - `turbo.json` - Turborepo configuration
+- `.prettierrc` - Prettier configuration
+- `.prettierignore` - Files to ignore during formatting
 
 **Files to modify:**
-- `package.json` (root) - add turbo dependency and scripts
+- `package.json` (root) - add turbo and prettier dependencies and scripts
 
 **Dependencies:**
 - `turbo` (exact version to be determined)
+- `prettier` (exact version to be determined)
 
 ### Task 1.2: Define pipeline tasks
 **Configure in `turbo.json`:**
 - `build` - builds packages with proper dependency ordering
 - `typecheck` - runs TypeScript checks
 - `lint` - runs ESLint
+- `format` - runs Prettier to fix formatting (no caching)
+- `format:check` - checks formatting without modifying (for CI)
 - `test` - runs Jest tests
 - `dev` - development servers (no caching)
 
@@ -88,6 +93,7 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 **Files to modify:**
 - `CLAUDE.md` - document Turborepo usage
 - `README.md` - update build instructions
+- `docs/universal-mfe-all-platforms-testing-guide.md` - update commands to use Turborepo
 
 ---
 
@@ -370,6 +376,10 @@ Implement a lightweight, type-safe event bus for communication between microfron
 **Files to modify:**
 - `.github/workflows/ci.yml`
 
+### Task 8.6: Update testing documentation
+**Files to modify:**
+- `docs/universal-mfe-all-platforms-testing-guide.md` - add unit test commands and troubleshooting
+
 ---
 
 ## Phase 9: Integration Testing
@@ -415,6 +425,10 @@ Integration tests verify cross-package interactions and Module Federation remote
 - `.github/workflows/ci.yml` - add integration test step
 - `turbo.json` - add `test:integration` pipeline task
 
+### Task 9.6: Update testing documentation
+**Files to modify:**
+- `docs/universal-mfe-all-platforms-testing-guide.md` - add integration test commands and troubleshooting
+
 ---
 
 ## Phase 10: E2E Testing
@@ -443,6 +457,10 @@ Integration tests verify cross-package interactions and Module Federation remote
 - `.github/workflows/e2e-web.yml`
 - `.github/workflows/e2e-mobile.yml` (optional - runs on tags only)
 
+### Task 10.4: Update testing documentation
+**Files to modify:**
+- `docs/universal-mfe-all-platforms-testing-guide.md` - add E2E test sections for Playwright and Maestro
+
 ---
 
 ## Phase 11: Documentation & Patterns
@@ -466,6 +484,7 @@ Integration tests verify cross-package interactions and Module Federation remote
 **Files to modify:**
 - `CLAUDE.md`
 - `README.md`
+- `docs/universal-mfe-all-platforms-testing-guide.md` - final review and consolidation of all testing sections
 
 ---
 
@@ -474,6 +493,7 @@ Integration tests verify cross-package interactions and Module Federation remote
 | Package | Version |
 |---------|---------|
 | turbo | TBD (latest stable) |
+| prettier | TBD (latest stable) |
 | @tanstack/react-query | 5.62.16 |
 | react-router | 7.1.1 |
 | react-router-dom | 7.1.1 |
