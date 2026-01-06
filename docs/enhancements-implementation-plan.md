@@ -100,10 +100,31 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 - `build:mobile:android` and `build:mobile:ios` kept as direct yarn workspace commands (require PLATFORM env var)
 - Verified: All scripts work with FULL TURBO caching
 
-### Task 1.4: Configure caching
-**Configure in `turbo.json`:**
-- Define inputs/outputs for each task
-- Configure remote caching (optional, for CI)
+### Task 1.4: Configure caching ✅ COMPLETE
+**Files modified:**
+- `turbo.json` - enhanced caching configuration
+
+**Changes:**
+- Added `globalDependencies`: `tsconfig.json`, `.nvmrc` (affect all packages)
+- Added `$TURBO_DEFAULT$` to all cached task inputs (includes lockfile, package.json)
+- Added `*.config.{js,mjs,ts}` to build inputs for bundler configs
+- Added root config references for lint (`../../eslint.config.mjs`), format (`../../.prettierrc`), test (`../../jest.config.js`)
+
+**Caching summary:**
+| Task | Cached | Notes |
+|------|--------|-------|
+| build | ✅ | Outputs: `dist/**` |
+| typecheck | ✅ | No outputs (validation only) |
+| lint | ✅ | References root eslint config |
+| format | ❌ | Side effects (modifies files) |
+| format:check | ✅ | References root prettier config |
+| test | ✅ | Outputs: `coverage/**` |
+| dev | ❌ | Persistent process |
+| clean | ❌ | Side effects (deletes files) |
+
+**Notes:**
+- Remote caching available via `TURBO_TOKEN` and `TURBO_TEAM` env vars (optional)
+- Verified: FULL TURBO on subsequent runs for build and typecheck
 
 ### Task 1.5: Update CI workflows
 **Files to modify:**

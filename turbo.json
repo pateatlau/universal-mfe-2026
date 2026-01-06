@@ -1,30 +1,62 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "tsconfig.json",
+    ".nvmrc"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "tsconfig.json", "package.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "src/**",
+        "tsconfig.json",
+        "package.json",
+        "*.config.{js,mjs,ts}"
+      ],
       "outputs": ["dist/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "tsconfig.json", "package.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "src/**",
+        "tsconfig.json",
+        "package.json"
+      ],
       "outputs": []
     },
     "lint": {
-      "inputs": ["src/**", "*.config.{js,mjs,ts}", "eslint.config.mjs"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "src/**",
+        "*.config.{js,mjs,ts}",
+        "../../eslint.config.mjs"
+      ],
       "outputs": []
     },
     "format": {
       "cache": false
     },
     "format:check": {
-      "inputs": ["src/**", "*.config.{js,mjs,ts}", ".prettierrc"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "src/**",
+        "*.config.{js,mjs,ts}",
+        "../../.prettierrc",
+        "../../.prettierignore"
+      ],
       "outputs": []
     },
     "test": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "jest.config.js", "package.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "src/**",
+        "jest.config.js",
+        "package.json",
+        "../../jest.config.js"
+      ],
       "outputs": ["coverage/**"]
     },
     "dev": {
