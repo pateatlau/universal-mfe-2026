@@ -11,7 +11,8 @@
   "dependencies": {
     "react": "19.1.0",
     "react-native": "0.80.0",
-    "@universal/shared-utils": "*"
+    "@universal/shared-utils": "*",
+    "@universal/shared-theme-context": "*"
   },
   "devDependencies": {
     "typescript": "5.9.3",

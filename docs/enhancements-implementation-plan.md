@@ -31,7 +31,7 @@ This document outlines the implementation plan to enhance the Universal Microfro
 | Feature | Status | Phase |
 |---------|--------|-------|
 | Turborepo Migration | ✅ Complete | 1 |
-| Design Tokens & Theming (dark/light mode) | Pending | 2 |
+| Design Tokens & Theming (dark/light mode) | In Progress | 2 |
 | Accessibility | Pending | 3 |
 | Internationalization (i18n) | Pending | 4 |
 | Event Bus (Inter-MFE Communication) | Pending | 5 |
@@ -252,10 +252,26 @@ All Turborepo migration tasks completed:
 **Notes:**
 - Verified: `yarn build:shared` - 4 packages built (design-tokens → theme-context dependency order correct)
 
-### Task 2.3: Update shared-hello-ui to use theming
-**Files to modify:**
-- `packages/shared-hello-ui/package.json` - add dependencies
-- `packages/shared-hello-ui/src/HelloUniversal.tsx` - use theme tokens
+### Task 2.3: Update shared-hello-ui to use theming ✅ COMPLETE
+**Files modified:**
+- `packages/shared-hello-ui/package.json` - added `@universal/shared-theme-context` dependency
+- `packages/shared-hello-ui/src/HelloUniversal.tsx` - updated to use `useTheme()` hook and dynamic themed styles
+
+**Changes:**
+- Added `@universal/shared-theme-context` to dependencies
+- Replaced static StyleSheet with `createStyles(theme)` function that generates styles from theme tokens
+- Component now uses `useMemo` to memoize styles based on theme changes
+- All hardcoded colors/spacing replaced with semantic tokens:
+  - `theme.colors.surface.card` for container background
+  - `theme.colors.text.primary` for text color
+  - `theme.colors.interactive.primary` for button background
+  - `theme.colors.text.inverse` for button text
+  - `theme.spacing.*` for padding, margins, gaps
+  - `theme.typography.*` for font sizes and weights
+
+**Notes:**
+- Verified: `yarn build:shared` - 4 packages built successfully
+- Verified: `yarn workspace @universal/shared-hello-ui typecheck` - passes
 
 ### Task 2.4: Integrate theming into host applications
 **Files to modify:**
