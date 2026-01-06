@@ -1,7 +1,7 @@
 /**
  * @universal/shared-hello-ui
  *
- * Universal React Native UI component with theme support.
+ * Universal React Native UI component with theme support and accessibility.
  *
  * Constraints:
  * - MUST use React Native primitives only (View, Text, Pressable, etc.)
@@ -10,16 +10,24 @@
  * - NO host-specific dependencies
  * - Can import from @universal/shared-utils
  * - Uses theme tokens from @universal/shared-theme-context
+ * - Uses accessibility utilities from @universal/shared-a11y
  */
 
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { getGreeting } from '@universal/shared-utils';
 import { useTheme, Theme } from '@universal/shared-theme-context';
+import { A11yRoles, A11yLabels, A11Y_MIN_TOUCH_TARGET } from '@universal/shared-a11y';
 
 export interface HelloUniversalProps {
+  /** Name to display in the greeting */
   name?: string;
+  /** Callback when the button is pressed */
   onPress?: () => void;
+  /** Custom accessibility label for the button (defaults to "Press Me") */
+  buttonAccessibilityLabel?: string;
+  /** Accessibility hint describing what the button does */
+  buttonAccessibilityHint?: string;
 }
 
 /**
@@ -31,17 +39,39 @@ export interface HelloUniversalProps {
  *
  * Uses only RN primitives: View, Text, Pressable
  * Supports light/dark themes via ThemeProvider
+ * Includes full accessibility support for screen readers
  */
-export function HelloUniversal({ name, onPress }: HelloUniversalProps) {
+export function HelloUniversal({
+  name,
+  onPress,
+  buttonAccessibilityLabel,
+  buttonAccessibilityHint,
+}: HelloUniversalProps) {
   const { theme } = useTheme();
   const greeting = getGreeting(name);
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>{greeting}</Text>
+    <View
+      style={styles.container}
+      accessible={true}
+      accessibilityRole="none"
+      accessibilityLabel={`Greeting card: ${greeting}`}
+    >
+      <Text
+        style={styles.text}
+        accessibilityRole={A11yRoles.TEXT}
+      >
+        {greeting}
+      </Text>
       {onPress && (
-        <Pressable style={styles.button} onPress={onPress}>
+        <Pressable
+          style={styles.button}
+          onPress={onPress}
+          accessibilityRole={A11yRoles.BUTTON}
+          accessibilityLabel={buttonAccessibilityLabel ?? 'Press Me'}
+          accessibilityHint={buttonAccessibilityHint ?? A11yLabels.format('Double tap to activate', 'greeting button')}
+        >
           <Text style={styles.buttonText}>Press Me</Text>
         </Pressable>
       )}
@@ -76,6 +106,10 @@ function createStyles(theme: Theme): Styles {
       paddingHorizontal: theme.spacing.button.paddingHorizontal,
       paddingVertical: theme.spacing.button.paddingVertical,
       borderRadius: 8,
+      minHeight: A11Y_MIN_TOUCH_TARGET,
+      minWidth: A11Y_MIN_TOUCH_TARGET,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     buttonText: {
       color: theme.colors.text.inverse,

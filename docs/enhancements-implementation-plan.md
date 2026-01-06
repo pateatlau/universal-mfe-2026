@@ -392,10 +392,25 @@ Build accessible components from the ground up, ensuring WCAG 2.1 AA compliance 
 - Verified: `yarn typecheck` - 13 tasks pass
 - Verified: `yarn lint:architecture` - 0 errors
 
-### Task 3.3: Add accessibility props to shared-hello-ui
-**Files to modify:**
-- `packages/shared-hello-ui/package.json` - add @universal/shared-a11y dependency
-- `packages/shared-hello-ui/src/HelloUniversal.tsx` - add accessibilityLabel, accessibilityRole, accessibilityHint
+### Task 3.3: Add accessibility props to shared-hello-ui ✅ COMPLETE
+**Files modified:**
+- `packages/shared-hello-ui/package.json` - added `@universal/shared-a11y` dependency
+- `packages/shared-hello-ui/src/HelloUniversal.tsx` - added accessibility props and WCAG compliance
+
+**Props added:**
+- `buttonAccessibilityLabel` - custom label for the button
+- `buttonAccessibilityHint` - hint describing button action
+
+**Accessibility enhancements:**
+- Container: `accessible={true}`, `accessibilityLabel` with greeting context
+- Text: `accessibilityRole={A11yRoles.TEXT}`
+- Button: `accessibilityRole={A11yRoles.BUTTON}`, label, hint
+- Button: `minHeight/minWidth` set to `A11Y_MIN_TOUCH_TARGET` (44px) for WCAG 2.1 AA
+
+**Notes:**
+- Verified: `yarn turbo run build --filter='@universal/shared-*'` - 5 packages built
+- Verified: `yarn typecheck` - 14 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
 
 ### Task 3.4: Create accessibility testing utilities
 **Files to create:**
