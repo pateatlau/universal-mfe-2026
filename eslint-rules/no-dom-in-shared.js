@@ -37,7 +37,12 @@ module.exports = {
     const isSharedPackage = /packages\/shared-[^/]+\/src\//.test(filename);
     const isTestFile = /\.(test|spec)\.[jt]sx?$/.test(filename);
 
-    if (!isSharedPackage || isTestFile) {
+    // Allow DOM APIs in shared-a11y package - it provides cross-platform
+    // accessibility features that require platform-specific implementations
+    // (e.g., ARIA live regions on web, AccessibilityInfo on native)
+    const isA11yPackage = /packages\/shared-a11y\//.test(filename);
+
+    if (!isSharedPackage || isTestFile || isA11yPackage) {
       return {};
     }
 
