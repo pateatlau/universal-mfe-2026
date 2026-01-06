@@ -18,52 +18,57 @@ This is a **universal microfrontend platform** that enables a single React Nativ
 All versions are exact (no `^` or `~`) to ensure reproducibility.
 
 ### Runtime & Build Tools
-| Tool | Version | Notes |
-|------|---------|-------|
-| Node.js | 24.11.0 | Locked via `.nvmrc` |
+
+| Tool         | Version | Notes                                              |
+| ------------ | ------- | -------------------------------------------------- |
+| Node.js      | 24.11.0 | Locked via `.nvmrc`                                |
 | Yarn Classic | 1.22.22 | Locked via `packageManager` in root `package.json` |
-| TypeScript | 5.9.3 | |
+| TypeScript   | 5.9.3   |                                                    |
 
 ### Mobile Packages (React 19.1.0 required by RN 0.80.0)
-| Package | Version |
-|---------|---------|
-| react | 19.1.0 |
-| react-native | 0.80.0 |
-| @callstack/repack | 5.2.0 |
-| @module-federation/enhanced | 0.21.6 |
-| @swc/helpers | 0.5.17 |
-| @rspack/cli | 1.6.5 |
+
+| Package                     | Version |
+| --------------------------- | ------- |
+| react                       | 19.1.0  |
+| react-native                | 0.80.0  |
+| @callstack/repack           | 5.2.0   |
+| @module-federation/enhanced | 0.21.6  |
+| @swc/helpers                | 0.5.17  |
+| @rspack/cli                 | 1.6.5   |
 
 ### Web Packages
-| Package | Version |
-|---------|---------|
-| react | 19.2.0 |
-| react-dom | 19.2.0 |
-| react-native-web | 0.21.2 |
-| @rspack/core | 1.6.5 |
-| @rspack/cli | 1.6.5 |
+
+| Package          | Version |
+| ---------------- | ------- |
+| react            | 19.2.0  |
+| react-dom        | 19.2.0  |
+| react-native-web | 0.21.2  |
+| @rspack/core     | 1.6.5   |
+| @rspack/cli      | 1.6.5   |
 
 ### Native Tooling (for reference - install these versions)
-| Tool | Version | Notes |
-|------|---------|-------|
-| Xcode | 16.2 | macOS only |
-| Android Build Tools | 35.0.0 | |
-| Android Compile SDK | 35 | |
-| Android NDK | 27.1.12297006 | |
-| Gradle | 8.14.1 | Locked via `gradle-wrapper.properties` |
-| Kotlin | 2.1.20 | |
-| CocoaPods | 1.16.2 | macOS only |
-| Ruby | 2.6.10+ | For CocoaPods |
+
+| Tool                | Version       | Notes                                  |
+| ------------------- | ------------- | -------------------------------------- |
+| Xcode               | 16.2          | macOS only                             |
+| Android Build Tools | 35.0.0        |                                        |
+| Android Compile SDK | 35            |                                        |
+| Android NDK         | 27.1.12297006 |                                        |
+| Gradle              | 8.14.1        | Locked via `gradle-wrapper.properties` |
+| Kotlin              | 2.1.20        |                                        |
+| CocoaPods           | 1.16.2        | macOS only                             |
+| Ruby                | 2.6.10+       | For CocoaPods                          |
 
 ### Port Assignments
-| Service | Port |
-|---------|------|
-| Web Shell | 9001 |
-| Web Remote | 9003 |
-| Mobile Host (Android) | 8081 |
-| Mobile Host (iOS) | 8082 |
+
+| Service                 | Port |
+| ----------------------- | ---- |
+| Web Shell               | 9001 |
+| Web Remote              | 9003 |
+| Mobile Host (Android)   | 8081 |
+| Mobile Host (iOS)       | 8082 |
 | Mobile Remote (Android) | 9004 |
-| Mobile Remote (iOS) | 9005 |
+| Mobile Remote (iOS)     | 9005 |
 
 ## Security Considerations
 
@@ -72,6 +77,7 @@ All versions are exact (no `^` or `~`) to ensure reproducibility.
 The `@react-native-community/cli@19.1.2` used by RN 0.80.0 has a known vulnerability (CVE-2025-11953) affecting the Metro dev server. This is a **development-time only** vulnerability and does not affect production builds.
 
 **Mitigations:**
+
 - The dev server only runs locally during development
 - For additional security, bind Metro to localhost: `react-native start --host 127.0.0.1`
 - Upgrade to `@react-native-community/cli@20.0.0+` when compatible with your RN version
@@ -141,6 +147,7 @@ packages/
 ## Common Development Commands
 
 ### Initial Setup (Required First)
+
 ```bash
 # Install dependencies - hoists @react-native/gradle-plugin to root node_modules
 # This is required before Android Gradle builds will work
@@ -155,6 +162,7 @@ yarn workspace @universal/shared-hello-ui build
 ```
 
 ### Web Development
+
 ```bash
 # Terminal 1: Web Remote
 cd packages/web-remote-hello
@@ -168,6 +176,7 @@ yarn dev  # Port 9001
 ```
 
 ### Mobile Development (Android)
+
 ```bash
 # Terminal 1: Mobile Remote
 cd packages/mobile-remote-hello
@@ -180,6 +189,7 @@ yarn android  # Port 8081
 ```
 
 ### Mobile Development (iOS)
+
 ```bash
 # Terminal 1: Mobile Remote
 cd packages/mobile-remote-hello
@@ -198,12 +208,14 @@ yarn ios  # Port 8082
 ### Module Federation Configuration
 
 **Web Host** (`packages/web-shell/rspack.config.mjs`):
+
 - Uses `@module-federation/enhanced/rspack`
 - Consumes remotes via browser runtime: `hello_remote@http://localhost:9003/remoteEntry.js`
 - All shared deps must be `singleton: true` and `eager: true`
 - React Native Web is aliased in resolve config
 
 **Mobile Host** (`packages/mobile-host/rspack.config.mjs`):
+
 - Uses `Repack.plugins.ModuleFederationPluginV2`
 - Remotes are NOT declared in config - loaded dynamically via ScriptManager
 - ScriptManager resolver pattern in `src/App.tsx` handles URL resolution
@@ -215,9 +227,7 @@ Location: `packages/mobile-host/src/App.tsx`
 
 ```typescript
 ScriptManager.shared.addResolver(async (scriptId, caller) => {
-  const REMOTE_HOST = Platform.OS === 'android'
-    ? 'http://10.0.2.2:9004'
-    : 'http://localhost:9005';
+  const REMOTE_HOST = Platform.OS === 'android' ? 'http://10.0.2.2:9004' : 'http://localhost:9005';
 
   if (scriptId === 'HelloRemote') {
     return { url: `${REMOTE_HOST}/HelloRemote.container.js.bundle` };
@@ -239,11 +249,13 @@ const module = await Federated.importModule('HelloRemote', './HelloRemote', 'def
 When creating universal components in `packages/shared-hello-ui/`:
 
 **MUST use:**
+
 - React Native primitives only: `View`, `Text`, `Pressable`, `Image`, `ScrollView`, etc.
 - `Platform.select()` for platform-specific logic if needed
 - `@universal/shared-utils` for business logic
 
 **FORBIDDEN:**
+
 - DOM elements: `<div>`, `<span>`, `<button>`, `<img>`
 - Browser APIs: `window`, `document`, `localStorage`
 - Native modules or platform-specific imports
@@ -254,6 +266,7 @@ When creating universal components in `packages/shared-hello-ui/`:
 Location: `packages/shared-utils/src/`
 
 **Constraints:**
+
 - Pure TypeScript only
 - NO React Native imports
 - NO React Native Web imports
@@ -287,10 +300,12 @@ Location: `packages/shared-utils/src/`
 The codebase uses stub files to replace incompatible dependencies:
 
 **Web Stubs:**
+
 - `packages/web-remote-hello/src/stubs/AsyncStorage.js` - No-op for web builds
 - Applied via `NormalModuleReplacementPlugin` in Rspack config
 
 **Mobile Stubs:**
+
 - `packages/mobile-host/src/stubs/ReactDevToolsSettingsManager.js`
 - `packages/mobile-host/src/stubs/NativeReactDevToolsRuntimeSettingsModule.js`
 - Multiple `@swc/helpers` replacements in mobile-remote-hello config
@@ -306,6 +321,7 @@ The codebase uses stub files to replace incompatible dependencies:
 ## Critical Development Rules
 
 **CRITICAL: Scope Discipline**
+
 - Only modify files directly related to the task at hand
 - Do not refactor, clean up, or "improve" unrelated code
 - Do not delete or modify files/packages not involved in the current task
@@ -315,6 +331,7 @@ The codebase uses stub files to replace incompatible dependencies:
 ## Important File Locations
 
 **Configuration Files:**
+
 - `packages/web-shell/rspack.config.mjs` - Web host MF config
 - `packages/web-remote-hello/rspack.config.mjs` - Web remote MF config
 - `packages/mobile-host/rspack.config.mjs` - Mobile host Re.Pack + MF config
@@ -323,6 +340,7 @@ The codebase uses stub files to replace incompatible dependencies:
 - `.cursorrules` - Complete development rules and constraints
 
 **Documentation:**
+
 - `docs/universal-mfe-architecture-overview.md` - Complete system design
 - `docs/universal-mfe-all-platforms-testing-guide.md` - Testing strategy
 - `docs/universal-mfe-mf-v2-migration-analysis.md` - MF v2 implementation details
@@ -343,44 +361,51 @@ The codebase uses stub files to replace incompatible dependencies:
 ## Quick Reference for Common Tasks
 
 **Add a shared utility:**
+
 1. Edit `packages/shared-utils/src/index.ts`
 2. Run `yarn workspace @universal/shared-utils build`
 
 **Add a universal UI component:**
+
 1. Edit `packages/shared-hello-ui/src/`
 2. Export from `packages/shared-hello-ui/src/index.ts`
 3. Run `yarn workspace @universal/shared-hello-ui build`
 4. Test on both web and mobile platforms
 
 **Modify web shell:**
+
 1. Edit `packages/web-shell/src/App.tsx`
 2. Changes hot-reload automatically in dev mode
 
 **Modify mobile host:**
+
 1. Edit `packages/mobile-host/src/App.tsx`
 2. Changes hot-reload automatically in dev mode
 
 **Add a new web remote:**
+
 1. Follow the pattern in `packages/web-remote-hello/`
 2. Update `rspack.config.mjs` with MF configuration
 3. Add stub files for incompatible dependencies
 4. Update web-shell's remotes config to consume it
 
 **Add a new mobile remote:**
+
 1. Follow the pattern in `packages/mobile-remote-hello/`
 2. Update `repack.remote.config.mjs` with MF configuration
 3. Add ScriptManager resolver entry in mobile-host's `App.tsx`
 4. Use platform-specific ports (9004 Android, 9005 iOS)
 
 **Update React Native version:**
+
 1. Update `react-native` version in all mobile package.json files
 2. Run `yarn install` to update node_modules
 3. Run `cd packages/mobile-host/ios && pod install` to regenerate Pods
 4. Never manually edit files in `ios/Pods/` directory
 
-## CI/CD Implementation Workflow
+## Enhancements Implementation Workflow
 
-When implementing CI/CD tasks (or any multi-step implementation plan), follow this strict workflow:
+When implementing Enhancements tasks (or any multi-step implementation plan), follow this strict workflow:
 
 1. **Implement the current task only**
 2. **Perform all applicable tests** - Run commands to verify the implementation works
