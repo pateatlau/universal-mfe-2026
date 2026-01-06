@@ -591,7 +591,7 @@ Integration tests verify cross-package interactions and Module Federation remote
 ## Build Order (Final - with Turborepo)
 
 Turborepo will automatically determine build order based on dependencies. The expected order:
-```
+```plaintext
 1. shared-utils
 2. shared-design-tokens
 3. shared-theme-context
