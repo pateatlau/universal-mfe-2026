@@ -276,6 +276,19 @@ Implement a lightweight, type-safe event bus for communication between microfron
 **Files to modify:**
 - `turbo.json` - add shared-event-bus to pipeline
 
+### Task 5.8: Establish MFE local state pattern
+**Purpose:** Each MFE maintains its own Zustand store for local state, ensuring loose coupling. Event bus communicates *events*, not state — MFEs react to events by updating their own stores.
+
+**Files to create:**
+- `packages/web-remote-hello/src/store/localStore.ts` - Example MFE-local Zustand store
+- `packages/mobile-remote-hello/src/store/localStore.ts` - Example MFE-local Zustand store
+
+**Pattern established:**
+- MFEs own their state (Zustand store per MFE)
+- Host app owns shared/global state (e.g., auth, theme via shared-auth-store)
+- Event bus bridges communication without coupling state
+- Example flow: Remote emits `USER_ACTION` event → Host receives → Host updates its store → Host emits `STATE_UPDATED` → Remote reacts if needed
+
 ---
 
 ## Phase 6: Data Fetching with React Query
@@ -577,6 +590,13 @@ Turborepo will automatically determine build order based on dependencies. The ex
 - No global store coupling — MFEs remain independent
 - Easy debugging with event history
 - Can integrate with Redux/Zustand if needed (events → actions)
+
+### Event Bus vs State Management
+- **Event Bus**: Pub/sub for inter-MFE communication (fire-and-forget messages)
+- **Zustand Stores**: Each MFE owns its local state independently
+- Events *trigger* state changes but don't *carry* state
+- Host owns shared/global state (auth, theme); remotes own their local state
+- This separation ensures MFEs remain independently deployable and testable
 
 ### Why React Router 7 (Not React Navigation)?
 - React Router 7 works on BOTH web and mobile
