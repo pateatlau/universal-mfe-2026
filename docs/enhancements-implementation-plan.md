@@ -89,7 +89,23 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 **Files to modify:**
 - `.github/workflows/ci.yml` - leverage Turborepo caching
 
-### Task 1.6: Update documentation
+### Task 1.6: Add architecture enforcement rules
+**Purpose:** Automatically enforce architectural boundaries to prevent drift over time.
+
+**Files to create:**
+- `eslint-rules/no-cross-mfe-imports.js` - Custom ESLint rule to prevent direct MFE-to-MFE imports
+- `eslint-rules/no-dom-in-shared.js` - Custom ESLint rule to prevent DOM usage in shared packages
+
+**Files to modify:**
+- `eslint.config.mjs` - add architecture enforcement rules
+- `package.json` (root) - add `lint:architecture` script
+
+**Rules enforced:**
+- No direct imports between remote MFEs (must use event bus)
+- No DOM elements (`div`, `span`, `button`) in `shared-*` packages
+- No `window`, `document`, `localStorage` direct usage in shared packages (use abstractions)
+
+### Task 1.7: Update documentation
 **Files to modify:**
 - `CLAUDE.md` - document Turborepo usage
 - `README.md` - update build instructions
@@ -103,12 +119,20 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 **Files to create:**
 - `packages/shared-design-tokens/package.json`
 - `packages/shared-design-tokens/tsconfig.json`
-- `packages/shared-design-tokens/src/colors.ts`
-- `packages/shared-design-tokens/src/spacing.ts`
-- `packages/shared-design-tokens/src/typography.ts`
-- `packages/shared-design-tokens/src/shadows.ts`
-- `packages/shared-design-tokens/src/themes.ts`
+- `packages/shared-design-tokens/src/primitives/colors.ts` - Raw color palette (blue.500, gray.100, etc.)
+- `packages/shared-design-tokens/src/primitives/spacing.ts` - Spacing scale (4, 8, 12, 16, etc.)
+- `packages/shared-design-tokens/src/primitives/typography.ts` - Font sizes, weights, line heights
+- `packages/shared-design-tokens/src/primitives/shadows.ts` - Shadow definitions
+- `packages/shared-design-tokens/src/semantic/colors.ts` - Semantic tokens (surface.background, text.primary, border.default)
+- `packages/shared-design-tokens/src/semantic/spacing.ts` - Semantic spacing (layout.padding, component.gap)
+- `packages/shared-design-tokens/src/themes.ts` - Light/dark theme compositions using semantic tokens
 - `packages/shared-design-tokens/src/index.ts`
+
+**Token architecture:**
+- **Primitives**: Raw values (colors, spacing, typography) - internal use only
+- **Semantic**: Meaningful aliases (surface.*, text.*, border.*) - used by components
+- Components should ONLY use semantic tokens, never primitives directly
+- This enables rebranding by only changing semantic → primitive mappings
 
 ### Task 2.2: Create shared-theme-context package
 **Files to create:**
@@ -180,6 +204,11 @@ Build accessible components from the ground up, ensuring WCAG 2.1 AA compliance 
 
 Implement internationalization with a lightweight, universal approach that works across web and mobile.
 
+**i18n namespace rules:**
+- Host apps own the root namespace (e.g., `common.*`, `navigation.*`)
+- Each MFE owns its own namespace (e.g., `hello.*` for HelloRemote)
+- Namespaces prevent translation key collisions between independently deployed MFEs
+
 ### Task 4.1: Create shared-i18n package
 **Files to create:**
 - `packages/shared-i18n/package.json`
@@ -245,13 +274,19 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - `packages/shared-event-bus/src/hooks/useEventEmitter.ts` - Emit events
 - `packages/shared-event-bus/src/EventBusProvider.tsx` - Context provider
 
-### Task 5.3: Define standard event types
+### Task 5.3: Define standard event types with versioning
 **Files to create:**
 - `packages/shared-event-bus/src/events/navigation.ts` - Navigation events (NAVIGATE_TO, BACK, etc.)
 - `packages/shared-event-bus/src/events/auth.ts` - Auth events (LOGIN, LOGOUT, SESSION_EXPIRED)
 - `packages/shared-event-bus/src/events/theme.ts` - Theme events (THEME_CHANGED)
 - `packages/shared-event-bus/src/events/remote.ts` - Remote module events (REMOTE_LOADED, REMOTE_ERROR)
-- `packages/shared-event-bus/src/events/index.ts` - Event registry
+- `packages/shared-event-bus/src/events/index.ts` - Event registry with version metadata
+
+**Event governance rules:**
+- All events include a `version` field (e.g., `{ type: 'NAVIGATE_TO', version: 1, payload: {...} }`)
+- Event evolution is **append-only**: new fields can be added, existing fields cannot be removed or changed
+- Breaking changes require a new event type (e.g., `NAVIGATE_TO_V2`)
+- Host is responsible for handling multiple event versions during migration periods
 
 ### Task 5.4: Add debugging and devtools support
 **Files to create:**
@@ -289,6 +324,25 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - Event bus bridges communication without coupling state
 - Example flow: Remote emits `USER_ACTION` event → Host receives → Host updates its store → Host emits `STATE_UPDATED` → Remote reacts if needed
 
+### Task 5.9: Implement remote loading failure & degradation strategy
+**Purpose:** Define standard behavior when remote MFEs fail to load, ensuring graceful degradation.
+
+**Files to create:**
+- `packages/shared-event-bus/src/components/RemoteErrorBoundary.tsx` - Error boundary for remote loading failures
+- `packages/shared-event-bus/src/components/RemoteLoadingFallback.tsx` - Loading state component
+- `packages/shared-event-bus/src/components/RemoteErrorFallback.tsx` - Error state component with retry
+
+**Files to modify:**
+- `packages/web-shell/src/App.tsx` - wrap remote imports with error boundary
+- `packages/mobile-host/src/App.tsx` - wrap remote imports with error boundary
+
+**Failure handling strategy:**
+- **Timeout**: Remote load times out after configurable duration (default: 10s)
+- **Retry**: Automatic retry with exponential backoff (max 3 attempts)
+- **Fallback UI**: Show error state with manual retry button
+- **Event emission**: Emit `REMOTE_LOAD_FAILED` event for analytics/logging
+- **Partial availability**: App remains functional even if some remotes fail
+
 ---
 
 ## Phase 6: Data Fetching with React Query
@@ -323,12 +377,18 @@ Implement a lightweight, type-safe event bus for communication between microfron
 
 ## Phase 7: Routing with React Router 7
 
+**Routing ownership rules (CRITICAL):**
+- **Hosts own all routes** - Route definitions live exclusively in host applications
+- **MFEs emit navigation intents** - Remotes use event bus to request navigation (e.g., `NAVIGATE_TO` event)
+- **MFEs never import routers** - No `useNavigate`, `useLocation`, or router imports in remote packages
+- **MFEs never reference URLs** - Remotes are URL-agnostic; hosts map events to routes
+
 ### Task 7.1: Create shared-router package
 **Files to create:**
 - `packages/shared-router/package.json`
 - `packages/shared-router/tsconfig.json`
-- `packages/shared-router/src/types.ts`
-- `packages/shared-router/src/routes.ts`
+- `packages/shared-router/src/types.ts` - Route types and navigation intent types
+- `packages/shared-router/src/routes.ts` - Route constants (NOT route definitions)
 - `packages/shared-router/src/index.ts`
 
 **Dependencies:**
@@ -488,6 +548,15 @@ Integration tests verify cross-package interactions and Module Federation remote
 - `docs/PATTERNS-I18N.md`
 - `docs/PATTERNS-EVENT-BUS.md`
 - `docs/PATTERNS-TESTING.md`
+- `docs/ANTI-PATTERNS.md` - Common mistakes to avoid in MFE architecture
+
+**Anti-patterns document should cover:**
+- Direct MFE-to-MFE imports (use event bus instead)
+- DOM elements in shared packages
+- Router imports in remote MFEs
+- Shared mutable state between MFEs
+- Primitive token usage in components (use semantic tokens)
+- Hardcoded URLs in remotes
 
 ### Task 11.2: Create main enhancements document
 **Files to create:**
@@ -540,21 +609,29 @@ Turborepo will automatically determine build order based on dependencies. The ex
 ## Success Criteria
 
 - [ ] Turborepo caching working locally and in CI
+- [ ] Architecture enforcement rules pass in CI (no cross-MFE imports, no DOM in shared)
 - [ ] Theming system works on web, iOS, and Android
+- [ ] Semantic tokens used by all components (no primitive token usage)
 - [ ] Dark mode toggle persists across sessions
 - [ ] Accessibility: Screen reader support verified on all platforms
 - [ ] Accessibility: WCAG 2.1 AA color contrast compliance
 - [ ] i18n: Language switching works on all platforms
 - [ ] i18n: Locale persists across sessions
+- [ ] i18n: MFE namespaces prevent key collisions
 - [ ] Event Bus: Inter-MFE communication works (remote → host)
 - [ ] Event Bus: Events logged in dev mode
+- [ ] Event Bus: Event versioning implemented
+- [ ] Remote loading: Graceful degradation when remote fails
+- [ ] Remote loading: Retry mechanism works
 - [ ] React Query hooks available and working
 - [ ] Routing works on web and mobile
+- [ ] Routing: MFEs use navigation events (no direct router imports)
 - [ ] RN component tests pass with >50% coverage
 - [ ] Integration tests pass in CI
 - [ ] Web E2E tests pass in CI
 - [ ] Mobile E2E flows work locally
 - [ ] All pattern documentation complete
+- [ ] Anti-patterns documentation complete
 
 ---
 
@@ -601,6 +678,12 @@ Turborepo will automatically determine build order based on dependencies. The ex
 ### Why React Router 7 (Not React Navigation)?
 - React Router 7 works on BOTH web and mobile
 - Unified routing API across platforms
+
+### Routing Ownership Model
+- **Hosts own routes**: All route definitions live in host applications only
+- **MFEs are URL-agnostic**: Remotes never import routers or reference URLs
+- **Navigation via events**: MFEs emit `NAVIGATE_TO` events; hosts translate to route changes
+- **Benefits**: MFEs can be deployed to any host without URL coupling
 
 ### Why Maestro (Not Detox)?
 - Simpler YAML-based test definitions
