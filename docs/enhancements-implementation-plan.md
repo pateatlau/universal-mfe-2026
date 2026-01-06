@@ -64,15 +64,20 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 - `prettier: "3.5.3"` was already installed
 - Verified with `npx turbo run build` - successfully built 4 packages in ~5s
 
-### Task 1.2: Define pipeline tasks
-**Configure in `turbo.json`:**
-- `build` - builds packages with proper dependency ordering
-- `typecheck` - runs TypeScript checks
+### Task 1.2: Define pipeline tasks ✅ COMPLETE
+**Configured in `turbo.json`:**
+- `build` - builds packages with proper dependency ordering (`dependsOn: ["^build"]`)
+- `typecheck` - runs TypeScript checks (depends on build for type declarations)
 - `lint` - runs ESLint
-- `format` - runs Prettier to fix formatting (no caching)
+- `format` - runs Prettier to fix formatting (`cache: false`)
 - `format:check` - checks formatting without modifying (for CI)
-- `test` - runs Jest tests
-- `dev` - development servers (no caching)
+- `test` - runs Jest tests (depends on build)
+- `dev` - development servers (`cache: false`, `persistent: true`)
+
+**Notes:**
+- All pipeline tasks were defined in Task 1.1 when creating turbo.json
+- Verified: `npx turbo run typecheck` - 6 packages type-checked successfully
+- Verified: Caching works correctly ("FULL TURBO" on cached runs)
 
 ### Task 1.3: Update package.json scripts
 **Files to modify:**
