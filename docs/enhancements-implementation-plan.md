@@ -126,9 +126,35 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 - Remote caching available via `TURBO_TOKEN` and `TURBO_TEAM` env vars (optional)
 - Verified: FULL TURBO on subsequent runs for build and typecheck
 
-### Task 1.5: Update CI workflows
-**Files to modify:**
-- `.github/workflows/ci.yml` - leverage Turborepo caching
+### Task 1.5: Update CI workflows ✅ COMPLETE
+**Files modified:**
+- `.github/workflows/ci.yml` - added Turborepo caching to all jobs
+
+**Changes:**
+Added Turborepo cache step to all 6 CI jobs:
+- `check` - Lint, Typecheck, Test
+- `build-web` - Build Web
+- `build-android` - Build Android
+- `build-standalone-android` - Build Standalone Android
+- `build-ios` - Build iOS (Simulator)
+- `build-standalone-ios` - Build Standalone iOS (Simulator)
+
+**Cache configuration:**
+```yaml
+- name: Setup Turborepo cache
+  uses: actions/cache@v5
+  with:
+    path: .turbo
+    key: ${{ runner.os }}-turbo-${{ github.sha }}
+    restore-keys: |
+      ${{ runner.os }}-turbo-
+```
+
+**Notes:**
+- Cache key uses `runner.os` (Linux/macOS) and `github.sha` for exact match
+- `restore-keys` allows partial match from previous runs
+- Jobs on same SHA share cache (check → build-web, etc.)
+- YAML syntax validated
 
 ### Task 1.6: Add architecture enforcement rules
 **Purpose:** Automatically enforce architectural boundaries to prevent drift over time.
