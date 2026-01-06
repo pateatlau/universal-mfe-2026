@@ -32,11 +32,15 @@ This document outlines the implementation plan to enhance the Universal Microfro
 |---------|--------|-------|
 | Turborepo Migration | Pending | 1 |
 | Design Tokens & Theming (dark/light mode) | Pending | 2 |
-| React Query (TanStack Query) | Pending | 3 |
-| React Router 7 | Pending | 4 |
-| RN Component Unit Testing | Pending | 5 |
-| E2E Testing (Playwright + Maestro) | Pending | 6 |
-| Documentation & Patterns | Pending | 7 |
+| Accessibility | Pending | 3 |
+| Internationalization (i18n) | Pending | 4 |
+| Event Bus (Inter-MFE Communication) | Pending | 5 |
+| React Query (TanStack Query) | Pending | 6 |
+| React Router 7 | Pending | 7 |
+| RN Component Unit Testing | Pending | 8 |
+| Integration Testing | Pending | 9 |
+| E2E Testing (Playwright + Maestro) | Pending | 10 |
+| Documentation & Patterns | Pending | 11 |
 
 **Already Implemented (before this plan):**
 - Zustand (exists in `packages/shared-auth-store/`)
@@ -126,9 +130,151 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 
 ---
 
-## Phase 3: Data Fetching with React Query
+## Phase 3: Accessibility
 
-### Task 3.1: Create shared-data-layer package
+Build accessible components from the ground up, ensuring WCAG 2.1 AA compliance across web and mobile platforms.
+
+### Task 3.1: Create shared-a11y package
+**Files to create:**
+- `packages/shared-a11y/package.json`
+- `packages/shared-a11y/tsconfig.json`
+- `packages/shared-a11y/src/hooks/useAccessibilityInfo.ts` - Platform-aware a11y state (screen reader, reduce motion)
+- `packages/shared-a11y/src/hooks/useFocusManagement.ts` - Focus trap and restore utilities
+- `packages/shared-a11y/src/hooks/useAnnounce.ts` - Screen reader announcements
+- `packages/shared-a11y/src/constants.ts` - ARIA roles, a11y labels
+- `packages/shared-a11y/src/index.ts`
+
+**No external dependencies** - Uses React Native's built-in AccessibilityInfo API
+
+### Task 3.2: Create accessible primitive components
+**Files to create:**
+- `packages/shared-a11y/src/components/AccessibleText.tsx` - Text with proper roles
+- `packages/shared-a11y/src/components/AccessibleButton.tsx` - Button with a11y props
+- `packages/shared-a11y/src/components/AccessibleInput.tsx` - Input with labels and error announcements
+- `packages/shared-a11y/src/components/SkipLink.tsx` - Skip to main content (web)
+- `packages/shared-a11y/src/components/VisuallyHidden.tsx` - Screen reader only content
+
+### Task 3.3: Add accessibility props to shared-hello-ui
+**Files to modify:**
+- `packages/shared-hello-ui/package.json` - add @universal/shared-a11y dependency
+- `packages/shared-hello-ui/src/HelloUniversal.tsx` - add accessibilityLabel, accessibilityRole, accessibilityHint
+
+### Task 3.4: Create accessibility testing utilities
+**Files to create:**
+- `packages/shared-a11y/src/testing/a11yMatchers.ts` - Custom Jest matchers for a11y
+- `packages/shared-a11y/src/testing/index.ts`
+
+### Task 3.5: Update build configuration
+**Files to modify:**
+- `turbo.json` - add shared-a11y to pipeline
+
+---
+
+## Phase 4: Internationalization (i18n)
+
+Implement internationalization with a lightweight, universal approach that works across web and mobile.
+
+### Task 4.1: Create shared-i18n package
+**Files to create:**
+- `packages/shared-i18n/package.json`
+- `packages/shared-i18n/tsconfig.json`
+- `packages/shared-i18n/src/types.ts` - Translation types, locale types
+- `packages/shared-i18n/src/I18nProvider.tsx` - Context provider for translations
+- `packages/shared-i18n/src/useTranslation.ts` - Hook to access translations
+- `packages/shared-i18n/src/useLocale.ts` - Hook to get/set current locale
+- `packages/shared-i18n/src/pluralize.ts` - Pluralization rules
+- `packages/shared-i18n/src/formatters.ts` - Date, number, currency formatters (uses Intl API)
+- `packages/shared-i18n/src/index.ts`
+
+**No external dependencies** - Pure TypeScript using browser/RN Intl API
+
+### Task 4.2: Create translation file structure
+**Files to create:**
+- `packages/shared-i18n/src/locales/en.ts` - English translations
+- `packages/shared-i18n/src/locales/es.ts` - Spanish translations (example)
+- `packages/shared-i18n/src/locales/index.ts` - Locale registry
+
+### Task 4.3: Create translation utilities
+**Files to create:**
+- `packages/shared-i18n/src/utils/interpolate.ts` - Variable interpolation in strings
+- `packages/shared-i18n/src/utils/detectLocale.ts` - Platform-aware locale detection
+- `packages/shared-i18n/src/utils/persistLocale.ts` - Save locale preference to storage
+
+### Task 4.4: Integrate i18n into host applications
+**Files to modify:**
+- `packages/web-shell/package.json` - add @universal/shared-i18n dependency
+- `packages/web-shell/src/App.tsx` - wrap with I18nProvider
+- `packages/mobile-host/package.json` - add @universal/shared-i18n dependency
+- `packages/mobile-host/src/App.tsx` - wrap with I18nProvider
+
+### Task 4.5: Add i18n to shared-hello-ui (example)
+**Files to modify:**
+- `packages/shared-hello-ui/package.json` - add @universal/shared-i18n dependency
+- `packages/shared-hello-ui/src/HelloUniversal.tsx` - use useTranslation hook
+
+### Task 4.6: Update build configuration
+**Files to modify:**
+- `turbo.json` - add shared-i18n to pipeline
+
+---
+
+## Phase 5: Event Bus (Inter-MFE Communication)
+
+Implement a lightweight, type-safe event bus for communication between microfrontends without tight coupling.
+
+### Task 5.1: Create shared-event-bus package
+**Files to create:**
+- `packages/shared-event-bus/package.json`
+- `packages/shared-event-bus/tsconfig.json`
+- `packages/shared-event-bus/src/types.ts` - Event types, payload types
+- `packages/shared-event-bus/src/EventBus.ts` - Core pub/sub implementation
+- `packages/shared-event-bus/src/index.ts`
+
+**No external dependencies** - Pure TypeScript implementation
+
+### Task 5.2: Create React integration hooks
+**Files to create:**
+- `packages/shared-event-bus/src/hooks/useEventBus.ts` - Access event bus instance
+- `packages/shared-event-bus/src/hooks/useEventListener.ts` - Subscribe to events with auto-cleanup
+- `packages/shared-event-bus/src/hooks/useEventEmitter.ts` - Emit events
+- `packages/shared-event-bus/src/EventBusProvider.tsx` - Context provider
+
+### Task 5.3: Define standard event types
+**Files to create:**
+- `packages/shared-event-bus/src/events/navigation.ts` - Navigation events (NAVIGATE_TO, BACK, etc.)
+- `packages/shared-event-bus/src/events/auth.ts` - Auth events (LOGIN, LOGOUT, SESSION_EXPIRED)
+- `packages/shared-event-bus/src/events/theme.ts` - Theme events (THEME_CHANGED)
+- `packages/shared-event-bus/src/events/remote.ts` - Remote module events (REMOTE_LOADED, REMOTE_ERROR)
+- `packages/shared-event-bus/src/events/index.ts` - Event registry
+
+### Task 5.4: Add debugging and devtools support
+**Files to create:**
+- `packages/shared-event-bus/src/devtools/EventLogger.ts` - Console logging for dev mode
+- `packages/shared-event-bus/src/devtools/EventHistory.ts` - Event history for debugging
+
+### Task 5.5: Integrate event bus into host applications
+**Files to modify:**
+- `packages/web-shell/package.json` - add @universal/shared-event-bus dependency
+- `packages/web-shell/src/App.tsx` - wrap with EventBusProvider
+- `packages/mobile-host/package.json` - add @universal/shared-event-bus dependency
+- `packages/mobile-host/src/App.tsx` - wrap with EventBusProvider
+
+### Task 5.6: Create example inter-MFE communication
+**Files to modify:**
+- `packages/web-remote-hello/src/HelloRemote.tsx` - emit event on button click
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - emit event on button click
+- `packages/web-shell/src/App.tsx` - listen for remote events
+- `packages/mobile-host/src/App.tsx` - listen for remote events
+
+### Task 5.7: Update build configuration
+**Files to modify:**
+- `turbo.json` - add shared-event-bus to pipeline
+
+---
+
+## Phase 6: Data Fetching with React Query
+
+### Task 6.1: Create shared-data-layer package
 **Files to create:**
 - `packages/shared-data-layer/package.json`
 - `packages/shared-data-layer/tsconfig.json`
@@ -139,26 +285,26 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 **Dependencies:**
 - `@tanstack/react-query` (exact version: 5.62.16)
 
-### Task 3.2: Create example API hooks
+### Task 6.2: Create example API hooks
 **Files to create:**
 - `packages/shared-data-layer/src/api/exampleApi.ts`
 - `packages/shared-data-layer/src/hooks/useExampleQuery.ts`
 - `packages/shared-data-layer/src/hooks/useExampleMutation.ts`
 
-### Task 3.3: Integrate QueryProvider into hosts
+### Task 6.3: Integrate QueryProvider into hosts
 **Files to modify:**
 - `packages/web-shell/src/App.tsx`
 - `packages/mobile-host/src/App.tsx`
 
-### Task 3.4: Update build configuration
+### Task 6.4: Update build configuration
 **Files to modify:**
 - `turbo.json` - add shared-data-layer to pipeline
 
 ---
 
-## Phase 4: Routing with React Router 7
+## Phase 7: Routing with React Router 7
 
-### Task 4.1: Create shared-router package
+### Task 7.1: Create shared-router package
 **Files to create:**
 - `packages/shared-router/package.json`
 - `packages/shared-router/tsconfig.json`
@@ -169,7 +315,7 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 **Dependencies:**
 - `react-router` (exact version: 7.1.1)
 
-### Task 4.2: Implement web routing
+### Task 7.2: Implement web routing
 **Files to create:**
 - `packages/web-shell/src/pages/Home.tsx`
 - `packages/web-shell/src/pages/Remote.tsx`
@@ -179,7 +325,7 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 - `packages/web-shell/package.json` - add `react-router-dom`
 - `packages/web-shell/src/App.tsx` - add BrowserRouter and routes
 
-### Task 4.3: Implement mobile routing
+### Task 7.3: Implement mobile routing
 **Files to create:**
 - `packages/mobile-host/src/pages/Home.tsx`
 - `packages/mobile-host/src/pages/Remote.tsx`
@@ -189,15 +335,15 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 - `packages/mobile-host/package.json` - add `react-router-native`
 - `packages/mobile-host/src/App.tsx` - add NativeRouter and routes
 
-### Task 4.4: Update build configuration
+### Task 7.4: Update build configuration
 **Files to modify:**
 - `turbo.json` - add shared-router to pipeline
 
 ---
 
-## Phase 5: React Native Component Unit Testing
+## Phase 8: React Native Component Unit Testing
 
-### Task 5.1: Add testing dependencies
+### Task 8.1: Add testing dependencies
 **Files to modify:**
 - `package.json` (root) - add:
   - `@testing-library/react-native` (12.9.0)
@@ -206,29 +352,74 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 **Files to create:**
 - `jest.setup.js` (root) - React Native mocks
 
-### Task 5.2: Configure Jest for shared-hello-ui
+### Task 8.2: Configure Jest for shared-hello-ui
 **Files to create:**
 - `packages/shared-hello-ui/jest.config.js`
 - `packages/shared-hello-ui/src/__tests__/HelloUniversal.test.tsx`
 
-### Task 5.3: Configure Jest for shared-theme-context
+### Task 8.3: Configure Jest for shared-theme-context
 **Files to create:**
 - `packages/shared-theme-context/jest.config.js`
 - `packages/shared-theme-context/src/__tests__/ThemeProvider.test.tsx`
 
-### Task 5.4: Update root Jest config
+### Task 8.4: Update root Jest config
 **Files to modify:**
 - `jest.config.js` (root) - add new projects
 
-### Task 5.5: Update CI workflow
+### Task 8.5: Update CI workflow
 **Files to modify:**
 - `.github/workflows/ci.yml`
 
 ---
 
-## Phase 6: E2E Testing
+## Phase 9: Integration Testing
 
-### Task 6.1: Setup Playwright for web
+Integration tests verify cross-package interactions and Module Federation remote loading without requiring full browser/device automation.
+
+### Task 9.1: Setup integration test infrastructure
+**Files to create:**
+- `packages/web-shell/src/__integration__/setup.ts` - Test environment setup
+- `packages/web-shell/jest.integration.config.js` - Separate Jest config for integration tests
+
+**Files to modify:**
+- `packages/web-shell/package.json` - add `test:integration` script
+- `package.json` (root) - add `test:integration` script
+
+**Dependencies:**
+- `@testing-library/react` (16.1.0) - for web integration tests
+- `msw` (2.7.3) - Mock Service Worker for API mocking
+
+### Task 9.2: Create web integration tests
+**Files to create:**
+- `packages/web-shell/src/__integration__/providers.test.tsx` - Test ThemeProvider + QueryProvider composition
+- `packages/web-shell/src/__integration__/routing.test.tsx` - Test route transitions and data loading
+- `packages/web-shell/src/__integration__/theme-persistence.test.tsx` - Test theme + storage integration
+
+### Task 9.3: Create mobile integration tests
+**Files to create:**
+- `packages/mobile-host/src/__integration__/setup.ts`
+- `packages/mobile-host/jest.integration.config.js`
+- `packages/mobile-host/src/__integration__/providers.test.tsx`
+- `packages/mobile-host/src/__integration__/navigation.test.tsx`
+
+**Files to modify:**
+- `packages/mobile-host/package.json` - add `test:integration` script
+
+### Task 9.4: Create shared package integration tests
+**Files to create:**
+- `packages/shared-data-layer/src/__integration__/queryClient.test.ts` - Test QueryClient with mocked APIs
+- `packages/shared-auth-store/src/__integration__/persistence.test.ts` - Test Zustand + storage integration
+
+### Task 9.5: Update CI workflow
+**Files to modify:**
+- `.github/workflows/ci.yml` - add integration test step
+- `turbo.json` - add `test:integration` pipeline task
+
+---
+
+## Phase 10: E2E Testing
+
+### Task 10.1: Setup Playwright for web
 **Files to create:**
 - `packages/web-shell/playwright.config.ts`
 - `packages/web-shell/e2e/smoke.spec.ts`
@@ -239,7 +430,7 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 **Files to modify:**
 - `packages/web-shell/package.json` - add `@playwright/test`
 
-### Task 6.2: Setup Maestro for mobile
+### Task 10.2: Setup Maestro for mobile
 **Files to create:**
 - `packages/mobile-host/.maestro/README.md`
 - `packages/mobile-host/.maestro/smoke.yaml`
@@ -247,28 +438,31 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 - `packages/mobile-host/.maestro/navigation.yaml`
 - `packages/mobile-host/.maestro/theming.yaml`
 
-### Task 6.3: Add E2E CI workflows
+### Task 10.3: Add E2E CI workflows
 **Files to create:**
 - `.github/workflows/e2e-web.yml`
 - `.github/workflows/e2e-mobile.yml` (optional - runs on tags only)
 
 ---
 
-## Phase 7: Documentation & Patterns
+## Phase 11: Documentation & Patterns
 
-### Task 7.1: Create pattern documentation
+### Task 11.1: Create pattern documentation
 **Files to create:**
 - `docs/PATTERNS-STATE-MANAGEMENT.md`
 - `docs/PATTERNS-DATA-FETCHING.md`
 - `docs/PATTERNS-ROUTING.md`
 - `docs/PATTERNS-THEMING.md`
+- `docs/PATTERNS-ACCESSIBILITY.md`
+- `docs/PATTERNS-I18N.md`
+- `docs/PATTERNS-EVENT-BUS.md`
 - `docs/PATTERNS-TESTING.md`
 
-### Task 7.2: Create main enhancements document
+### Task 11.2: Create main enhancements document
 **Files to create:**
 - `docs/ENTERPRISE-ENHANCEMENTS.md`
 
-### Task 7.3: Update existing docs
+### Task 11.3: Update existing docs
 **Files to modify:**
 - `CLAUDE.md`
 - `README.md`
@@ -285,7 +479,9 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 | react-router-dom | 7.1.1 |
 | react-router-native | 7.1.1 |
 | @testing-library/react-native | 12.9.0 |
+| @testing-library/react | 16.1.0 |
 | react-test-renderer | 19.1.0 |
+| msw | 2.7.3 |
 | @playwright/test | 1.49.1 |
 
 ---
@@ -297,10 +493,13 @@ Turborepo will automatically determine build order based on dependencies. The ex
 1. shared-utils
 2. shared-design-tokens
 3. shared-theme-context
-4. shared-data-layer
-5. shared-router
-6. shared-hello-ui
-7. shared-auth-store
+4. shared-a11y
+5. shared-i18n
+6. shared-event-bus
+7. shared-data-layer
+8. shared-router
+9. shared-hello-ui
+10. shared-auth-store
 ```
 
 ---
@@ -310,9 +509,16 @@ Turborepo will automatically determine build order based on dependencies. The ex
 - [ ] Turborepo caching working locally and in CI
 - [ ] Theming system works on web, iOS, and Android
 - [ ] Dark mode toggle persists across sessions
+- [ ] Accessibility: Screen reader support verified on all platforms
+- [ ] Accessibility: WCAG 2.1 AA color contrast compliance
+- [ ] i18n: Language switching works on all platforms
+- [ ] i18n: Locale persists across sessions
+- [ ] Event Bus: Inter-MFE communication works (remote → host)
+- [ ] Event Bus: Events logged in dev mode
 - [ ] React Query hooks available and working
 - [ ] Routing works on web and mobile
 - [ ] RN component tests pass with >50% coverage
+- [ ] Integration tests pass in CI
 - [ ] Web E2E tests pass in CI
 - [ ] Mobile E2E flows work locally
 - [ ] All pattern documentation complete
@@ -331,6 +537,26 @@ Turborepo will automatically determine build order based on dependencies. The ex
 - Tailwind CSS requires CSS (web-only)
 - Shadcn uses DOM elements (web-only)
 - Pure TS tokens work universally with React Native StyleSheet
+
+### Why Custom Accessibility Package (Not react-native-a11y)?
+- React Native has built-in accessibility props (accessibilityLabel, accessibilityRole, etc.)
+- No external dependency needed for core a11y features
+- Custom hooks provide platform-aware behavior (AccessibilityInfo API)
+- Testing utilities tailored to our component patterns
+
+### Why Custom i18n (Not react-i18next/FormatJS)?
+- Zero runtime dependencies
+- Browser/RN Intl API provides formatting (dates, numbers, currency)
+- Simpler mental model: just TypeScript objects + interpolation
+- No build-time extraction or compilation step needed
+- Easy to migrate to react-i18next later if needed (same translation structure)
+
+### Why Custom Event Bus (Not Redux/RxJS)?
+- Minimal footprint (~100 lines of code)
+- Type-safe events with TypeScript discriminated unions
+- No global store coupling — MFEs remain independent
+- Easy debugging with event history
+- Can integrate with Redux/Zustand if needed (events → actions)
 
 ### Why React Router 7 (Not React Navigation)?
 - React Router 7 works on BOTH web and mobile
