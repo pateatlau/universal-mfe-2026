@@ -79,10 +79,26 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 - Verified: `npx turbo run typecheck` - 6 packages type-checked successfully
 - Verified: Caching works correctly ("FULL TURBO" on cached runs)
 
-### Task 1.3: Update package.json scripts
-**Files to modify:**
-- `package.json` (root) - update scripts to use `turbo run`
-- Individual package scripts may need adjustment
+### Task 1.3: Update package.json scripts ✅ COMPLETE
+**Files modified:**
+- `package.json` (root) - updated scripts to use `turbo run`
+- `turbo.json` - added `clean` task
+
+**Scripts updated:**
+- `build` → `turbo run build`
+- `build:shared` → `turbo run build --filter=@universal/shared-*`
+- `build:web` → `turbo run build --filter=@universal/web-*`
+- `typecheck` → `turbo run typecheck`
+- `lint` → `turbo run lint`
+- `format` → `turbo run format`
+- `format:check` → `turbo run format:check` (new)
+- `test` → `turbo run test`
+- `clean` → `turbo run clean`
+- `dev` → `turbo run dev` (new)
+
+**Notes:**
+- `build:mobile:android` and `build:mobile:ios` kept as direct yarn workspace commands (require PLATFORM env var)
+- Verified: All scripts work with FULL TURBO caching
 
 ### Task 1.4: Configure caching
 **Configure in `turbo.json`:**
