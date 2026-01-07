@@ -11,10 +11,12 @@
     "@universal/shared-data-layer": "*",
     "@universal/shared-event-bus": "*",
     "@universal/shared-i18n": "*",
+    "@universal/shared-router": "*",
     "@universal/shared-theme-context": "*",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-native-web": "0.21.2"
+    "react-native-web": "0.21.2",
+    "react-router-dom": "6.30.0"
   },
   "devDependencies": {
     "@module-federation/enhanced": "0.21.6",

@@ -1105,15 +1105,33 @@ All React Query / Data Fetching tasks completed:
 - `yarn typecheck` - 21 tasks pass
 - `yarn lint:architecture` - 0 errors
 
-### Task 7.2: Implement web routing
-**Files to create:**
-- `packages/web-shell/src/pages/Home.tsx`
-- `packages/web-shell/src/pages/Remote.tsx`
-- `packages/web-shell/src/pages/Settings.tsx`
+### Task 7.2: Implement web routing ✅ COMPLETE
+**Files created:**
+- `packages/web-shell/src/pages/Home.tsx` - Welcome page with navigation links
+- `packages/web-shell/src/pages/Remote.tsx` - Remote MFE loading page
+- `packages/web-shell/src/pages/Settings.tsx` - Theme and language settings
 
-**Files to modify:**
-- `packages/web-shell/package.json` - add `react-router-dom`
-- `packages/web-shell/src/App.tsx` - add BrowserRouter and routes
+**Files modified:**
+- `packages/web-shell/package.json` - added `react-router-dom@6.30.0`
+- `packages/web-shell/src/App.tsx` - added BrowserRouter, Header, and routes
+- `packages/web-shell/rspack.config.mjs` - added `historyApiFallback: true` for SPA routing, added react-router aliases
+- `packages/shared-router/package.json` - updated to `react-router@6.30.0`
+
+**Routes implemented:**
+- `/` and `/home` - Home page
+- `/remote-hello` - Remote module page
+- `/settings` - Settings page
+
+**Note on react-router version:**
+React Router v7.11.0 has a known incompatibility with Module Federation (`@module-federation/enhanced@0.21.6`).
+The error "resolving fallback for shared module react-dom" occurs due to v7's internal ESM structure
+(`dist/development/dom-export.mjs`). Downgraded to v6.30.0 which works correctly with Module Federation.
+See: https://github.com/module-federation/core/issues/3267
+
+**Verified:**
+- `yarn typecheck` - 22 tasks pass
+- `yarn turbo run build --filter='@universal/web-*'` - 11 tasks pass
+- Manual verification: Navigation works between all pages
 
 ### Task 7.3: Implement mobile routing
 **Files to create:**

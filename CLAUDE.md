@@ -384,6 +384,12 @@ The codebase uses stub files to replace incompatible dependencies:
 - If encountering errors, investigate the specific issue first before taking broad actions
 - When in doubt, ask for clarification rather than making assumptions
 
+**CRITICAL: No Unilateral Decisions**
+
+- Whenever you are in doubt or unsure, DO NOT assume anything
+- Inform the user about the situation and ask for advice on how to proceed
+- This applies especially to: version changes, architectural decisions, workarounds for compatibility issues, and any deviation from the original plan
+
 ## Important File Locations
 
 **Configuration Files:**

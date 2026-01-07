@@ -24,12 +24,17 @@ export default {
     headers: {
       'Access-Control-Allow-Origin': '*',
     },
+    // Enable SPA fallback for client-side routing
+    historyApiFallback: true,
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
     alias: {
       // Use absolute path to ensure alias works for all imports including transitive deps
       'react-native$': path.resolve(__dirname, 'node_modules/react-native-web'),
+      // Force correct react-router resolution (avoid mock/test packages in node_modules)
+      'react-router': path.resolve(__dirname, '../../node_modules/react-router'),
+      'react-router-dom': path.resolve(__dirname, 'node_modules/react-router-dom'),
     },
     fallback: {
       // Exclude React Native native modules that don't work on web
