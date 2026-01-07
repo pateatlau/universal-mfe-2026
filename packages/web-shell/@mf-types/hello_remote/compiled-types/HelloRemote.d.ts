@@ -22,12 +22,15 @@
  *
  * 3. **Backward Compatibility**: Still supports `onPress` callback
  */
+import { type ThemeName } from '@universal/shared-theme-context';
 import { type LocaleCode } from '@universal/shared-i18n';
 export interface HelloRemoteProps {
     name?: string;
     onPress?: () => void;
-    /** Locale passed from host for i18n synchronization */
+    /** Initial locale (deprecated: use event bus sync instead) */
     locale?: LocaleCode;
+    /** Initial theme (deprecated: use event bus sync instead) */
+    theme?: ThemeName;
 }
 /**
  * HelloRemote - Web remote component exposed via MF
@@ -36,12 +39,15 @@ export interface HelloRemoteProps {
  * bundles and don't inherit context from the host.
  *
  * Provider order:
- * 1. EventBusProvider - For emitting events to the host
- * 2. I18nProvider - For translations
- * 3. ThemeProvider - For theming
+ * 1. EventBusProvider - For event bus communication with host
+ * 2. EventSyncWrapper - Listens for theme/locale changes from host
+ * 3. I18nProvider - For translations (synced via events)
+ * 4. ThemeProvider - For theming (synced via events)
  *
- * The locale prop allows the host to pass its current locale so the remote
- * can display translations in the same language as the host.
+ * Theme and locale sync via Event Bus:
+ * - Host emits THEME_CHANGED when theme changes
+ * - Host emits LOCALE_CHANGED when locale changes
+ * - This component listens and updates its providers accordingly
  */
-export default function HelloRemote({ name, onPress, locale }: HelloRemoteProps): import("react/jsx-runtime").JSX.Element;
+export default function HelloRemote({ name, onPress, locale: initialLocale, theme: initialTheme, }: HelloRemoteProps): import("react/jsx-runtime").JSX.Element;
 //# sourceMappingURL=HelloRemote.d.ts.map

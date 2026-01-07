@@ -22,6 +22,7 @@ import {
   ThemeProvider,
   useTheme,
   Theme,
+  type ThemeName,
 } from '@universal/shared-theme-context';
 import {
   I18nProvider,
@@ -138,7 +139,7 @@ function createStyles(theme: Theme): Styles {
  * Inner standalone app component that uses theme and i18n context.
  */
 function StandaloneAppContent() {
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { theme, isDark, toggleTheme, themeName } = useTheme();
   const { locale, setLocale } = useLocale();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [pressCount, setPressCount] = useState(0);
@@ -180,7 +181,7 @@ function StandaloneAppContent() {
 
       <View style={styles.content}>
         <View style={styles.remoteContainer}>
-          <HelloRemote name="Web User" onPress={handlePress} locale={locale} />
+          <HelloRemote name="Web User" onPress={handlePress} locale={locale} theme={themeName} />
         </View>
 
         {pressCount > 0 && (

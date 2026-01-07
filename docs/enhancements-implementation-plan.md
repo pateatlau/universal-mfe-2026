@@ -34,7 +34,7 @@ This document outlines the implementation plan to enhance the Universal Microfro
 | Design Tokens & Theming (dark/light mode) | ✅ Complete | 2 |
 | Accessibility | ✅ Complete | 3 |
 | Internationalization (i18n) | ✅ Complete | 4 |
-| Event Bus (Inter-MFE Communication) | Pending | 5 |
+| Event Bus (Inter-MFE Communication) | ✅ Complete | 5 |
 | React Query (TanStack Query) | Pending | 6 |
 | React Router 7 | Pending | 7 |
 | RN Component Unit Testing | Pending | 8 |
@@ -301,16 +301,17 @@ All Turborepo migration tasks completed:
 - Verified: `yarn lint:architecture` - No architecture rule violations
 - Verified: Web shell, web remote standalone, mobile host (iOS/Android), mobile remote standalone all work with theming
 
-**TODO - Theme Synchronization Discussion:**
-Remote MFE components have their own `ThemeProvider` and do NOT sync with the host's theme. This is intentional for MFE independence (each remote can be deployed independently with its own default theme). However, this means:
-- Host toggles theme → only host UI changes
-- Remote component stays on its default theme (light)
+**Theme Synchronization via Event Bus: ✅ IMPLEMENTED**
+Theme synchronization between host and remote MFEs is now implemented using Event Bus (see Phase 5):
+- Host emits `THEME_CHANGED` event when user toggles theme
+- Remote MFEs listen for this event and update their internal ThemeProvider
+- This approach maintains MFE independence while enabling UI consistency
 
-**Future options to discuss:**
-1. **Accept current behavior** - Each MFE is independent, consistent with MFE principles
-2. **Theme via props** - Pass `themeName` prop from host to remote, remote uses it as `defaultTheme`
-3. **Shared state** - Use event bus (Phase 5) to broadcast theme changes, remotes subscribe
-4. **Context bridging** - Advanced: Share React context across MF boundaries (complex, requires MF shared config)
+Implementation details:
+- `packages/web-shell/src/App.tsx` - emits THEME_CHANGED on toggle
+- `packages/mobile-host/src/App.tsx` - emits THEME_CHANGED on toggle
+- `packages/web-remote-hello/src/HelloRemote.tsx` - listens and syncs theme
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - listens and syncs theme
 
 ### Task 2.5: Update build scripts ✅ COMPLETE
 **Status:** No changes required
@@ -591,10 +592,17 @@ Implement internationalization with a lightweight, universal approach that works
 - `packages/mobile-remote-hello/package.json` - added @universal/shared-i18n dependency
 - `packages/mobile-remote-hello/src/HelloRemote.tsx` - wrapped with I18nProvider, accepts `locale` prop
 
-**Locale synchronization pattern:**
-- Host passes current locale to remote via `locale` prop
-- Remote wraps with `I18nProvider key={locale}` to force re-render on locale change
-- **Future enhancement:** Replace prop drilling with Event Bus (Phase 5) for cleaner cross-MFE locale synchronization
+**Locale Synchronization via Event Bus: ✅ IMPLEMENTED**
+Locale synchronization between host and remote MFEs is now implemented using Event Bus (see Phase 5):
+- Host emits `LOCALE_CHANGED` event when user changes language
+- Remote MFEs listen for this event and update their internal I18nProvider
+- This approach maintains MFE independence while enabling consistent translations
+
+Implementation details:
+- `packages/web-shell/src/App.tsx` - emits LOCALE_CHANGED on language toggle
+- `packages/mobile-host/src/App.tsx` - emits LOCALE_CHANGED on language toggle
+- `packages/web-remote-hello/src/HelloRemote.tsx` - listens and syncs locale
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - listens and syncs locale
 
 **Notes:**
 - Removed `getGreeting` from shared-utils (now handled by i18n)
@@ -875,6 +883,57 @@ Implement a lightweight, type-safe event bus for communication between microfron
 
 **Note:** Host apps (web-shell, mobile-host) already have manual loading/error handling.
 The new components are exported for use when more sophisticated loading is needed.
+
+### Task 5.10: Implement theme and locale sync via Event Bus ✅ COMPLETE
+**Purpose:** Enable host-to-remote synchronization of theme and locale using Event Bus instead of prop drilling.
+
+**Files modified:**
+- `packages/web-shell/src/App.tsx` - Emit THEME_CHANGED and LOCALE_CHANGED events
+- `packages/mobile-host/src/App.tsx` - Emit THEME_CHANGED and LOCALE_CHANGED events
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Listen for events and sync state
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Listen for events and sync state
+
+**Implementation pattern:**
+1. **Host emits events**: When user toggles theme/locale, host emits corresponding event
+   - `THEME_CHANGED`: `{ theme: 'dark' | 'light', previousTheme }`
+   - `LOCALE_CHANGED`: `{ locale: string, previousLocale }`
+2. **Remotes listen**: Remotes use `useEventListener` hook to receive events
+3. **Remotes update providers**: On event, remotes update their internal state which triggers provider re-render
+
+**Benefits over prop drilling:**
+- Decoupled communication (no need to pass props through multiple layers)
+- Works even when remote is loaded after theme/locale change
+- Consistent with event bus pattern for all inter-MFE communication
+- Backwards compatible (initial props still work for first render)
+
+**Standalone mode support:**
+HelloRemote components also support direct prop changes for standalone mode (where no event bus events are emitted). This is implemented via `useEffect` hooks that sync internal state when `theme` or `locale` props change:
+- `packages/web-remote-hello/src/standalone.tsx` - passes `theme={themeName}` prop
+- `packages/mobile-remote-hello/src/App.tsx` - passes `theme={themeName}` prop
+- HelloRemote uses `useEffect` to sync state when props change
+
+**Verified:**
+- Web shell and remote: Theme and locale sync correctly
+- Mobile host and remote: Theme and locale sync correctly
+- Web remote standalone: Theme and locale sync correctly
+- Mobile remote standalone: Theme and locale sync correctly
+- Events logged in console in development mode
+
+---
+
+## Phase 5 Complete ✅
+
+All Event Bus tasks completed:
+- Task 5.1: Created shared-event-bus package with core pub/sub
+- Task 5.2: Created React hooks (useEventBus, useEventListener, useEventEmitter)
+- Task 5.3: Defined standard event types with versioning
+- Task 5.4: Added debugging and devtools support
+- Task 5.5: Integrated event bus into host applications
+- Task 5.6: Created example inter-MFE communication (BUTTON_PRESSED)
+- Task 5.7: Verified build configuration
+- Task 5.8: Established MFE local state pattern with Zustand
+- Task 5.9: Implemented remote loading failure & degradation strategy
+- Task 5.10: Implemented theme and locale sync via Event Bus
 
 ---
 

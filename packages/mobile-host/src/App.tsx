@@ -7,7 +7,7 @@
  * Hermes is required for execution.
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,8 @@ import {
   useEventListener,
   createEventLogger,
   InteractionEventTypes,
+  ThemeEventTypes,
+  LocaleEventTypes,
   type AppEvents,
   type ButtonPressedEvent,
 } from '@universal/shared-event-bus';
@@ -285,10 +287,11 @@ function EventLogger() {
  * Inner app component that uses theme context.
  */
 function AppContent() {
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { theme, isDark, toggleTheme, themeName } = useTheme();
   const { locale, setLocale } = useLocale();
   const { t } = useTranslation('common');
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const bus = useEventBus<AppEvents>();
 
   const [state, setState] = useState<AppState>({
     remoteComponent: null,
@@ -311,12 +314,48 @@ function AppContent() {
     }
   );
 
+  // Emit THEME_CHANGED event when theme changes
+  // This allows remote MFEs to sync their theme via event bus
+  const handleThemeToggle = useCallback(() => {
+    const previousTheme = themeName;
+    toggleTheme();
+    const newTheme = themeName === 'light' ? 'dark' : 'light';
+    bus.emit(
+      ThemeEventTypes.THEME_CHANGED,
+      {
+        theme: newTheme,
+        previousTheme,
+      },
+      1,
+      { source: 'MobileHost' }
+    );
+  }, [bus, themeName, toggleTheme]);
+
+  // Emit LOCALE_CHANGED event when locale changes
+  // This allows remote MFEs to sync their locale via event bus
+  const handleLocaleChange = useCallback(
+    (newLocale: string) => {
+      const previousLocale = locale;
+      setLocale(newLocale as typeof locale);
+      bus.emit(
+        LocaleEventTypes.LOCALE_CHANGED,
+        {
+          locale: newLocale,
+          previousLocale,
+        },
+        1,
+        { source: 'MobileHost' }
+      );
+    },
+    [bus, locale, setLocale]
+  );
+
   // Cycle through available locales
-  const cycleLocale = () => {
+  const cycleLocale = useCallback(() => {
     const currentIndex = availableLocales.indexOf(locale);
     const nextIndex = (currentIndex + 1) % availableLocales.length;
-    setLocale(availableLocales[nextIndex]);
-  };
+    handleLocaleChange(availableLocales[nextIndex]);
+  }, [locale, handleLocaleChange]);
 
   const loadRemote = async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
@@ -368,7 +407,7 @@ function AppContent() {
           <Text style={styles.title}>{t('appName')} - Mobile Host</Text>
         </View>
         <View style={styles.controlsRow}>
-          <Pressable style={styles.themeToggle} onPress={toggleTheme}>
+          <Pressable style={styles.themeToggle} onPress={handleThemeToggle}>
             <Text style={styles.themeToggleText}>
               {isDark ? '☀️ Light' : '🌙 Dark'}
             </Text>
