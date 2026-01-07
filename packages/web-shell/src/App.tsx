@@ -7,7 +7,7 @@
  * Uses manual loading pattern with error handling for consistency with mobile.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,15 @@ import {
   availableLocales,
   getLocaleDisplayName,
 } from '@universal/shared-i18n';
+import {
+  EventBusProvider,
+  useEventBus,
+  createEventLogger,
+  type AppEvents,
+} from '@universal/shared-event-bus';
+
+// Enable event logging in development
+const __DEV__ = process.env.NODE_ENV !== 'production';
 
 interface AppState {
   remoteComponent: React.ComponentType<any> | null;
@@ -191,6 +200,26 @@ function createStyles(theme: Theme): Styles {
 }
 
 /**
+ * Component that enables event logging in development mode.
+ */
+function EventLogger() {
+  const bus = useEventBus<AppEvents>();
+
+  useEffect(() => {
+    if (__DEV__) {
+      const unsubscribe = createEventLogger(bus, {
+        prefix: '[WebShell]',
+        showTimestamp: true,
+        showPayload: true,
+      });
+      return unsubscribe;
+    }
+  }, [bus]);
+
+  return null;
+}
+
+/**
  * Inner app component that uses theme and i18n context.
  */
 function AppContent() {
@@ -310,15 +339,22 @@ function AppContent() {
 }
 
 /**
- * Root React component that wraps the app with ThemeProvider and I18nProvider.
+ * Root React component that wraps the app with providers.
+ * Provider order (outermost to innermost):
+ * 1. EventBusProvider - Event bus for inter-MFE communication
+ * 2. I18nProvider - Internationalization
+ * 3. ThemeProvider - Theming
  */
 function App() {
   return (
-    <I18nProvider translations={locales} initialLocale="en">
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
-    </I18nProvider>
+    <EventBusProvider options={{ debug: __DEV__, name: 'WebShell' }}>
+      <I18nProvider translations={locales} initialLocale="en">
+        <ThemeProvider>
+          <EventLogger />
+          <AppContent />
+        </ThemeProvider>
+      </I18nProvider>
+    </EventBusProvider>
   );
 }
 

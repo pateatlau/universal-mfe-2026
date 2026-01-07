@@ -7,7 +7,7 @@
  * Hermes is required for execution.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,12 @@ import {
   availableLocales,
   getLocaleDisplayName,
 } from '@universal/shared-i18n';
+import {
+  EventBusProvider,
+  useEventBus,
+  createEventLogger,
+  type AppEvents,
+} from '@universal/shared-event-bus';
 
 // Platform-specific remote host configuration
 // Android uses port 9004, iOS uses port 9005 to allow simultaneous testing
@@ -246,6 +252,32 @@ function createStyles(theme: Theme): Styles {
   });
 }
 
+// Development mode check for conditional logging
+const __DEV__ = process.env.NODE_ENV !== 'production';
+
+/**
+ * EventLogger component - enables debug logging in development mode.
+ * This subscribes to all events and logs them to the console.
+ */
+function EventLogger() {
+  const bus = useEventBus<AppEvents>();
+
+  useEffect(() => {
+    if (!__DEV__) return;
+
+    const unsubscribe = createEventLogger(bus, {
+      prefix: '[MobileHost]',
+      showTimestamp: true,
+      showPayload: true,
+      useColors: false, // Mobile console doesn't support CSS colors
+    });
+
+    return unsubscribe;
+  }, [bus]);
+
+  return null;
+}
+
 /**
  * Inner app component that uses theme context.
  */
@@ -376,15 +408,18 @@ function AppContent() {
 }
 
 /**
- * Root React component that wraps the app with I18nProvider and ThemeProvider.
+ * Root React component that wraps the app with EventBusProvider, I18nProvider, and ThemeProvider.
  */
 function App() {
   return (
-    <I18nProvider translations={locales} initialLocale="en">
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
-    </I18nProvider>
+    <EventBusProvider options={{ debug: __DEV__, name: 'MobileHost' }}>
+      <I18nProvider translations={locales} initialLocale="en">
+        <ThemeProvider>
+          <EventLogger />
+          <AppContent />
+        </ThemeProvider>
+      </I18nProvider>
+    </EventBusProvider>
   );
 }
 
