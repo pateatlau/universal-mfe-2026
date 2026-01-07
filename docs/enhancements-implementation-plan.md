@@ -729,8 +729,23 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - `packages/shared-event-bus/src/devtools/index.ts` - Barrel export
 
 **Files modified:**
-- `packages/shared-event-bus/tsconfig.json` - Added DOM lib for browser APIs (window, console)
+- `packages/shared-event-bus/tsconfig.json` - Added DOM lib for TypeScript type definitions
 - `packages/shared-event-bus/src/index.ts` - Added devtools exports
+
+**Note on DOM lib in tsconfig:**
+The `"DOM"` lib is included for TypeScript type checking only. This is consistent with other shared packages (shared-i18n, shared-a11y) that need platform detection:
+- **TypeScript needs DOM lib** to recognize `window`, `document` etc. for `typeof` checks
+- **Platform detection patterns** like `typeof window !== 'undefined'` are safe and explicitly allowed
+- **ESLint architecture rule** (`no-dom-in-shared.js`) prevents actual runtime usage of browser APIs
+- **Devtools gracefully degrade** on non-web platforms (e.g., colored logs only when `window` exists)
+
+This combination (DOM lib for types + ESLint rule for runtime safety) is the correct pattern.
+
+**Note on ESLint exception:**
+Unlike shared-a11y and shared-i18n, shared-event-bus does NOT require an ESLint exception because:
+- Devtools only use `console` (universal API available in all JS runtimes, not in forbidden list)
+- Platform checks use `typeof window !== 'undefined'` (explicitly allowed by the rule)
+- No direct usage of forbidden globals (window, document, localStorage, etc.)
 
 **Verified:**
 - `yarn workspace @universal/shared-event-bus build` - Success

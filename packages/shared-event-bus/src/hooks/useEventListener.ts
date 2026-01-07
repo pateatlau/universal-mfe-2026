@@ -5,7 +5,7 @@
  * This is the recommended way to listen for events in React components.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useEventBusContext } from '../EventBusProvider';
 import { WILDCARD_EVENT } from '../EventBus';
 import type { BaseEvent, EventHandler, SubscribeOptions } from '../types';
@@ -122,6 +122,10 @@ export function useEventListenerOnce<E extends BaseEvent = BaseEvent>(
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
 
+  // Keep options in ref to avoid re-subscriptions on every render
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   // Track if we've already handled an event
   const handledRef = useRef(false);
 
@@ -137,14 +141,14 @@ export function useEventListenerOnce<E extends BaseEvent = BaseEvent>(
     };
 
     const subscription = bus.subscribe(eventType, stableHandler, {
-      ...options,
+      ...optionsRef.current,
       once: true,
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [bus, eventType, options]);
+  }, [bus, eventType]);
 }
 
 /**
@@ -182,6 +186,10 @@ export function useEventListenerMultiple<E extends BaseEvent = BaseEvent>(
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
 
+  // Keep options in ref to avoid re-subscriptions on every render
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   useEffect(() => {
     const stableHandler: EventHandler<E> = (event) => {
       handlerRef.current(event);
@@ -189,14 +197,14 @@ export function useEventListenerMultiple<E extends BaseEvent = BaseEvent>(
 
     // Subscribe to all event types
     const subscriptions = eventTypes.map((eventType) =>
-      bus.subscribe(eventType, stableHandler, options)
+      bus.subscribe(eventType, stableHandler, optionsRef.current)
     );
 
     // Cleanup all subscriptions
     return () => {
       subscriptions.forEach((sub) => sub.unsubscribe());
     };
-  }, [bus, eventTypes.join(','), options]); // Join eventTypes for stable dependency
+  }, [bus, eventTypes.join(',')]); // Join eventTypes for stable dependency
 }
 
 /**
@@ -237,12 +245,15 @@ export function useEventSubscriber<E extends BaseEvent = BaseEvent>(): {
 } {
   const bus = useEventBusContext<E>();
   const subscriptionsRef = useRef<Set<() => void>>(new Set());
+  // Track subscription count in state for reactivity
+  const [subscriptionCount, setSubscriptionCount] = useState(0);
 
   // Cleanup all subscriptions on unmount
   useEffect(() => {
     return () => {
       subscriptionsRef.current.forEach((unsubscribe) => unsubscribe());
       subscriptionsRef.current.clear();
+      // Note: no need to setSubscriptionCount here since component is unmounting
     };
   }, []);
 
@@ -257,9 +268,11 @@ export function useEventSubscriber<E extends BaseEvent = BaseEvent>(): {
       const unsubscribe = () => {
         subscription.unsubscribe();
         subscriptionsRef.current.delete(unsubscribe);
+        setSubscriptionCount(subscriptionsRef.current.size);
       };
 
       subscriptionsRef.current.add(unsubscribe);
+      setSubscriptionCount(subscriptionsRef.current.size);
       return unsubscribe;
     },
     [bus]
@@ -267,6 +280,6 @@ export function useEventSubscriber<E extends BaseEvent = BaseEvent>(): {
 
   return {
     subscribe,
-    subscriptionCount: subscriptionsRef.current.size,
+    subscriptionCount,
   };
 }

@@ -11,6 +11,7 @@ export {
   createTableLogger,
   type LogLevel,
   type EventLoggerOptions,
+  type GroupedLoggerOptions,
   type LogMetadata,
 } from './EventLogger';
 

@@ -5,7 +5,7 @@
  * Automatically includes source information when configured.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useEventBusContext } from '../EventBusProvider';
 import type { BaseEvent, EmitOptions } from '../types';
 
@@ -211,22 +211,23 @@ export function useEmitOnCondition<E extends BaseEvent>(
   options: EmitOptions = {}
 ): void {
   const bus = useEventBusContext<E>();
+  const emittedRef = useRef(false);
 
-  // Track if we've already emitted for this condition
-  const emittedRef = useMemo(() => ({ current: false }), []);
+  useEffect(() => {
+    // Reset when condition becomes false
+    if (!condition) {
+      emittedRef.current = false;
+      return;
+    }
 
-  // Reset when condition becomes false
-  if (!condition) {
-    emittedRef.current = false;
-  }
-
-  // Emit when condition becomes true (only once per true cycle)
-  if (condition && !emittedRef.current) {
-    emittedRef.current = true;
-    const resolvedPayload =
-      typeof payload === 'function'
-        ? (payload as () => E['payload'])()
-        : payload;
-    bus.emit(eventType, resolvedPayload, version, options);
-  }
+    // Emit when condition becomes true (only once per true cycle)
+    if (condition && !emittedRef.current) {
+      emittedRef.current = true;
+      const resolvedPayload =
+        typeof payload === 'function'
+          ? (payload as () => E['payload'])()
+          : payload;
+      bus.emit(eventType, resolvedPayload, version, options);
+    }
+  }, [bus, condition, eventType, payload, version, options]);
 }

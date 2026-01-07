@@ -10,8 +10,8 @@
     "clean": "rm -rf dist"
   },
   "peerDependencies": {
-    "react": ">=18.0.0",
-    "react-native": ">=0.72.0"
+    "react": "19.1.0",
+    "react-native": "0.80.0"
   },
   "devDependencies": {
     "typescript": "5.9.3",

@@ -135,12 +135,32 @@ export function createHistoryViewer<Events extends BaseEvent>(
 
   /**
    * Find events by payload content.
+   *
+   * For string queries, uses case-insensitive literal matching (safe from ReDoS).
+   * For RegExp queries, uses the provided regex directly (caller is responsible for safety).
    */
   function search(
     query: string | RegExp,
     field?: string
   ): EventHistoryEntry<Events>[] {
-    const regex = typeof query === 'string' ? new RegExp(query, 'i') : query;
+    // For string queries, use safe literal matching instead of regex
+    // This prevents ReDoS attacks from malicious patterns
+    const isStringQuery = typeof query === 'string';
+    const lowerQuery = isStringQuery ? query.toLowerCase() : '';
+
+    /**
+     * Match a value against the query.
+     * String queries use case-insensitive indexOf (safe).
+     * RegExp queries use the provided regex (caller-controlled).
+     */
+    const matches = (value: string): boolean => {
+      if (isStringQuery) {
+        // Safe literal matching - no regex involved
+        return value.toLowerCase().includes(lowerQuery);
+      }
+      // RegExp was explicitly provided by caller - trust their intent
+      return (query as RegExp).test(value);
+    };
 
     return bus.getHistory().filter((entry) => {
       const payload = entry.event.payload;
@@ -150,12 +170,12 @@ export function createHistoryViewer<Events extends BaseEvent>(
 
       if (field) {
         const value = (payload as Record<string, unknown>)[field];
-        return value !== undefined && regex.test(String(value));
+        return value !== undefined && matches(String(value));
       }
 
       // Search all string values
       return Object.values(payload as Record<string, unknown>).some(
-        (value) => typeof value === 'string' && regex.test(value)
+        (value) => typeof value === 'string' && matches(value)
       );
     });
   }

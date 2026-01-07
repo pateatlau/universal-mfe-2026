@@ -76,14 +76,18 @@ export interface EventBusProviderProps<Events extends BaseEvent = BaseEvent> {
  * The first provider to render creates the global instance; subsequent providers
  * reuse it.
  *
+ * @important The `options` object is only used when creating the initial global bus.
+ * Subsequent providers reuse the existing bus and ignore their options.
+ * If you need to pass a custom bus instance, use the `eventBus` prop.
+ *
  * @example
  * ```tsx
- * // Host app
+ * // Host app (creates the global bus with options)
  * <EventBusProvider options={{ debug: true, name: 'HostApp' }}>
  *   <App />
  * </EventBusProvider>
  *
- * // Remote MFE (automatically uses the same global bus)
+ * // Remote MFE (automatically uses the same global bus, options ignored)
  * <EventBusProvider options={{ name: 'RemoteMFE' }}>
  *   <HelloRemote />
  * </EventBusProvider>
@@ -94,10 +98,16 @@ export function EventBusProvider<Events extends BaseEvent = BaseEvent>({
   eventBus,
   options,
 }: EventBusProviderProps<Events>): React.ReactElement {
-  // Use provided bus, or get/create the global singleton
+  // Use provided bus, or get/create the global singleton.
+  // Note: options is only used on first creation of global bus.
+  // We use a ref to capture initial options and avoid dependency on unstable object.
+  const optionsRef = React.useRef(options);
+
   const bus = useMemo(() => {
-    return eventBus || getGlobalEventBus<Events>(options);
-  }, [eventBus, options]);
+    return eventBus || getGlobalEventBus<Events>(optionsRef.current);
+    // eventBus is the only real dependency - global bus is a singleton
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventBus]);
 
   // Note: We intentionally do NOT clear the global bus on unmount.
   // The global bus persists for the lifetime of the application.
@@ -118,14 +128,20 @@ export function EventBusProvider<Events extends BaseEvent = BaseEvent>({
  *
  * @example
  * ```tsx
+ * import { Pressable, Text } from 'react-native';
+ *
  * function MyComponent() {
  *   const bus = useEventBusContext();
  *
- *   const handleClick = () => {
- *     bus.emit('BUTTON_CLICKED', { buttonId: 'submit' });
+ *   const handlePress = () => {
+ *     bus.emit('BUTTON_PRESSED', { buttonId: 'submit' });
  *   };
  *
- *   return <button onClick={handleClick}>Click me</button>;
+ *   return (
+ *     <Pressable onPress={handlePress}>
+ *       <Text>Press me</Text>
+ *     </Pressable>
+ *   );
  * }
  * ```
  */

@@ -193,9 +193,20 @@ export function createEventLogger<Events extends BaseEvent>(
 }
 
 /**
+ * Options for grouped event logger.
+ */
+export interface GroupedLoggerOptions extends EventLoggerOptions {
+  /** Maximum number of correlation groups to track (default: 100) */
+  maxGroups?: number;
+  /** Inactivity timeout in ms before a group is evicted (default: 60000 = 1 minute) */
+  groupTimeoutMs?: number;
+}
+
+/**
  * Create a logger that groups related events.
  *
  * Groups events by correlationId for easier tracing.
+ * Includes memory management: max group limit and inactivity-based eviction.
  *
  * @param bus - Event bus instance
  * @param options - Logger options
@@ -205,21 +216,75 @@ export function createEventLogger<Events extends BaseEvent>(
  * ```ts
  * const unsubscribe = createGroupedEventLogger(bus, {
  *   prefix: '[Auth Flow]',
+ *   maxGroups: 50,
+ *   groupTimeoutMs: 30000, // 30 seconds
  * });
  * ```
  */
 export function createGroupedEventLogger<Events extends BaseEvent>(
   bus: EventBus<Events>,
-  options: EventLoggerOptions = {}
+  options: GroupedLoggerOptions = {}
 ): () => void {
-  const { prefix = '[EventBus]' } = options;
+  const {
+    prefix = '[EventBus]',
+    maxGroups = 100,
+    groupTimeoutMs = 60000, // 1 minute default
+  } = options;
+
   const correlationGroups = new Map<string, BaseEvent[]>();
+  const groupTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /**
+   * Clear the timeout for a correlation group.
+   */
+  const clearGroupTimeout = (correlationId: string) => {
+    const existingTimeout = groupTimeouts.get(correlationId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      groupTimeouts.delete(correlationId);
+    }
+  };
+
+  /**
+   * Set/reset the inactivity timeout for a correlation group.
+   * Group will be evicted after groupTimeoutMs of inactivity.
+   */
+  const resetGroupTimeout = (correlationId: string) => {
+    clearGroupTimeout(correlationId);
+    const timeout = setTimeout(() => {
+      correlationGroups.delete(correlationId);
+      groupTimeouts.delete(correlationId);
+    }, groupTimeoutMs);
+    groupTimeouts.set(correlationId, timeout);
+  };
+
+  /**
+   * Evict the oldest correlation group if we're at capacity.
+   * Uses Map insertion order (first key = oldest).
+   */
+  const evictOldestIfNeeded = () => {
+    if (correlationGroups.size >= maxGroups) {
+      const oldestKey = correlationGroups.keys().next().value;
+      if (oldestKey) {
+        clearGroupTimeout(oldestKey);
+        correlationGroups.delete(oldestKey);
+      }
+    }
+  };
 
   const subscription = bus.subscribe(WILDCARD_EVENT as Events['type'], (event) => {
     if (event.correlationId) {
+      // Evict oldest group if at capacity (before adding new)
+      if (!correlationGroups.has(event.correlationId)) {
+        evictOldestIfNeeded();
+      }
+
       const group = correlationGroups.get(event.correlationId) || [];
       group.push(event);
       correlationGroups.set(event.correlationId, group);
+
+      // Reset inactivity timeout for this group
+      resetGroupTimeout(event.correlationId);
 
       // Log as group
       console.groupCollapsed(
@@ -237,6 +302,9 @@ export function createGroupedEventLogger<Events extends BaseEvent>(
 
   return () => {
     subscription.unsubscribe();
+    // Clear all timeouts to prevent memory leaks
+    groupTimeouts.forEach((timeout) => clearTimeout(timeout));
+    groupTimeouts.clear();
     correlationGroups.clear();
   };
 }
