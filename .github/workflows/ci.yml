@@ -68,7 +68,7 @@ jobs:
       - name: Run unit tests
         run: |
           echo "::group::Running unit tests"
-          yarn test -- --coverage
+          npx jest --coverage
           echo "::endgroup::"
 
       - name: Security audit
