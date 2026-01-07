@@ -850,6 +850,8 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - `packages/shared-event-bus/src/index.ts` - Export remote loading components
 - `packages/shared-event-bus/src/events/remote.ts` - Added RENDER_ERROR and LOAD_ERROR to errorCode union
 - `packages/shared-event-bus/package.json` - Added react-native peer dependency for RN primitives
+- `packages/web-shell/rspack.config.mjs` - Fixed react-native alias for transitive dependencies
+- `packages/web-shell/src/App.tsx` - User-friendly error messages and proper MF cache handling
 
 **Components provided:**
 - **RemoteLoadingFallback**: Accessible loading indicator with customizable message
@@ -864,6 +866,12 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - **Event emission**: Emits REMOTE_LOADING, REMOTE_LOADED, REMOTE_RETRYING, REMOTE_LOAD_FAILED
 - **Error Boundary**: Catches render errors, emits REMOTE_LOAD_FAILED with RENDER_ERROR code
 - **Partial availability**: Components designed for graceful degradation
+
+**Web shell improvements:**
+- User-friendly error messages (replaced cryptic Module Federation errors)
+- Proper handling of MF cached failures (MF caches failed loads as empty objects)
+- "Reload Page" button (MF requires page reload to truly retry after failure)
+- Validation that loaded component is a valid function before rendering
 
 **Note:** Host apps (web-shell, mobile-host) already have manual loading/error handling.
 The new components are exported for use when more sophisticated loading is needed.

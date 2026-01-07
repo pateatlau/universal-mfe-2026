@@ -48,6 +48,8 @@ interface AppState {
   loading: boolean;
   error: string | null;
   pressCount: number;
+  loadAttempt: number; // Track load attempts for cache busting
+  requiresReload: boolean; // True when MF cached a failed load and requires page reload
 }
 
 interface Styles {
@@ -236,6 +238,8 @@ function AppContent() {
     loading: false,
     error: null,
     pressCount: 0,
+    loadAttempt: 0,
+    requiresReload: false,
   });
 
   // Listen for BUTTON_PRESSED events from remote MFEs
@@ -260,11 +264,34 @@ function AppContent() {
   };
 
   const loadRemote = async () => {
-    setState((prev) => ({ ...prev, loading: true, error: null }));
+    // Reset component and increment attempt counter on retry
+    setState((prev) => ({
+      ...prev,
+      remoteComponent: null,
+      loading: true,
+      error: null,
+      loadAttempt: prev.loadAttempt + 1,
+      requiresReload: false,
+    }));
 
     try {
+      // Dynamic import - Module Federation handles caching
       const RemoteModule = await import('hello_remote/HelloRemote');
-      const HelloRemote = RemoteModule.default || RemoteModule;
+      const HelloRemote = RemoteModule.default;
+
+      // Validate that we got a valid React component (must be a function)
+      // Module Federation caches failed loads as empty objects, so we need to detect this
+      if (typeof HelloRemote !== 'function') {
+        // MF cached a failed load - need page reload to retry properly
+        setState((prev) => ({
+          ...prev,
+          remoteComponent: null,
+          loading: false,
+          error: 'Remote module is not available. Please ensure the remote server is running and reload the page.',
+          requiresReload: true,
+        }));
+        return;
+      }
 
       setState((prev) => ({
         ...prev,
@@ -272,13 +299,23 @@ function AppContent() {
         loading: false,
       }));
     } catch (error) {
+      // Log the original error for debugging
       console.error('Failed to load remote:', error);
+
+      // Show user-friendly error message
+      // Module Federation errors are technical - translate to user-friendly message
       setState((prev) => ({
         ...prev,
+        remoteComponent: null,
         loading: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Unable to load remote component. The remote server may be unavailable. Please check that it is running and reload the page.',
+        requiresReload: true, // Always require reload since MF caches failures
       }));
     }
+  };
+
+  const reloadPage = () => {
+    window.location.reload();
   };
 
   // Legacy callback - no longer needed since we use event bus
@@ -334,15 +371,15 @@ function AppContent() {
 
         {state.error && (
           <View style={styles.error}>
-            <Text style={styles.errorText}>{t('error')}: {state.error}</Text>
-            <Pressable style={styles.retryButton} onPress={loadRemote}>
-              <Text style={styles.retryButtonText}>{t('retry')}</Text>
+            <Text style={styles.errorText}>{state.error}</Text>
+            <Pressable style={styles.retryButton} onPress={reloadPage}>
+              <Text style={styles.retryButtonText}>Reload Page</Text>
             </Pressable>
           </View>
         )}
 
         {HelloRemote && (
-          <View style={styles.remoteContainer}>
+          <View style={styles.remoteContainer} key={`remote-${state.loadAttempt}`}>
             <HelloRemote name="Web User" onPress={handleRemotePress} locale={locale} />
           </View>
         )}
