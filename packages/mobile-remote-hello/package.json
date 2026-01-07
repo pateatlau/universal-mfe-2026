@@ -25,6 +25,7 @@
   "dependencies": {
     "@module-federation/enhanced": "0.21.6",
     "@swc/helpers": "0.5.17",
+    "@universal/shared-event-bus": "*",
     "@universal/shared-hello-ui": "*",
     "@universal/shared-i18n": "*",
     "@universal/shared-theme-context": "*",

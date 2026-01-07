@@ -106,6 +106,13 @@ export {
   type RemoteUnloadedEvent,
   type RemoteEvents,
   RemoteEventTypes,
+  // Interaction events
+  type ButtonPressedEvent,
+  type FormSubmittedEvent,
+  type ItemSelectedEvent,
+  type CustomActionEvent,
+  type InteractionEvents,
+  InteractionEventTypes,
   // Combined types
   type AppEvents,
   EventTypes,

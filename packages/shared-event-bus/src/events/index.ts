@@ -90,6 +90,16 @@ export {
   RemoteEventTypes,
 } from './remote';
 
+// User interaction events
+export {
+  type ButtonPressedEvent,
+  type FormSubmittedEvent,
+  type ItemSelectedEvent,
+  type CustomActionEvent,
+  type InteractionEvents,
+  InteractionEventTypes,
+} from './interaction';
+
 /**
  * Union of all standard application events.
  *
@@ -111,13 +121,16 @@ import type { LocaleEvents } from './locale';
 import { LocaleEventTypes } from './locale';
 import type { RemoteEvents } from './remote';
 import { RemoteEventTypes } from './remote';
+import type { InteractionEvents } from './interaction';
+import { InteractionEventTypes } from './interaction';
 
 export type AppEvents =
   | NavigationEvents
   | AuthEvents
   | ThemeEvents
   | LocaleEvents
-  | RemoteEvents;
+  | RemoteEvents
+  | InteractionEvents;
 
 /**
  * All event type constants combined.
@@ -128,6 +141,7 @@ export const EventTypes = {
   ...ThemeEventTypes,
   ...LocaleEventTypes,
   ...RemoteEventTypes,
+  ...InteractionEventTypes,
 } as const;
 
 /**
@@ -161,4 +175,9 @@ export const EventVersions: Record<keyof typeof EventTypes, number> = {
   REMOTE_LOAD_FAILED: 1,
   REMOTE_RETRYING: 1,
   REMOTE_UNLOADED: 1,
+  // Interaction events (v1)
+  BUTTON_PRESSED: 1,
+  FORM_SUBMITTED: 1,
+  ITEM_SELECTED: 1,
+  CUSTOM_ACTION: 1,
 };

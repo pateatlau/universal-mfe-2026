@@ -9,9 +9,6 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
-  "dependencies": {
-    "react": "*"
-  },
   "peerDependencies": {
     "react": ">=18.0.0"
   },

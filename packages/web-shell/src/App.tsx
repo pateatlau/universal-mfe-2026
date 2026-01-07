@@ -33,8 +33,11 @@ import {
 import {
   EventBusProvider,
   useEventBus,
+  useEventListener,
   createEventLogger,
+  InteractionEventTypes,
   type AppEvents,
+  type ButtonPressedEvent,
 } from '@universal/shared-event-bus';
 
 // Enable event logging in development
@@ -235,6 +238,20 @@ function AppContent() {
     pressCount: 0,
   });
 
+  // Listen for BUTTON_PRESSED events from remote MFEs
+  // This demonstrates event-based communication without prop drilling
+  useEventListener<ButtonPressedEvent>(
+    InteractionEventTypes.BUTTON_PRESSED,
+    (event) => {
+      // Update press count when remote button is pressed
+      setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
+      console.info(
+        `[WebShell] Received BUTTON_PRESSED from ${event.source}:`,
+        event.payload
+      );
+    }
+  );
+
   // Cycle through available locales
   const cycleLocale = () => {
     const currentIndex = availableLocales.indexOf(locale);
@@ -264,9 +281,13 @@ function AppContent() {
     }
   };
 
+  // Legacy callback - no longer needed since we use event bus
+  // Kept for demonstration of backward compatibility
+  // The remote still calls onPress, but host now listens via event bus instead
   const handleRemotePress = () => {
-    setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
-    console.info('Remote button pressed!', state.pressCount + 1);
+    // Note: Press count is now updated by the BUTTON_PRESSED event listener above
+    // This callback could be used for additional host-specific logic
+    console.info('[WebShell] Legacy onPress callback triggered');
   };
 
   const HelloRemote = state.remoteComponent;

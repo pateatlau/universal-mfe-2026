@@ -729,19 +729,58 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - `yarn workspace @universal/shared-event-bus typecheck` - Passes
 - ESLint architecture rules pass (0 errors)
 
-### Task 5.5: Integrate event bus into host applications
-**Files to modify:**
-- `packages/web-shell/package.json` - add @universal/shared-event-bus dependency
-- `packages/web-shell/src/App.tsx` - wrap with EventBusProvider
-- `packages/mobile-host/package.json` - add @universal/shared-event-bus dependency
-- `packages/mobile-host/src/App.tsx` - wrap with EventBusProvider
+### Task 5.5: Integrate event bus into host applications ✅ COMPLETE
+**Files modified:**
+- `packages/web-shell/package.json` - added @universal/shared-event-bus dependency
+- `packages/web-shell/src/App.tsx` - wrapped with EventBusProvider, added EventLogger component
+- `packages/mobile-host/package.json` - added @universal/shared-event-bus dependency
+- `packages/mobile-host/src/App.tsx` - wrapped with EventBusProvider, added EventLogger component
 
-### Task 5.6: Create example inter-MFE communication
-**Files to modify:**
-- `packages/web-remote-hello/src/HelloRemote.tsx` - emit event on button click
-- `packages/mobile-remote-hello/src/HelloRemote.tsx` - emit event on button click
-- `packages/web-shell/src/App.tsx` - listen for remote events
-- `packages/mobile-host/src/App.tsx` - listen for remote events
+**Implementation:**
+- Both hosts wrap the app with `EventBusProvider` with `debug: __DEV__` and named instances
+- `EventLogger` component subscribes to all events and logs in development mode
+- Web uses colored console output; mobile uses plain text (no CSS colors support)
+- Event bus is now available via `useEventBus()` hook in all child components
+
+**Verified:**
+- `yarn build:shared` - Success (7 packages)
+- `yarn typecheck` - 18 tasks pass
+- `yarn lint:architecture` - 0 errors (33 warnings for console statements - expected for debug code)
+
+### Task 5.6: Create example inter-MFE communication ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/events/interaction.ts` - Interaction events:
+  - `ButtonPressedEvent` - Button click with buttonId, label, metadata
+  - `FormSubmittedEvent` - Form submission with formId, data, validation status
+  - `ItemSelectedEvent` - Item selection with itemId, itemType, metadata
+  - `CustomActionEvent` - Custom action with actionId, payload
+
+**Files modified:**
+- `packages/shared-event-bus/src/events/index.ts` - Added interaction events to registry
+- `packages/shared-event-bus/src/index.ts` - Exported interaction event types
+- `packages/web-remote-hello/package.json` - Added @universal/shared-event-bus dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Emits BUTTON_PRESSED event on click
+- `packages/web-remote-hello/src/standalone.tsx` - Added I18nProvider and language toggle
+- `packages/mobile-remote-hello/package.json` - Added @universal/shared-event-bus dependency
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Emits BUTTON_PRESSED event on click
+- `packages/mobile-remote-hello/src/App.tsx` - Added I18nProvider and language toggle
+- `packages/web-shell/src/App.tsx` - Listens for BUTTON_PRESSED events, updates press count
+- `packages/mobile-host/src/App.tsx` - Listens for BUTTON_PRESSED events, updates press count
+- `packages/shared-event-bus/package.json` - Fixed React version (peerDependencies only)
+- `packages/shared-event-bus/src/EventBusProvider.tsx` - Global singleton pattern via globalThis
+
+**Key implementation details:**
+- EventBusProvider uses global singleton (`globalThis.__UNIVERSAL_EVENT_BUS__`) to ensure all MFEs share the same event bus instance
+- Remote MFEs emit `BUTTON_PRESSED` events with buttonId, label, and metadata
+- Host apps listen for events via `useEventListener<ButtonPressedEvent>` hook
+- Press count is updated via event bus instead of prop callbacks (demonstrates decoupled communication)
+- Standalone apps have language toggle matching host/shell apps
+
+**Verified:**
+- Web shell and remote: Events flow correctly, press count updates
+- iOS host and remote: Events flow correctly, press count updates
+- Android host and remote: Events flow correctly, press count updates
+- Standalone apps: Theme and language toggles work correctly
 
 ### Task 5.7: Update build configuration
 **Files to modify:**
