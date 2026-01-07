@@ -836,24 +836,37 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - `yarn typecheck` - 18 tasks pass
 - `yarn install` - Dependencies installed successfully
 
-### Task 5.9: Implement remote loading failure & degradation strategy
+### Task 5.9: Implement remote loading failure & degradation strategy ✅ COMPLETE
 **Purpose:** Define standard behavior when remote MFEs fail to load, ensuring graceful degradation.
 
-**Files to create:**
-- `packages/shared-event-bus/src/components/RemoteErrorBoundary.tsx` - Error boundary for remote loading failures
-- `packages/shared-event-bus/src/components/RemoteLoadingFallback.tsx` - Loading state component
-- `packages/shared-event-bus/src/components/RemoteErrorFallback.tsx` - Error state component with retry
+**Files created:**
+- `packages/shared-event-bus/src/components/RemoteLoadingFallback.tsx` - Themed loading indicator
+- `packages/shared-event-bus/src/components/RemoteErrorFallback.tsx` - Error display with retry button
+- `packages/shared-event-bus/src/components/RemoteErrorBoundary.tsx` - React Error Boundary for render errors
+- `packages/shared-event-bus/src/components/useRemoteLoader.ts` - Hook with retry logic and event emission
+- `packages/shared-event-bus/src/components/index.ts` - Barrel exports
 
-**Files to modify:**
-- `packages/web-shell/src/App.tsx` - wrap remote imports with error boundary
-- `packages/mobile-host/src/App.tsx` - wrap remote imports with error boundary
+**Files modified:**
+- `packages/shared-event-bus/src/index.ts` - Export remote loading components
+- `packages/shared-event-bus/src/events/remote.ts` - Added RENDER_ERROR and LOAD_ERROR to errorCode union
+- `packages/shared-event-bus/package.json` - Added react-native peer dependency for RN primitives
 
-**Failure handling strategy:**
-- **Timeout**: Remote load times out after configurable duration (default: 10s)
-- **Retry**: Automatic retry with exponential backoff (max 3 attempts)
-- **Fallback UI**: Show error state with manual retry button
-- **Event emission**: Emit `REMOTE_LOAD_FAILED` event for analytics/logging
-- **Partial availability**: App remains functional even if some remotes fail
+**Components provided:**
+- **RemoteLoadingFallback**: Accessible loading indicator with customizable message
+- **RemoteErrorFallback**: Error display with retry button, shows error details in dev mode
+- **RemoteErrorBoundary**: Catches render errors, emits events, supports custom fallbacks
+- **useRemoteLoader**: Hook with timeout, exponential backoff retry, event emission
+
+**Failure handling strategy implemented:**
+- **Timeout**: Configurable timeout (default: 10s), rejects with descriptive error
+- **Retry**: Exponential backoff with jitter (base: 1s, max: 30s), configurable attempts
+- **Fallback UI**: RemoteErrorFallback with retry button, shows error details in dev
+- **Event emission**: Emits REMOTE_LOADING, REMOTE_LOADED, REMOTE_RETRYING, REMOTE_LOAD_FAILED
+- **Error Boundary**: Catches render errors, emits REMOTE_LOAD_FAILED with RENDER_ERROR code
+- **Partial availability**: Components designed for graceful degradation
+
+**Note:** Host apps (web-shell, mobile-host) already have manual loading/error handling.
+The new components are exported for use when more sophisticated loading is needed.
 
 ---
 

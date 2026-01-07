@@ -81,7 +81,7 @@ export type RemoteLoadFailedEvent = EventDefinition<
     /** URL that failed */
     url?: string;
     /** Error code for programmatic handling */
-    errorCode: 'NETWORK_ERROR' | 'TIMEOUT' | 'SCRIPT_ERROR' | 'INIT_ERROR' | 'UNKNOWN';
+    errorCode: 'NETWORK_ERROR' | 'TIMEOUT' | 'SCRIPT_ERROR' | 'INIT_ERROR' | 'RENDER_ERROR' | 'LOAD_ERROR' | 'UNKNOWN';
     /** Error message */
     errorMessage: string;
     /** Number of retry attempts made */
