@@ -8,8 +8,14 @@
 /**
  * Regular expression to match interpolation placeholders.
  * Matches {{variableName}} patterns.
+ *
+ * Note: We have two versions - global for replace/matchAll operations,
+ * and non-global for test() to avoid stateful lastIndex behavior.
  */
 const INTERPOLATION_REGEX = /\{\{(\w+)\}\}/g;
+
+/** Non-global version for hasInterpolation() to avoid stateful lastIndex */
+const INTERPOLATION_REGEX_TEST = /\{\{(\w+)\}\}/;
 
 /**
  * Interpolate variables into a translation string.
@@ -99,7 +105,7 @@ export function extractVariables(template: string): string[] {
  * ```
  */
 export function hasInterpolation(template: string): boolean {
-  return INTERPOLATION_REGEX.test(template);
+  return INTERPOLATION_REGEX_TEST.test(template);
 }
 
 /**

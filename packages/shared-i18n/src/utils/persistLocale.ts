@@ -36,31 +36,21 @@ interface LocaleStorage {
 }
 
 /**
- * Default storage implementation.
- * Uses localStorage on web, in-memory fallback elsewhere.
+ * Storage implementation configured via configureLocaleStorage().
+ * Must be set by the host application before using persistence functions.
  */
 let storage: LocaleStorage | null = null;
 
 /**
- * Initialize storage based on platform.
+ * Get the configured storage implementation.
+ *
+ * Returns null if no storage has been configured via configureLocaleStorage().
+ * This keeps the shared package platform-agnostic - host applications must
+ * provide their own storage implementation (localStorage for web, AsyncStorage
+ * for React Native, etc.).
  */
 function getStorage(): LocaleStorage | null {
-  if (storage) {
-    return storage;
-  }
-
-  // Try localStorage for web
-  if (typeof window !== 'undefined' && window.localStorage) {
-    storage = {
-      getItem: (key) => window.localStorage.getItem(key),
-      setItem: (key, value) => window.localStorage.setItem(key, value),
-      removeItem: (key) => window.localStorage.removeItem(key),
-    };
-    return storage;
-  }
-
-  // No persistent storage available
-  return null;
+  return storage;
 }
 
 /**

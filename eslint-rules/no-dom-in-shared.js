@@ -166,7 +166,11 @@ module.exports = {
         }
 
         // Skip if it's a function parameter
-        if (parent.type === 'FunctionDeclaration' || parent.type === 'ArrowFunctionExpression') {
+        if (
+          parent.type === 'FunctionDeclaration' ||
+          parent.type === 'FunctionExpression' ||
+          parent.type === 'ArrowFunctionExpression'
+        ) {
           const params = parent.params || [];
           if (params.includes(node)) {
             return;
