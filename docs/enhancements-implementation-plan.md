@@ -704,10 +704,30 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - `yarn workspace @universal/shared-event-bus typecheck` - Passes
 - ESLint architecture rules pass (0 errors)
 
-### Task 5.4: Add debugging and devtools support
-**Files to create:**
-- `packages/shared-event-bus/src/devtools/EventLogger.ts` - Console logging for dev mode
-- `packages/shared-event-bus/src/devtools/EventHistory.ts` - Event history for debugging
+### Task 5.4: Add debugging and devtools support ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/devtools/EventLogger.ts` - Console logging:
+  - `createEventLogger` - Formatted console output with colors, timestamps, filters
+  - `createGroupedEventLogger` - Groups events by correlationId for tracing
+  - `createTableLogger` - Batch events into console.table format
+- `packages/shared-event-bus/src/devtools/EventHistory.ts` - History viewer:
+  - `createHistoryViewer` - Query, filter, and analyze event history
+  - `filter()` - Filter by type, source, time range, correlationId, version
+  - `search()` - Search payloads by string/regex
+  - `getStats()` - Statistics (counts by type/source, events per minute, most frequent)
+  - `groupBy()` - Group events by type, source, or custom key
+  - `export()` - Export history as JSON for external analysis
+  - `print()` - Formatted console output with grouping
+- `packages/shared-event-bus/src/devtools/index.ts` - Barrel export
+
+**Files modified:**
+- `packages/shared-event-bus/tsconfig.json` - Added DOM lib for browser APIs (window, console)
+- `packages/shared-event-bus/src/index.ts` - Added devtools exports
+
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
 
 ### Task 5.5: Integrate event bus into host applications
 **Files to modify:**

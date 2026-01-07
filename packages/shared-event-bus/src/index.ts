@@ -111,3 +111,17 @@ export {
   EventTypes,
   EventVersions,
 } from './events';
+
+// DevTools (for development debugging)
+export {
+  createEventLogger,
+  createGroupedEventLogger,
+  createTableLogger,
+  createHistoryViewer,
+  type LogLevel,
+  type EventLoggerOptions,
+  type LogMetadata,
+  type HistoryFilter,
+  type HistoryStats,
+  type HistoryViewer,
+} from './devtools';
