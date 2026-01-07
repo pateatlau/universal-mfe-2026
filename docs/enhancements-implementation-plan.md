@@ -954,16 +954,37 @@ All Event Bus tasks completed:
 
 ## Phase 6: Data Fetching with React Query
 
-### Task 6.1: Create shared-data-layer package
-**Files to create:**
+### Task 6.1: Create shared-data-layer package ✅ COMPLETE
+**Files created:**
 - `packages/shared-data-layer/package.json`
 - `packages/shared-data-layer/tsconfig.json`
-- `packages/shared-data-layer/src/queryClient.ts`
-- `packages/shared-data-layer/src/QueryProvider.tsx`
-- `packages/shared-data-layer/src/index.ts`
+- `packages/shared-data-layer/src/queryClient.ts` - QueryClient factory with sensible defaults
+- `packages/shared-data-layer/src/QueryProvider.tsx` - React provider with shared/isolated client options
+- `packages/shared-data-layer/src/index.ts` - Exports + re-exported React Query hooks
 
 **Dependencies:**
-- `@tanstack/react-query` (exact version: 5.62.16)
+- `@tanstack/react-query` (exact version: 5.90.16)
+
+**API provided:**
+- `createQueryClient(config?)` - Create new QueryClient with optional overrides
+- `getSharedQueryClient()` - Get/create singleton instance for cache sharing
+- `resetSharedQueryClient()` - Reset singleton (for testing)
+- `defaultQueryClientConfig` - Default configuration object
+- `QueryProvider` - React provider with `useSharedClient`, `config`, `client` props
+- Re-exported hooks: `useQuery`, `useMutation`, `useQueryClient`, `useInfiniteQuery`, etc.
+
+**Default configuration:**
+- `staleTime`: 30 seconds
+- `gcTime`: 5 minutes
+- `retry`: 3 for queries, 1 for mutations
+- `refetchOnWindowFocus`: false (less noisy on mobile)
+- `refetchOnReconnect`: true
+
+**Verified:**
+- `yarn workspace @universal/shared-data-layer build` - Success
+- `yarn typecheck` - 19 tasks pass
+- `yarn lint:architecture` - 0 errors
+- `yarn build:shared` - 8 packages built
 
 ### Task 6.2: Create example API hooks
 **Files to create:**
