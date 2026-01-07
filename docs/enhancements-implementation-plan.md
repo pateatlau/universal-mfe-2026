@@ -504,11 +504,34 @@ Implement internationalization with a lightweight, universal approach that works
 - Verified: `yarn typecheck` - 15 tasks pass
 - Verified: `yarn lint:architecture` - 0 errors
 
-### Task 4.2: Create translation file structure
-**Files to create:**
-- `packages/shared-i18n/src/locales/en.ts` - English translations
-- `packages/shared-i18n/src/locales/es.ts` - Spanish translations (example)
-- `packages/shared-i18n/src/locales/index.ts` - Locale registry
+### Task 4.2: Create translation file structure ✅ COMPLETE
+**Files created:**
+- `packages/shared-i18n/src/locales/en.ts` - English translations with namespaces:
+  - `common.*` - Shared strings (loading, error, retry, welcome, items with pluralization)
+  - `navigation.*` - Navigation labels (home, settings, profile, menu)
+  - `errors.*` - Error messages with interpolation ({{field}}, {{moduleName}})
+  - `accessibility.*` - Screen reader announcements
+  - `theme.*` - Theme labels (light, dark, system, toggle)
+  - `language.*` - Language selector labels
+  - `hello.*` - HelloRemote MFE namespace
+  - `datetime.*` - Date/time labels with pluralization
+- `packages/shared-i18n/src/locales/es.ts` - Spanish translations (complete mirror of English)
+- `packages/shared-i18n/src/locales/index.ts` - Locale registry with:
+  - `locales` - TranslationResources for all locales
+  - `availableLocales` - List of supported locale codes
+  - `defaultLocale` - Default locale ('en')
+  - `localeDisplayNames` - Native language names
+  - `rtlLocales` - RTL locales list
+  - Helper functions: `isRTLLocale`, `getLocaleDisplayName`, `isLocaleSupported`, `getTranslations`
+
+**Type updates:**
+- Added `it` (Italian) and `ar` (Arabic) to `LocaleCode` type
+- Updated `SUPPORTED_LOCALES` constant with all 10 locales
+
+**Notes:**
+- Verified: `yarn workspace @universal/shared-i18n build` - Success
+- Verified: `yarn typecheck` - 15 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
 
 ### Task 4.3: Create translation utilities
 **Files to create:**

@@ -121,3 +121,18 @@ export {
   formatList,
   formatBytes,
 } from './formatters';
+
+// Locales
+export {
+  locales,
+  availableLocales,
+  defaultLocale,
+  localeDisplayNames,
+  rtlLocales,
+  isRTLLocale,
+  getLocaleDisplayName,
+  isLocaleSupported,
+  getTranslations,
+  en,
+  es,
+} from './locales';

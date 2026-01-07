@@ -2,7 +2,7 @@
  * Supported locale codes.
  * Add new locales here as they are implemented.
  */
-export type LocaleCode = 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja' | 'ko';
+export type LocaleCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar';
 
 /**
  * Default locale for the application.
@@ -17,10 +17,12 @@ export const SUPPORTED_LOCALES: Record<LocaleCode, string> = {
   es: 'Español',
   fr: 'Français',
   de: 'Deutsch',
+  it: 'Italiano',
   pt: 'Português',
   zh: '中文',
   ja: '日本語',
   ko: '한국어',
+  ar: 'العربية',
 };
 
 /**
