@@ -986,11 +986,41 @@ All Event Bus tasks completed:
 - `yarn lint:architecture` - 0 errors
 - `yarn build:shared` - 8 packages built
 
-### Task 6.2: Create example API hooks
-**Files to create:**
-- `packages/shared-data-layer/src/api/exampleApi.ts`
-- `packages/shared-data-layer/src/hooks/useExampleQuery.ts`
-- `packages/shared-data-layer/src/hooks/useExampleMutation.ts`
+### Task 6.2: Create example API hooks ✅ COMPLETE
+**Files created:**
+- `packages/shared-data-layer/src/api/exampleApi.ts` - Typed API functions using JSONPlaceholder
+- `packages/shared-data-layer/src/api/index.ts` - API barrel exports
+- `packages/shared-data-layer/src/hooks/useExampleQuery.ts` - Query hooks with key factories
+- `packages/shared-data-layer/src/hooks/useExampleMutation.ts` - Mutation hooks with optimistic updates
+- `packages/shared-data-layer/src/hooks/index.ts` - Hooks barrel exports
+
+**Files modified:**
+- `packages/shared-data-layer/src/index.ts` - Added API and hooks exports
+- `eslint-rules/no-dom-in-shared.js` - Added exception for shared-data-layer (fetch is universal)
+
+**API functions provided:**
+- Posts: `fetchPosts`, `fetchPost`, `fetchPostsByUser`, `createPost`, `updatePost`, `deletePost`
+- Users: `fetchUsers`, `fetchUser`
+- Comments: `fetchComments`
+- Types: `Post`, `User`, `Comment`, `CreatePostParams`, `UpdatePostParams`, `ApiError`
+
+**Query hooks provided:**
+- `usePosts()`, `usePost(id)`, `usePostsByUser(userId)` - Posts queries
+- `useUsers()`, `useUser(id)` - Users queries
+- `useComments(postId)` - Comments query
+- `usePostWithDetails(postId)` - Parallel fetch: post + author + comments
+- Query key factories: `postKeys`, `userKeys`, `commentKeys`
+
+**Mutation hooks provided (with optimistic updates):**
+- `useCreatePost()` - Create post with cache invalidation
+- `useUpdatePost()` - Update with optimistic update + rollback
+- `useDeletePost()` - Delete with optimistic removal + rollback
+- `useBulkDeletePosts()` - Bulk delete multiple posts
+
+**Verified:**
+- `yarn workspace @universal/shared-data-layer build` - Success
+- `yarn typecheck` - 19 tasks pass
+- `yarn lint:architecture` - 0 errors
 
 ### Task 6.3: Integrate QueryProvider into hosts
 **Files to modify:**

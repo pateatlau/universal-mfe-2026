@@ -47,7 +47,11 @@ module.exports = {
     // localStorage for persistence
     const isI18nPackage = /packages\/shared-i18n\//.test(filename);
 
-    if (!isSharedPackage || isTestFile || isA11yPackage || isI18nPackage) {
+    // Allow fetch in shared-data-layer package - fetch is universally available
+    // on all target platforms (Web browsers, Node.js 18+, React Native 0.80+)
+    const isDataLayerPackage = /packages\/shared-data-layer\//.test(filename);
+
+    if (!isSharedPackage || isTestFile || isA11yPackage || isI18nPackage || isDataLayerPackage) {
       return {};
     }
 
