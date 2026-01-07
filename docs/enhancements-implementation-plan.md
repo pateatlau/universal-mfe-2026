@@ -782,9 +782,23 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - Android host and remote: Events flow correctly, press count updates
 - Standalone apps: Theme and language toggles work correctly
 
-### Task 5.7: Update build configuration
-**Files to modify:**
-- `turbo.json` - add shared-event-bus to pipeline
+### Task 5.7: Update build configuration ✅ COMPLETE
+**Status:** No changes required
+
+**Analysis:**
+- Turborepo automatically discovers `@universal/shared-event-bus` via Yarn workspaces
+- Generic task definitions in `turbo.json` apply to all workspace packages
+- `dependsOn: ["^build"]` ensures correct build order based on package.json dependencies
+- The dependency graph shows shared-event-bus is correctly identified with dependents:
+  - `@universal/mobile-host`
+  - `@universal/mobile-remote-hello`
+  - `@universal/web-remote-hello`
+  - `@universal/web-shell`
+
+**Verified:**
+- `yarn turbo run build --dry-run` shows shared-event-bus in pipeline
+- `yarn build:shared` - 7 packages built successfully with FULL TURBO caching
+- Build order is correct: shared-event-bus builds before its dependents
 
 ### Task 5.8: Establish MFE local state pattern
 **Purpose:** Each MFE maintains its own Zustand store for local state, ensuring loose coupling. Event bus communicates *events*, not state — MFEs react to events by updating their own stores.
