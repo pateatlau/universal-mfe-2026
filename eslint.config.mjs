@@ -4,6 +4,11 @@ import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import globals from 'globals';
+import { createRequire } from 'module';
+
+// Import custom architecture rules
+const require = createRequire(import.meta.url);
+const architectureRules = require('./eslint-rules/index.js');
 
 export default tseslint.config(
   // Global ignores
@@ -105,6 +110,21 @@ export default tseslint.config(
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+
+  // Architecture enforcement rules
+  {
+    files: ['packages/**/*.{ts,tsx,js,jsx}'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/*.test.*', '**/*.spec.*'],
+    plugins: {
+      architecture: architectureRules,
+    },
+    rules: {
+      // Prevent direct imports between remote MFEs
+      'architecture/no-cross-mfe-imports': 'error',
+      // Prevent DOM usage in shared packages
+      'architecture/no-dom-in-shared': 'error',
     },
   },
 

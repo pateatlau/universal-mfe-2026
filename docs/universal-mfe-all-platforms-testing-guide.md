@@ -36,6 +36,21 @@ lsof -ti:9001,9003,9004,9005,8081,8082,8083,8084 | xargs kill -9 2>/dev/null
 yarn build:shared
 ```
 
+### Turborepo Commands
+
+All commands use Turborepo for caching. Second runs show "FULL TURBO" (instant).
+
+```bash
+yarn build           # Build all packages
+yarn build:shared    # Build shared packages only
+yarn build:web       # Build web packages only
+yarn typecheck       # Type check all packages
+yarn lint            # Run ESLint
+yarn lint:architecture  # Check architecture rules
+yarn test            # Run tests
+yarn clean           # Clean all build outputs
+```
+
 ---
 
 ## Web Platform

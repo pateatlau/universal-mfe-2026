@@ -126,6 +126,7 @@ Host and standalone apps can run simultaneously on different emulators/simulator
 | Rspack | 1.6.5 |
 | Re.Pack | 5.2.0 |
 | Module Federation | 0.21.6 |
+| Turborepo | 2.7.3 |
 | TypeScript | 5.9.3 |
 
 ## CI/CD
@@ -201,6 +202,23 @@ yarn workspace @universal/mobile-host clean
 | iOS "file not found" | Run `node scripts/setup-symlinks.js` in mobile-host |
 | Remote not loading | Verify server running: `curl -I http://localhost:900X/HelloRemote.container.js.bundle` |
 | Port in use | Kill process: `lsof -ti:PORT \| xargs kill -9` |
+
+## Turborepo
+
+The project uses [Turborepo](https://turbo.build/) for fast, cached builds.
+
+```bash
+yarn build          # Build all packages
+yarn build:shared   # Build shared packages only
+yarn build:web      # Build web packages only
+yarn typecheck      # Type check all packages
+yarn lint           # Run ESLint
+yarn lint:architecture  # Check architecture rules
+yarn test           # Run tests
+yarn clean          # Clean all build outputs
+```
+
+Subsequent runs with unchanged inputs show "FULL TURBO" (instant from cache).
 
 ## License
 

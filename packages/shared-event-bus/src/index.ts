@@ -1,0 +1,149 @@
+/**
+ * Shared Event Bus
+ *
+ * A lightweight, type-safe event bus for inter-MFE communication.
+ *
+ * @example
+ * ```ts
+ * import { createEventBus, type BaseEvent, type EventDefinition } from '@universal/shared-event-bus';
+ *
+ * // Define your events
+ * type UserLoginEvent = EventDefinition<'USER_LOGIN', { userId: string }, 1>;
+ * type UserLogoutEvent = EventDefinition<'USER_LOGOUT', {}, 1>;
+ * type AuthEvents = UserLoginEvent | UserLogoutEvent;
+ *
+ * // Create event bus
+ * const bus = createEventBus<AuthEvents>({ debug: true });
+ *
+ * // Subscribe to events
+ * const subscription = bus.subscribe('USER_LOGIN', (event) => {
+ *   console.log('User logged in:', event.payload.userId);
+ * });
+ *
+ * // Emit events
+ * bus.emit('USER_LOGIN', { userId: '123' });
+ *
+ * // Cleanup
+ * subscription.unsubscribe();
+ * ```
+ */
+
+// Core types
+export type {
+  BaseEvent,
+  EventHandler,
+  Subscription,
+  EventFilter,
+  SubscribeOptions,
+  EmitOptions,
+  EventBusOptions,
+  EventBusStats,
+  EventHistoryEntry,
+  EventDefinition,
+  EventType,
+  EventPayload,
+  EventUnion,
+} from './types';
+
+// Core implementation
+export { createEventBus, WILDCARD_EVENT, type EventBus } from './EventBus';
+
+// React integration
+export {
+  EventBusProvider,
+  useEventBusContext,
+  type EventBusProviderProps,
+} from './EventBusProvider';
+
+// React hooks
+export {
+  useEventBus,
+  useEventListener,
+  useEventListenerOnce,
+  useEventListenerMultiple,
+  useEventSubscriber,
+  useEventEmitter,
+  useTypedEmitter,
+  useEventEmitters,
+  useEmitOnCondition,
+  type UseEventEmitterOptions,
+} from './hooks';
+
+// Standard event types
+export {
+  // Navigation events
+  type NavigateToEvent,
+  type NavigateBackEvent,
+  type NavigationCompletedEvent,
+  type OpenExternalUrlEvent,
+  type NavigationEvents,
+  NavigationEventTypes,
+  // Auth events
+  type UserLoggedInEvent,
+  type UserLoggedOutEvent,
+  type SessionExpiredEvent,
+  type AuthErrorEvent,
+  type LoginRequiredEvent,
+  type UserProfileUpdatedEvent,
+  type AuthEvents,
+  AuthEventTypes,
+  // Theme events
+  type ThemeName,
+  type ThemeChangedEvent,
+  type ThemeChangeRequestEvent,
+  type ThemeEvents,
+  ThemeEventTypes,
+  // Locale events
+  type LocaleChangedEvent,
+  type LocaleChangeRequestEvent,
+  type LocaleEvents,
+  LocaleEventTypes,
+  // Remote events
+  type RemoteLoadingEvent,
+  type RemoteLoadedEvent,
+  type RemoteLoadFailedEvent,
+  type RemoteRetryingEvent,
+  type RemoteUnloadedEvent,
+  type RemoteEvents,
+  RemoteEventTypes,
+  // Interaction events
+  type ButtonPressedEvent,
+  type FormSubmittedEvent,
+  type ItemSelectedEvent,
+  type CustomActionEvent,
+  type InteractionEvents,
+  InteractionEventTypes,
+  // Combined types
+  type AppEvents,
+  EventTypes,
+  EventVersions,
+} from './events';
+
+// DevTools (for development debugging)
+export {
+  createEventLogger,
+  createGroupedEventLogger,
+  createTableLogger,
+  createHistoryViewer,
+  type LogLevel,
+  type EventLoggerOptions,
+  type LogMetadata,
+  type HistoryFilter,
+  type HistoryStats,
+  type HistoryViewer,
+} from './devtools';
+
+// Remote loading components
+export {
+  RemoteLoadingFallback,
+  RemoteErrorFallback,
+  RemoteErrorBoundary,
+  useRemoteLoader,
+  type RemoteLoadingFallbackProps,
+  type RemoteErrorFallbackProps,
+  type RemoteErrorBoundaryProps,
+  type ErrorFallbackRenderProps,
+  type RemoteLoaderOptions,
+  type RemoteLoaderState,
+  type RemoteLoaderResult,
+} from './components';

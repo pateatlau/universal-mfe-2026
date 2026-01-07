@@ -28,7 +28,8 @@ export default {
   resolve: {
     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
     alias: {
-      'react-native': 'react-native-web',
+      // Use absolute path to ensure alias works for all imports including transitive deps
+      'react-native$': path.resolve(__dirname, 'node_modules/react-native-web'),
     },
     fallback: {
       // Exclude React Native native modules that don't work on web

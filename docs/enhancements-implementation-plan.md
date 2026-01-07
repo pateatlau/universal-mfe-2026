@@ -1,7 +1,7 @@
 # Enterprise Enhancements Implementation Plan
 
-**Status:** Awaiting User Approval
-**Last Updated:** 2026-01-06
+**Status:** In Progress
+**Last Updated:** 2026-01-07
 **Target:** Seed project foundation for enterprise-level applications
 **Branch:** `enhancements`
 
@@ -30,11 +30,11 @@ This document outlines the implementation plan to enhance the Universal Microfro
 
 | Feature | Status | Phase |
 |---------|--------|-------|
-| Turborepo Migration | Pending | 1 |
-| Design Tokens & Theming (dark/light mode) | Pending | 2 |
-| Accessibility | Pending | 3 |
-| Internationalization (i18n) | Pending | 4 |
-| Event Bus (Inter-MFE Communication) | Pending | 5 |
+| Turborepo Migration | ✅ Complete | 1 |
+| Design Tokens & Theming (dark/light mode) | ✅ Complete | 2 |
+| Accessibility | ✅ Complete | 3 |
+| Internationalization (i18n) | ✅ Complete | 4 |
+| Event Bus (Inter-MFE Communication) | ✅ Complete | 5 |
 | React Query (TanStack Query) | Pending | 6 |
 | React Router 7 | Pending | 7 |
 | RN Component Unit Testing | Pending | 8 |
@@ -52,81 +52,177 @@ This document outlines the implementation plan to enhance the Universal Microfro
 
 Migrate from Yarn Classic workspaces to Turborepo for improved build performance, caching, and task orchestration.
 
-### Task 1.1: Install and configure Turborepo
-**Files to create:**
-- `turbo.json` - Turborepo configuration
-- `.prettierrc` - Prettier configuration
-- `.prettierignore` - Files to ignore during formatting
+### Task 1.1: Install and configure Turborepo ✅ COMPLETE
+**Files created:**
+- `turbo.json` - Turborepo configuration with task definitions
 
-**Files to modify:**
-- `package.json` (root) - add turbo and prettier dependencies and scripts
+**Files modified:**
+- `package.json` (root) - added `turbo: "2.7.3"` as devDependency
 
-**Dependencies:**
-- `turbo` (exact version to be determined)
-- `prettier` (exact version to be determined)
+**Notes:**
+- `.prettierrc` and `.prettierignore` already existed with proper configuration
+- `prettier: "3.5.3"` was already installed
+- Verified with `npx turbo run build` - successfully built 4 packages in ~5s
 
-### Task 1.2: Define pipeline tasks
-**Configure in `turbo.json`:**
-- `build` - builds packages with proper dependency ordering
-- `typecheck` - runs TypeScript checks
+### Task 1.2: Define pipeline tasks ✅ COMPLETE
+**Configured in `turbo.json`:**
+- `build` - builds packages with proper dependency ordering (`dependsOn: ["^build"]`)
+- `typecheck` - runs TypeScript checks (depends on build for type declarations)
 - `lint` - runs ESLint
-- `format` - runs Prettier to fix formatting (no caching)
+- `format` - runs Prettier to fix formatting (`cache: false`)
 - `format:check` - checks formatting without modifying (for CI)
-- `test` - runs Jest tests
-- `dev` - development servers (no caching)
+- `test` - runs Jest tests (depends on build)
+- `dev` - development servers (`cache: false`, `persistent: true`)
 
-### Task 1.3: Update package.json scripts
-**Files to modify:**
-- `package.json` (root) - update scripts to use `turbo run`
-- Individual package scripts may need adjustment
+**Notes:**
+- All pipeline tasks were defined in Task 1.1 when creating turbo.json
+- Verified: `npx turbo run typecheck` - 6 packages type-checked successfully
+- Verified: Caching works correctly ("FULL TURBO" on cached runs)
 
-### Task 1.4: Configure caching
-**Configure in `turbo.json`:**
-- Define inputs/outputs for each task
-- Configure remote caching (optional, for CI)
+### Task 1.3: Update package.json scripts ✅ COMPLETE
+**Files modified:**
+- `package.json` (root) - updated scripts to use `turbo run`
+- `turbo.json` - added `clean` task
 
-### Task 1.5: Update CI workflows
-**Files to modify:**
-- `.github/workflows/ci.yml` - leverage Turborepo caching
+**Scripts updated:**
+- `build` → `turbo run build`
+- `build:shared` → `turbo run build --filter=@universal/shared-*`
+- `build:web` → `turbo run build --filter=@universal/web-*`
+- `typecheck` → `turbo run typecheck`
+- `lint` → `turbo run lint`
+- `format` → `turbo run format`
+- `format:check` → `turbo run format:check` (new)
+- `test` → `turbo run test`
+- `clean` → `turbo run clean`
+- `dev` → `turbo run dev` (new)
 
-### Task 1.6: Add architecture enforcement rules
+**Notes:**
+- `build:mobile:android` and `build:mobile:ios` kept as direct yarn workspace commands (require PLATFORM env var)
+- Verified: All scripts work with FULL TURBO caching
+
+### Task 1.4: Configure caching ✅ COMPLETE
+**Files modified:**
+- `turbo.json` - enhanced caching configuration
+
+**Changes:**
+- Added `globalDependencies`: `tsconfig.json`, `.nvmrc` (affect all packages)
+- Added `$TURBO_DEFAULT$` to all cached task inputs (includes lockfile, package.json)
+- Added `*.config.{js,mjs,ts}` to build inputs for bundler configs
+- Added root config references for lint (`../../eslint.config.mjs`), format (`../../.prettierrc`), test (`../../jest.config.js`)
+
+**Caching summary:**
+| Task | Cached | Notes |
+|------|--------|-------|
+| build | ✅ | Outputs: `dist/**` |
+| typecheck | ✅ | No outputs (validation only) |
+| lint | ✅ | References root eslint config |
+| format | ❌ | Side effects (modifies files) |
+| format:check | ✅ | References root prettier config |
+| test | ✅ | Outputs: `coverage/**` |
+| dev | ❌ | Persistent process |
+| clean | ❌ | Side effects (deletes files) |
+
+**Notes:**
+- Remote caching available via `TURBO_TOKEN` and `TURBO_TEAM` env vars (optional)
+- Verified: FULL TURBO on subsequent runs for build and typecheck
+
+### Task 1.5: Update CI workflows ✅ COMPLETE
+**Files modified:**
+- `.github/workflows/ci.yml` - added Turborepo caching to all jobs
+
+**Changes:**
+Added Turborepo cache step to all 6 CI jobs:
+- `check` - Lint, Typecheck, Test
+- `build-web` - Build Web
+- `build-android` - Build Android
+- `build-standalone-android` - Build Standalone Android
+- `build-ios` - Build iOS (Simulator)
+- `build-standalone-ios` - Build Standalone iOS (Simulator)
+
+**Cache configuration:**
+```yaml
+- name: Setup Turborepo cache
+  uses: actions/cache@v5
+  with:
+    path: .turbo
+    key: ${{ runner.os }}-turbo-${{ github.sha }}
+    restore-keys: |
+      ${{ runner.os }}-turbo-
+```
+
+**Notes:**
+- Cache key uses `runner.os` (Linux/macOS) and `github.sha` for exact match
+- `restore-keys` allows partial match from previous runs
+- Jobs on same SHA share cache (check → build-web, etc.)
+- YAML syntax validated
+
+### Task 1.6: Add architecture enforcement rules ✅ COMPLETE
 **Purpose:** Automatically enforce architectural boundaries to prevent drift over time.
 
-**Files to create:**
+**Files created:**
+- `eslint-rules/index.js` - Plugin entry point
 - `eslint-rules/no-cross-mfe-imports.js` - Custom ESLint rule to prevent direct MFE-to-MFE imports
 - `eslint-rules/no-dom-in-shared.js` - Custom ESLint rule to prevent DOM usage in shared packages
 
-**Files to modify:**
-- `eslint.config.mjs` - add architecture enforcement rules
-- `package.json` (root) - add `lint:architecture` script
+**Files modified:**
+- `eslint.config.mjs` - added architecture enforcement rules as `architecture` plugin
+- `package.json` (root) - added `lint:architecture` script
 
 **Rules enforced:**
-- No direct imports between remote MFEs (must use event bus)
-- No DOM elements (`div`, `span`, `button`) in `shared-*` packages
-- No `window`, `document`, `localStorage` direct usage in shared packages (use abstractions)
+| Rule | Purpose |
+|------|---------|
+| `architecture/no-cross-mfe-imports` | Prevents `web-remote-*` or `mobile-remote-*` packages from importing each other |
+| `architecture/no-dom-in-shared` | Prevents DOM elements (`div`, `span`, etc.) and browser globals (`window`, `document`, `localStorage`) in `shared-*` packages |
 
-### Task 1.7: Update documentation
-**Files to modify:**
-- `CLAUDE.md` - document Turborepo usage
-- `README.md` - update build instructions
-- `docs/universal-mfe-all-platforms-testing-guide.md` - update commands to use Turborepo
+**Notes:**
+- Rules are automatically applied to all packages via eslint.config.mjs
+- `yarn lint:architecture` runs architecture checks independently
+- Tested with intentional violations - rules correctly flag errors
+- Existing codebase passes with 0 architecture errors
+
+### Task 1.7: Update documentation ✅ COMPLETE
+**Files modified:**
+- `CLAUDE.md` - Added Turborepo section with commands, caching info, and architecture enforcement
+- `README.md` - Added Turborepo to Tech Stack table, added Turborepo section with commands
+- `docs/universal-mfe-all-platforms-testing-guide.md` - Added Turborepo commands section
+
+**Documentation updates:**
+- Turborepo 2.7.3 added to version tables
+- Key commands documented: `build`, `build:shared`, `build:web`, `typecheck`, `lint`, `lint:architecture`, `test`, `clean`
+- Caching behavior explained ("FULL TURBO" on cache hits)
+- Architecture enforcement rules documented
+
+---
+
+## Phase 1 Complete ✅
+
+All Turborepo migration tasks completed:
+- Task 1.1: Turborepo installed and configured
+- Task 1.2: Pipeline tasks defined
+- Task 1.3: Root scripts updated to use `turbo run`
+- Task 1.4: Caching configured with inputs/outputs
+- Task 1.5: CI workflows updated with Turborepo cache
+- Task 1.6: Architecture enforcement ESLint rules added
+- Task 1.7: Documentation updated
 
 ---
 
 ## Phase 2: Design Tokens & Theming
 
-### Task 2.1: Create shared-design-tokens package
-**Files to create:**
+### Task 2.1: Create shared-design-tokens package ✅ COMPLETE
+**Files created:**
 - `packages/shared-design-tokens/package.json`
 - `packages/shared-design-tokens/tsconfig.json`
-- `packages/shared-design-tokens/src/primitives/colors.ts` - Raw color palette (blue.500, gray.100, etc.)
-- `packages/shared-design-tokens/src/primitives/spacing.ts` - Spacing scale (4, 8, 12, 16, etc.)
-- `packages/shared-design-tokens/src/primitives/typography.ts` - Font sizes, weights, line heights
-- `packages/shared-design-tokens/src/primitives/shadows.ts` - Shadow definitions
-- `packages/shared-design-tokens/src/semantic/colors.ts` - Semantic tokens (surface.background, text.primary, border.default)
-- `packages/shared-design-tokens/src/semantic/spacing.ts` - Semantic spacing (layout.padding, component.gap)
-- `packages/shared-design-tokens/src/themes.ts` - Light/dark theme compositions using semantic tokens
-- `packages/shared-design-tokens/src/index.ts`
+- `packages/shared-design-tokens/src/primitives/colors.ts` - Color palette (blue, gray, green, yellow, red) with 50-900 shades
+- `packages/shared-design-tokens/src/primitives/spacing.ts` - Spacing scale (0-32 based on 4px unit)
+- `packages/shared-design-tokens/src/primitives/typography.ts` - Font sizes, weights, line heights, letter spacing
+- `packages/shared-design-tokens/src/primitives/shadows.ts` - Shadow definitions with RN properties and Android elevation
+- `packages/shared-design-tokens/src/primitives/index.ts` - Primitives barrel export
+- `packages/shared-design-tokens/src/semantic/colors.ts` - Semantic colors (surface.*, text.*, border.*, interactive.*, status.*, icon.*)
+- `packages/shared-design-tokens/src/semantic/spacing.ts` - Semantic spacing (layout.*, component.*, element.*, input.*, button.*)
+- `packages/shared-design-tokens/src/semantic/index.ts` - Semantic barrel export
+- `packages/shared-design-tokens/src/themes.ts` - Light and dark theme compositions
+- `packages/shared-design-tokens/src/index.ts` - Main entry point
 
 **Token architecture:**
 - **Primitives**: Raw values (colors, spacing, typography) - internal use only
@@ -134,29 +230,113 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 - Components should ONLY use semantic tokens, never primitives directly
 - This enables rebranding by only changing semantic → primitive mappings
 
-### Task 2.2: Create shared-theme-context package
-**Files to create:**
+**Notes:**
+- Verified: `yarn workspace @universal/shared-design-tokens build` - Success
+- Verified: `yarn build:shared` - Turborepo includes new package (3 packages built)
+
+### Task 2.2: Create shared-theme-context package ✅ COMPLETE
+**Files created:**
 - `packages/shared-theme-context/package.json`
 - `packages/shared-theme-context/tsconfig.json`
-- `packages/shared-theme-context/src/ThemeProvider.tsx`
-- `packages/shared-theme-context/src/useTheme.ts`
-- `packages/shared-theme-context/src/index.ts`
+- `packages/shared-theme-context/src/ThemeProvider.tsx` - Context provider with theme state and toggle
+- `packages/shared-theme-context/src/useTheme.ts` - Hooks (useTheme, useThemeTokens, useThemeColors, useThemeSpacing)
+- `packages/shared-theme-context/src/index.ts` - Main entry point
 
-### Task 2.3: Update shared-hello-ui to use theming
-**Files to modify:**
-- `packages/shared-hello-ui/package.json` - add dependencies
-- `packages/shared-hello-ui/src/HelloUniversal.tsx` - use theme tokens
+**API provided:**
+- `ThemeProvider` - Context provider with `defaultTheme` and `onThemeChange` props
+- `useTheme()` - Returns `{ theme, themeName, isDark, toggleTheme, setTheme }`
+- `useThemeTokens()` - Convenience hook for theme object
+- `useThemeColors()` - Convenience hook for color tokens
+- `useThemeSpacing()` - Convenience hook for spacing tokens
 
-### Task 2.4: Integrate theming into host applications
-**Files to modify:**
-- `packages/web-shell/package.json`
-- `packages/web-shell/src/App.tsx`
-- `packages/mobile-host/package.json`
-- `packages/mobile-host/src/App.tsx`
+**Notes:**
+- Verified: `yarn build:shared` - 4 packages built (design-tokens → theme-context dependency order correct)
 
-### Task 2.5: Update build scripts
-**Files to modify:**
-- `turbo.json` - ensure proper build order for new packages
+### Task 2.3: Update shared-hello-ui to use theming ✅ COMPLETE
+**Files modified:**
+- `packages/shared-hello-ui/package.json` - added `@universal/shared-theme-context` dependency
+- `packages/shared-hello-ui/src/HelloUniversal.tsx` - updated to use `useTheme()` hook and dynamic themed styles
+
+**Changes:**
+- Added `@universal/shared-theme-context` to dependencies
+- Replaced static StyleSheet with `createStyles(theme)` function that generates styles from theme tokens
+- Component now uses `useMemo` to memoize styles based on theme changes
+- All hardcoded colors/spacing replaced with semantic tokens:
+  - `theme.colors.surface.card` for container background
+  - `theme.colors.text.primary` for text color
+  - `theme.colors.interactive.primary` for button background
+  - `theme.colors.text.inverse` for button text
+  - `theme.spacing.*` for padding, margins, gaps
+  - `theme.typography.*` for font sizes and weights
+
+**Notes:**
+- Verified: `yarn build:shared` - 4 packages built successfully
+- Verified: `yarn workspace @universal/shared-hello-ui typecheck` - passes
+
+### Task 2.4: Integrate theming into host applications ✅ COMPLETE
+**Files modified:**
+
+**Semantic tokens enhanced:**
+- `packages/shared-design-tokens/src/semantic/colors.ts` - Added `surface.primary`, `surface.secondary`, `surface.tertiary`
+- `packages/shared-design-tokens/src/semantic/spacing.ts` - Added `component.borderRadius`, `input.borderRadius`, `button.borderRadius`, `button.paddingHorizontalSmall`, `button.paddingVerticalSmall`
+
+**Host applications:**
+- `packages/web-shell/package.json` - Added `@universal/shared-theme-context` dependency
+- `packages/web-shell/src/App.tsx` - Wrapped with `ThemeProvider`, added theme toggle button, updated all styles to use theme tokens
+- `packages/mobile-host/package.json` - Added `@universal/shared-theme-context` dependency
+- `packages/mobile-host/src/App.tsx` - Wrapped with `ThemeProvider`, added theme toggle button, updated all styles to use theme tokens
+
+**Remote modules (ThemeProvider wrapper for MFE independence):**
+- `packages/web-remote-hello/package.json` - Added `@universal/shared-theme-context` dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Wrapped `HelloUniversal` with `ThemeProvider`
+- `packages/mobile-remote-hello/package.json` - Added `@universal/shared-theme-context` dependency
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Wrapped `HelloUniversal` with `ThemeProvider`
+
+**Standalone mode (theme toggle added):**
+- `packages/web-remote-hello/src/standalone.tsx` - Added `ThemeProvider`, theme toggle, themed styles
+- `packages/mobile-remote-hello/src/App.tsx` - Added `ThemeProvider`, theme toggle, themed styles
+
+**Notes:**
+- Verified: `yarn typecheck` - All 12 tasks pass
+- Verified: `yarn lint:architecture` - No architecture rule violations
+- Verified: Web shell, web remote standalone, mobile host (iOS/Android), mobile remote standalone all work with theming
+
+**Theme Synchronization via Event Bus: ✅ IMPLEMENTED**
+Theme synchronization between host and remote MFEs is now implemented using Event Bus (see Phase 5):
+- Host emits `THEME_CHANGED` event when user toggles theme
+- Remote MFEs listen for this event and update their internal ThemeProvider
+- This approach maintains MFE independence while enabling UI consistency
+
+Implementation details:
+- `packages/web-shell/src/App.tsx` - emits THEME_CHANGED on toggle
+- `packages/mobile-host/src/App.tsx` - emits THEME_CHANGED on toggle
+- `packages/web-remote-hello/src/HelloRemote.tsx` - listens and syncs theme
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - listens and syncs theme
+
+### Task 2.5: Update build scripts ✅ COMPLETE
+**Status:** No changes required
+
+**Verification:**
+- Turborepo automatically determines correct build order based on package.json dependencies
+- `dependsOn: ["^build"]` in turbo.json ensures dependencies are built first
+- Verified build order: `shared-utils` → `shared-design-tokens` → `shared-theme-context` → `shared-hello-ui`
+- `yarn build:shared` - 4 packages built in correct order
+- `yarn build` - All 6 buildable packages compiled successfully
+
+**Notes:**
+- The new packages (`shared-design-tokens`, `shared-theme-context`) are automatically discovered by Turborepo
+- No manual configuration needed for build order - Turborepo infers from dependency graph
+
+---
+
+## Phase 2 Complete ✅
+
+All Design Tokens & Theming tasks completed:
+- Task 2.1: Created shared-design-tokens package with primitives and semantic tokens
+- Task 2.2: Created shared-theme-context package with ThemeProvider and hooks
+- Task 2.3: Updated shared-hello-ui to use theming
+- Task 2.4: Integrated theming into host and remote applications
+- Task 2.5: Verified build scripts (no changes needed)
 
 ---
 
@@ -164,39 +344,129 @@ Migrate from Yarn Classic workspaces to Turborepo for improved build performance
 
 Build accessible components from the ground up, ensuring WCAG 2.1 AA compliance across web and mobile platforms.
 
-### Task 3.1: Create shared-a11y package
-**Files to create:**
+### Task 3.1: Create shared-a11y package ✅ COMPLETE
+**Files created:**
 - `packages/shared-a11y/package.json`
-- `packages/shared-a11y/tsconfig.json`
-- `packages/shared-a11y/src/hooks/useAccessibilityInfo.ts` - Platform-aware a11y state (screen reader, reduce motion)
-- `packages/shared-a11y/src/hooks/useFocusManagement.ts` - Focus trap and restore utilities
-- `packages/shared-a11y/src/hooks/useAnnounce.ts` - Screen reader announcements
-- `packages/shared-a11y/src/constants.ts` - ARIA roles, a11y labels
+- `packages/shared-a11y/tsconfig.json` - includes DOM lib for web platform a11y APIs
+- `packages/shared-a11y/src/hooks/useAccessibilityInfo.ts` - Platform-aware a11y state (screen reader, reduce motion, bold text, grayscale, etc.)
+- `packages/shared-a11y/src/hooks/useFocusManagement.ts` - Focus trap, restore, and programmatic focus utilities
+- `packages/shared-a11y/src/hooks/useAnnounce.ts` - Screen reader announcements with polite/assertive priority
+- `packages/shared-a11y/src/hooks/index.ts` - Hooks barrel export
+- `packages/shared-a11y/src/constants.ts` - ARIA roles, states, actions, labels, hints, and WCAG constants
 - `packages/shared-a11y/src/index.ts`
+
+**Files modified:**
+- `eslint-rules/no-dom-in-shared.js` - Added exception for shared-a11y package (requires DOM APIs for web accessibility)
+
+**API provided:**
+- Hooks: `useAccessibilityInfo`, `useScreenReader`, `useReduceMotion`, `useFocusManagement`, `useFocusOnMount`, `useFocusTrap`, `useAnnounce`, `useAnnounceResult`
+- Constants: `A11yRoles`, `A11yStates`, `A11yActions`, `A11yLabels`, `A11yHints`, `A11yLiveRegion`, `A11Y_MIN_TOUCH_TARGET`, `A11Y_CONTRAST_RATIOS`
 
 **No external dependencies** - Uses React Native's built-in AccessibilityInfo API
 
-### Task 3.2: Create accessible primitive components
-**Files to create:**
-- `packages/shared-a11y/src/components/AccessibleText.tsx` - Text with proper roles
-- `packages/shared-a11y/src/components/AccessibleButton.tsx` - Button with a11y props
-- `packages/shared-a11y/src/components/AccessibleInput.tsx` - Input with labels and error announcements
-- `packages/shared-a11y/src/components/SkipLink.tsx` - Skip to main content (web)
-- `packages/shared-a11y/src/components/VisuallyHidden.tsx` - Screen reader only content
+**Notes:**
+- Verified: `yarn workspace @universal/shared-a11y build` - Success
+- Verified: `yarn typecheck` - 13 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
 
-### Task 3.3: Add accessibility props to shared-hello-ui
-**Files to modify:**
-- `packages/shared-hello-ui/package.json` - add @universal/shared-a11y dependency
-- `packages/shared-hello-ui/src/HelloUniversal.tsx` - add accessibilityLabel, accessibilityRole, accessibilityHint
+### Task 3.2: Create accessible primitive components ✅ COMPLETE
+**Files created:**
+- `packages/shared-a11y/src/components/AccessibleText.tsx` - Text with semantic roles (header, alert, summary) and heading levels
+- `packages/shared-a11y/src/components/AccessibleButton.tsx` - Button with 44x44 min touch target, disabled/loading/selected states
+- `packages/shared-a11y/src/components/AccessibleInput.tsx` - Input with label, hint, error (auto-announced), required indicator
+- `packages/shared-a11y/src/components/SkipLink.tsx` - Skip to main content link (WCAG 2.4.1 compliance)
+- `packages/shared-a11y/src/components/VisuallyHidden.tsx` - Screen reader-only content with `visuallyHiddenStyle` export
+- `packages/shared-a11y/src/components/index.ts` - Components barrel export
 
-### Task 3.4: Create accessibility testing utilities
-**Files to create:**
+**Files modified:**
+- `packages/shared-a11y/src/index.ts` - Added component exports
+
+**Components API:**
+- `AccessibleText`: `semanticRole`, `headingLevel`, `announceChanges`, `accessibilityLabel`
+- `AccessibleButton`: `label`, `disabled`, `loading`, `loadingLabel`, `selected`, `accessibilityHint`
+- `AccessibleInput`: `label`, `labelHidden`, `hint`, `error`, `required`, `disabled`
+- `SkipLink`: `label`, `targetRef`, `onSkip`
+- `VisuallyHidden`: `as="view"|"text"`, `containerProps`
+
+**Notes:**
+- Verified: `yarn workspace @universal/shared-a11y build` - Success
+- Verified: `yarn typecheck` - 13 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
+
+### Task 3.3: Add accessibility props to shared-hello-ui ✅ COMPLETE
+**Files modified:**
+- `packages/shared-hello-ui/package.json` - added `@universal/shared-a11y` dependency
+- `packages/shared-hello-ui/src/HelloUniversal.tsx` - added accessibility props and WCAG compliance
+
+**Props added:**
+- `buttonAccessibilityLabel` - custom label for the button
+- `buttonAccessibilityHint` - hint describing button action
+
+**Accessibility enhancements:**
+- Container: `accessible={true}`, `accessibilityLabel` with greeting context
+- Text: `accessibilityRole={A11yRoles.TEXT}`
+- Button: `accessibilityRole={A11yRoles.BUTTON}`, label, hint
+- Button: `minHeight/minWidth` set to `A11Y_MIN_TOUCH_TARGET` (44px) for WCAG 2.1 AA
+
+**Notes:**
+- Verified: `yarn turbo run build --filter='@universal/shared-*'` - 5 packages built
+- Verified: `yarn typecheck` - 14 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
+
+### Task 3.4: Create accessibility testing utilities ✅ COMPLETE
+**Files created:**
 - `packages/shared-a11y/src/testing/a11yMatchers.ts` - Custom Jest matchers for a11y
-- `packages/shared-a11y/src/testing/index.ts`
+- `packages/shared-a11y/src/testing/index.ts` - Testing utilities barrel export
 
-### Task 3.5: Update build configuration
-**Files to modify:**
-- `turbo.json` - add shared-a11y to pipeline
+**Files modified:**
+- `packages/shared-a11y/src/index.ts` - Added testing exports
+
+**Custom Jest matchers provided:**
+- `toHaveAccessibilityRole(role)` - Verify element has expected role
+- `toHaveAccessibilityLabel(label, options?)` - Verify label (supports partial match)
+- `toHaveAccessibilityHint(hint)` - Verify element has expected hint
+- `toHaveAccessibilityState(state)` - Verify disabled, selected, checked, etc.
+- `toHaveAccessibilityValue(value)` - Verify value for sliders, progress bars
+- `toBeAccessible()` - Verify basic accessibility requirements
+- `toHaveMinimumTouchTarget(minSize?)` - Verify 44x44px touch target
+
+**Usage:**
+```ts
+import { extendExpectWithA11yMatchers } from '@universal/shared-a11y/testing';
+extendExpectWithA11yMatchers();
+
+expect(button).toHaveAccessibilityRole('button');
+expect(button).toBeAccessible();
+```
+
+**Notes:**
+- Verified: `yarn workspace @universal/shared-a11y build` - Success
+- Verified: `yarn typecheck` - 14 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
+
+### Task 3.5: Update build configuration ✅ COMPLETE
+**Status:** No changes required
+
+**Analysis:**
+- `turbo.json` uses generic task definitions that automatically apply to all workspace packages
+- `dependsOn: ["^build"]` ensures dependencies are built in correct order
+- Turborepo auto-discovers `@universal/shared-a11y` as a workspace package
+
+**Verification:**
+- `shared-a11y` appears in `--dry-run` output
+- Build order correct: utils → design-tokens → theme-context → a11y → hello-ui
+- Caching works ("FULL TURBO" on cached runs)
+
+---
+
+## Phase 3 Complete ✅
+
+All Accessibility tasks completed:
+- Task 3.1: Created shared-a11y package with hooks (useAccessibilityInfo, useFocusManagement, useAnnounce)
+- Task 3.2: Created accessible primitive components (AccessibleText, AccessibleButton, AccessibleInput, SkipLink, VisuallyHidden)
+- Task 3.3: Added accessibility props to shared-hello-ui (WCAG 2.1 AA compliance)
+- Task 3.4: Created accessibility testing utilities (7 custom Jest matchers)
+- Task 3.5: Verified build configuration (no changes needed)
 
 ---
 
@@ -209,47 +479,142 @@ Implement internationalization with a lightweight, universal approach that works
 - Each MFE owns its own namespace (e.g., `hello.*` for HelloRemote)
 - Namespaces prevent translation key collisions between independently deployed MFEs
 
-### Task 4.1: Create shared-i18n package
-**Files to create:**
+### Task 4.1: Create shared-i18n package ✅ COMPLETE
+**Files created:**
 - `packages/shared-i18n/package.json`
-- `packages/shared-i18n/tsconfig.json`
-- `packages/shared-i18n/src/types.ts` - Translation types, locale types
-- `packages/shared-i18n/src/I18nProvider.tsx` - Context provider for translations
-- `packages/shared-i18n/src/useTranslation.ts` - Hook to access translations
-- `packages/shared-i18n/src/useLocale.ts` - Hook to get/set current locale
-- `packages/shared-i18n/src/pluralize.ts` - Pluralization rules
-- `packages/shared-i18n/src/formatters.ts` - Date, number, currency formatters (uses Intl API)
-- `packages/shared-i18n/src/index.ts`
+- `packages/shared-i18n/tsconfig.json` - includes ES2021 and DOM libs for Intl API support
+- `packages/shared-i18n/src/types.ts` - LocaleCode, Translations, TranslateOptions, PluralRules, DateFormatOptions, NumberFormatOptions
+- `packages/shared-i18n/src/I18nProvider.tsx` - Context provider with useI18nContext hook, withI18n HOC, mergeTranslations utility
+- `packages/shared-i18n/src/useTranslation.ts` - Translation hook with interpolation ({{var}}) and pluralization support
+- `packages/shared-i18n/src/useLocale.ts` - Locale management hook with RTL detection, getBestMatchingLocale utility
+- `packages/shared-i18n/src/pluralize.ts` - Pluralization using Intl.PluralRules (getPluralCategory, pluralize, formatCount, formatOrdinal)
+- `packages/shared-i18n/src/formatters.ts` - Formatting utilities using Intl APIs:
+  - `formatDate` - Date formatting with dateStyle/timeStyle/custom options
+  - `formatNumber` - Number formatting with notation, grouping
+  - `formatCurrency` - Currency formatting with symbol/name display
+  - `formatRelativeTime` - Relative time ("2 days ago", "in 3 hours")
+  - `formatRelativeTimeAuto` - Auto-select unit based on time difference
+  - `formatList` - List formatting ("A, B, and C")
+  - `formatBytes` - File size formatting with binary/decimal units
+- `packages/shared-i18n/src/index.ts` - Main entry point with all exports
 
 **No external dependencies** - Pure TypeScript using browser/RN Intl API
 
-### Task 4.2: Create translation file structure
-**Files to create:**
-- `packages/shared-i18n/src/locales/en.ts` - English translations
-- `packages/shared-i18n/src/locales/es.ts` - Spanish translations (example)
-- `packages/shared-i18n/src/locales/index.ts` - Locale registry
+**Notes:**
+- Verified: `yarn workspace @universal/shared-i18n build` - Success
+- Verified: `yarn typecheck` - 15 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
 
-### Task 4.3: Create translation utilities
-**Files to create:**
-- `packages/shared-i18n/src/utils/interpolate.ts` - Variable interpolation in strings
-- `packages/shared-i18n/src/utils/detectLocale.ts` - Platform-aware locale detection
-- `packages/shared-i18n/src/utils/persistLocale.ts` - Save locale preference to storage
+### Task 4.2: Create translation file structure ✅ COMPLETE
+**Files created:**
+- `packages/shared-i18n/src/locales/en.ts` - English translations with namespaces:
+  - `common.*` - Shared strings (loading, error, retry, welcome, items with pluralization)
+  - `navigation.*` - Navigation labels (home, settings, profile, menu)
+  - `errors.*` - Error messages with interpolation ({{field}}, {{moduleName}})
+  - `accessibility.*` - Screen reader announcements
+  - `theme.*` - Theme labels (light, dark, system, toggle)
+  - `language.*` - Language selector labels
+  - `hello.*` - HelloRemote MFE namespace
+  - `datetime.*` - Date/time labels with pluralization
+- `packages/shared-i18n/src/locales/es.ts` - Spanish translations (complete mirror of English)
+- `packages/shared-i18n/src/locales/index.ts` - Locale registry with:
+  - `locales` - TranslationResources for all locales
+  - `availableLocales` - List of supported locale codes
+  - `defaultLocale` - Default locale ('en')
+  - `localeDisplayNames` - Native language names
+  - `rtlLocales` - RTL locales list
+  - Helper functions: `isRTLLocale`, `getLocaleDisplayName`, `isLocaleSupported`, `getTranslations`
 
-### Task 4.4: Integrate i18n into host applications
-**Files to modify:**
-- `packages/web-shell/package.json` - add @universal/shared-i18n dependency
-- `packages/web-shell/src/App.tsx` - wrap with I18nProvider
-- `packages/mobile-host/package.json` - add @universal/shared-i18n dependency
-- `packages/mobile-host/src/App.tsx` - wrap with I18nProvider
+**Type updates:**
+- Added `it` (Italian) and `ar` (Arabic) to `LocaleCode` type
+- Updated `SUPPORTED_LOCALES` constant with all 10 locales
 
-### Task 4.5: Add i18n to shared-hello-ui (example)
-**Files to modify:**
-- `packages/shared-hello-ui/package.json` - add @universal/shared-i18n dependency
-- `packages/shared-hello-ui/src/HelloUniversal.tsx` - use useTranslation hook
+**Notes:**
+- Verified: `yarn workspace @universal/shared-i18n build` - Success
+- Verified: `yarn typecheck` - 15 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
 
-### Task 4.6: Update build configuration
-**Files to modify:**
-- `turbo.json` - add shared-i18n to pipeline
+### Task 4.3: Create translation utilities ✅ COMPLETE
+**Files created:**
+- `packages/shared-i18n/src/utils/interpolate.ts` - Variable interpolation utilities:
+  - `interpolate(template, params)` - Replace `{{var}}` placeholders with values
+  - `extractVariables(template)` - Get all variable names from template
+  - `hasInterpolation(template)` - Check if template has placeholders
+  - `validateInterpolation(template, params)` - Check if all required params provided
+  - `createInterpolator<T>(template)` - Create type-safe interpolation function
+- `packages/shared-i18n/src/utils/detectLocale.ts` - Platform-aware locale detection:
+  - `getDeviceLocale()` - Get device locale (iOS/Android/Web)
+  - `getPreferredLocales()` - Get array of preferred locales
+  - `findBestLocale(preferred)` - Find best match from available translations
+  - `detectLocale()` - Main entry point combining detection + matching
+  - `isDeviceRTL()` / `getTextDirection()` - RTL support
+  - `getAvailablePreferredLocales()` - Get locales for language selector
+- `packages/shared-i18n/src/utils/persistLocale.ts` - Locale persistence:
+  - `configureLocaleStorage(storage)` - Configure custom storage (AsyncStorage)
+  - `saveLocale(locale)` / `loadLocale()` / `clearLocale()` - CRUD operations
+  - `loadOrDetectLocale(detectFn)` - Load persisted or detect from device
+  - `hasPersistedLocale()` / `getCachedLocale()` - Query functions
+- `packages/shared-i18n/src/utils/index.ts` - Barrel export
+
+**Files modified:**
+- `eslint-rules/no-dom-in-shared.js` - Added exception for shared-i18n package (needs navigator/localStorage)
+- `packages/shared-i18n/src/index.ts` - Added utility exports
+
+**Notes:**
+- Verified: `yarn workspace @universal/shared-i18n build` - Success
+- Verified: `yarn typecheck` - 15 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
+
+### Task 4.4: Integrate i18n into host applications ✅ COMPLETE
+**Files modified:**
+- `packages/web-shell/package.json` - added @universal/shared-i18n dependency
+- `packages/web-shell/src/App.tsx` - wrapped with I18nProvider, added language toggle button, used translations
+- `packages/mobile-host/package.json` - added @universal/shared-i18n dependency
+- `packages/mobile-host/src/App.tsx` - wrapped with I18nProvider, added language toggle button, used translations
+
+**Translation keys used:**
+- `common.appName`, `common.subtitle`, `common.subtitleMobile`
+- `common.loading`, `common.loadRemote`, `common.error`, `common.retry`
+- `common.pressCount` (with pluralization)
+
+**Notes:**
+- Language toggle cycles through available locales (en/es)
+- Locale is passed to remote components via props (see Task 4.5)
+
+### Task 4.5: Add i18n to shared-hello-ui and remotes ✅ COMPLETE
+**Files modified:**
+- `packages/shared-hello-ui/package.json` - added @universal/shared-i18n dependency
+- `packages/shared-hello-ui/src/HelloUniversal.tsx` - uses `useTranslation('hello')` hook for:
+  - `hello.greeting` / `hello.greetingWithName` (with {{name}} interpolation)
+  - `hello.buttonLabel`, `hello.buttonHint`
+- `packages/web-remote-hello/package.json` - added @universal/shared-i18n dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - wrapped with I18nProvider, accepts `locale` prop
+- `packages/mobile-remote-hello/package.json` - added @universal/shared-i18n dependency
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - wrapped with I18nProvider, accepts `locale` prop
+
+**Locale Synchronization via Event Bus: ✅ IMPLEMENTED**
+Locale synchronization between host and remote MFEs is now implemented using Event Bus (see Phase 5):
+- Host emits `LOCALE_CHANGED` event when user changes language
+- Remote MFEs listen for this event and update their internal I18nProvider
+- This approach maintains MFE independence while enabling consistent translations
+
+Implementation details:
+- `packages/web-shell/src/App.tsx` - emits LOCALE_CHANGED on language toggle
+- `packages/mobile-host/src/App.tsx` - emits LOCALE_CHANGED on language toggle
+- `packages/web-remote-hello/src/HelloRemote.tsx` - listens and syncs locale
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - listens and syncs locale
+
+**Notes:**
+- Removed `getGreeting` from shared-utils (now handled by i18n)
+- Verified: All translations work on web (en/es)
+- Verified: Locale changes in host immediately reflect in remote
+
+### Task 4.6: Update build configuration ✅ COMPLETE
+**Notes:**
+- Turborepo automatically includes shared-i18n in build pipeline via dependency detection
+- No manual turbo.json changes required - `dependsOn: ["^build"]` handles it
+- Verified: `yarn build:shared` builds shared-i18n correctly
+- Verified: `yarn typecheck` passes for all 16 tasks
 
 ---
 
@@ -257,91 +622,333 @@ Implement internationalization with a lightweight, universal approach that works
 
 Implement a lightweight, type-safe event bus for communication between microfrontends without tight coupling.
 
-### Task 5.1: Create shared-event-bus package
-**Files to create:**
+### Task 5.1: Create shared-event-bus package ✅ COMPLETE
+**Files created:**
 - `packages/shared-event-bus/package.json`
 - `packages/shared-event-bus/tsconfig.json`
-- `packages/shared-event-bus/src/types.ts` - Event types, payload types
-- `packages/shared-event-bus/src/EventBus.ts` - Core pub/sub implementation
-- `packages/shared-event-bus/src/index.ts`
+- `packages/shared-event-bus/src/types.ts` - Core types:
+  - `BaseEvent` - Base interface with type, version, payload, timestamp, source, correlationId
+  - `EventHandler`, `Subscription`, `EventFilter` - Handler and subscription types
+  - `SubscribeOptions`, `EmitOptions`, `EventBusOptions` - Configuration options
+  - `EventBusStats`, `EventHistoryEntry` - Statistics and debugging types
+  - `EventDefinition`, `EventType`, `EventPayload`, `EventUnion` - Helper types
+- `packages/shared-event-bus/src/EventBus.ts` - Core pub/sub implementation:
+  - `createEventBus<Events>()` - Factory function with type-safe events
+  - `subscribe()`, `subscribeOnce()` - Subscribe with filter, priority, once options
+  - `emit()` - Emit events with version, source, correlationId
+  - `waitFor()` - Promise-based event waiting with timeout
+  - `getHistory()`, `clearHistory()` - Event history for debugging
+  - `getStats()` - Statistics (total events, subscriptions, counts)
+  - `WILDCARD_EVENT` - Subscribe to all events with '*'
+- `packages/shared-event-bus/src/index.ts` - Exports
 
 **No external dependencies** - Pure TypeScript implementation
 
-### Task 5.2: Create React integration hooks
-**Files to create:**
-- `packages/shared-event-bus/src/hooks/useEventBus.ts` - Access event bus instance
-- `packages/shared-event-bus/src/hooks/useEventListener.ts` - Subscribe to events with auto-cleanup
-- `packages/shared-event-bus/src/hooks/useEventEmitter.ts` - Emit events
-- `packages/shared-event-bus/src/EventBusProvider.tsx` - Context provider
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
 
-### Task 5.3: Define standard event types with versioning
-**Files to create:**
-- `packages/shared-event-bus/src/events/navigation.ts` - Navigation events (NAVIGATE_TO, BACK, etc.)
-- `packages/shared-event-bus/src/events/auth.ts` - Auth events (LOGIN, LOGOUT, SESSION_EXPIRED)
-- `packages/shared-event-bus/src/events/theme.ts` - Theme events (THEME_CHANGED)
-- `packages/shared-event-bus/src/events/remote.ts` - Remote module events (REMOTE_LOADED, REMOTE_ERROR)
-- `packages/shared-event-bus/src/events/index.ts` - Event registry with version metadata
+### Task 5.2: Create React integration hooks ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/EventBusProvider.tsx` - React context provider:
+  - `EventBusProvider` - Provides event bus instance to component tree
+  - `useEventBusContext` - Access event bus from context (throws if not wrapped)
+- `packages/shared-event-bus/src/hooks/useEventBus.ts` - Direct event bus access hook
+- `packages/shared-event-bus/src/hooks/useEventListener.ts` - Subscription hooks:
+  - `useEventListener` - Subscribe with auto-cleanup on unmount
+  - `useEventListenerOnce` - Single event subscription
+  - `useEventListenerMultiple` - Subscribe to multiple event types
+  - `useEventSubscriber` - Imperative subscription management
+- `packages/shared-event-bus/src/hooks/useEventEmitter.ts` - Emission hooks:
+  - `useEventEmitter` - Memoized emit function with source/correlationId
+  - `useTypedEmitter` - Type-safe emitter for single event type
+  - `useEventEmitters` - Multiple typed emitters at once
+  - `useEmitOnCondition` - Emit when condition becomes true
+- `packages/shared-event-bus/src/hooks/index.ts` - Barrel export
+- `packages/shared-event-bus/src/index.ts` - Updated with React exports
 
-**Event governance rules:**
-- All events include a `version` field (e.g., `{ type: 'NAVIGATE_TO', version: 1, payload: {...} }`)
-- Event evolution is **append-only**: new fields can be added, existing fields cannot be removed or changed
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
+
+### Task 5.3: Define standard event types with versioning ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/events/navigation.ts` - Navigation events:
+  - `NavigateToEvent` - Request navigation to path with params
+  - `NavigateBackEvent` - Request to go back with fallback
+  - `NavigationCompletedEvent` - Notification after navigation completes
+  - `OpenExternalUrlEvent` - Request to open external URL
+- `packages/shared-event-bus/src/events/auth.ts` - Auth events:
+  - `UserLoggedInEvent` - User logged in with userId, email, roles
+  - `UserLoggedOutEvent` - User logged out with reason
+  - `SessionExpiredEvent` - Session expired with redirect
+  - `AuthErrorEvent` - Auth error with code, message, retryable
+  - `LoginRequiredEvent` - Request to show login UI
+  - `UserProfileUpdatedEvent` - Profile changes notification
+- `packages/shared-event-bus/src/events/theme.ts` - Theme events:
+  - `ThemeChangedEvent` - Theme changed (host → MFEs)
+  - `ThemeChangeRequestEvent` - Theme change request (MFE → host)
+- `packages/shared-event-bus/src/events/locale.ts` - Locale events:
+  - `LocaleChangedEvent` - Locale changed (host → MFEs)
+  - `LocaleChangeRequestEvent` - Locale change request (MFE → host)
+- `packages/shared-event-bus/src/events/remote.ts` - Remote module events:
+  - `RemoteLoadingEvent`, `RemoteLoadedEvent`, `RemoteLoadFailedEvent`
+  - `RemoteRetryingEvent`, `RemoteUnloadedEvent`
+- `packages/shared-event-bus/src/events/index.ts` - Event registry:
+  - `AppEvents` - Union of all standard events
+  - `EventTypes` - All event type constants combined
+  - `EventVersions` - Version metadata for compatibility checks
+
+**Event governance rules (documented in events/index.ts):**
+- All events include a `version` field (currently v1 for all events)
+- Event evolution is **append-only**: new fields can be added, existing fields cannot be removed
 - Breaking changes require a new event type (e.g., `NAVIGATE_TO_V2`)
 - Host is responsible for handling multiple event versions during migration periods
 
-### Task 5.4: Add debugging and devtools support
-**Files to create:**
-- `packages/shared-event-bus/src/devtools/EventLogger.ts` - Console logging for dev mode
-- `packages/shared-event-bus/src/devtools/EventHistory.ts` - Event history for debugging
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
 
-### Task 5.5: Integrate event bus into host applications
-**Files to modify:**
-- `packages/web-shell/package.json` - add @universal/shared-event-bus dependency
-- `packages/web-shell/src/App.tsx` - wrap with EventBusProvider
-- `packages/mobile-host/package.json` - add @universal/shared-event-bus dependency
-- `packages/mobile-host/src/App.tsx` - wrap with EventBusProvider
+### Task 5.4: Add debugging and devtools support ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/devtools/EventLogger.ts` - Console logging:
+  - `createEventLogger` - Formatted console output with colors, timestamps, filters
+  - `createGroupedEventLogger` - Groups events by correlationId for tracing
+  - `createTableLogger` - Batch events into console.table format
+- `packages/shared-event-bus/src/devtools/EventHistory.ts` - History viewer:
+  - `createHistoryViewer` - Query, filter, and analyze event history
+  - `filter()` - Filter by type, source, time range, correlationId, version
+  - `search()` - Search payloads by string/regex
+  - `getStats()` - Statistics (counts by type/source, events per minute, most frequent)
+  - `groupBy()` - Group events by type, source, or custom key
+  - `export()` - Export history as JSON for external analysis
+  - `print()` - Formatted console output with grouping
+- `packages/shared-event-bus/src/devtools/index.ts` - Barrel export
 
-### Task 5.6: Create example inter-MFE communication
-**Files to modify:**
-- `packages/web-remote-hello/src/HelloRemote.tsx` - emit event on button click
-- `packages/mobile-remote-hello/src/HelloRemote.tsx` - emit event on button click
-- `packages/web-shell/src/App.tsx` - listen for remote events
-- `packages/mobile-host/src/App.tsx` - listen for remote events
+**Files modified:**
+- `packages/shared-event-bus/tsconfig.json` - Added DOM lib for TypeScript type definitions
+- `packages/shared-event-bus/src/index.ts` - Added devtools exports
 
-### Task 5.7: Update build configuration
-**Files to modify:**
-- `turbo.json` - add shared-event-bus to pipeline
+**Note on DOM lib in tsconfig:**
+The `"DOM"` lib is included for TypeScript type checking only. This is consistent with other shared packages (shared-i18n, shared-a11y) that need platform detection:
+- **TypeScript needs DOM lib** to recognize `window`, `document` etc. for `typeof` checks
+- **Platform detection patterns** like `typeof window !== 'undefined'` are safe and explicitly allowed
+- **ESLint architecture rule** (`no-dom-in-shared.js`) prevents actual runtime usage of browser APIs
+- **Devtools gracefully degrade** on non-web platforms (e.g., colored logs only when `window` exists)
 
-### Task 5.8: Establish MFE local state pattern
+This combination (DOM lib for types + ESLint rule for runtime safety) is the correct pattern.
+
+**Note on ESLint exception:**
+Unlike shared-a11y and shared-i18n, shared-event-bus does NOT require an ESLint exception because:
+- Devtools only use `console` (universal API available in all JS runtimes, not in forbidden list)
+- Platform checks use `typeof window !== 'undefined'` (explicitly allowed by the rule)
+- No direct usage of forbidden globals (window, document, localStorage, etc.)
+
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
+
+### Task 5.5: Integrate event bus into host applications ✅ COMPLETE
+**Files modified:**
+- `packages/web-shell/package.json` - added @universal/shared-event-bus dependency
+- `packages/web-shell/src/App.tsx` - wrapped with EventBusProvider, added EventLogger component
+- `packages/mobile-host/package.json` - added @universal/shared-event-bus dependency
+- `packages/mobile-host/src/App.tsx` - wrapped with EventBusProvider, added EventLogger component
+
+**Implementation:**
+- Both hosts wrap the app with `EventBusProvider` with `debug: __DEV__` and named instances
+- `EventLogger` component subscribes to all events and logs in development mode
+- Web uses colored console output; mobile uses plain text (no CSS colors support)
+- Event bus is now available via `useEventBus()` hook in all child components
+
+**Verified:**
+- `yarn build:shared` - Success (7 packages)
+- `yarn typecheck` - 18 tasks pass
+- `yarn lint:architecture` - 0 errors (33 warnings for console statements - expected for debug code)
+
+### Task 5.6: Create example inter-MFE communication ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/events/interaction.ts` - Interaction events:
+  - `ButtonPressedEvent` - Button click with buttonId, label, metadata
+  - `FormSubmittedEvent` - Form submission with formId, data, validation status
+  - `ItemSelectedEvent` - Item selection with itemId, itemType, metadata
+  - `CustomActionEvent` - Custom action with actionId, payload
+
+**Files modified:**
+- `packages/shared-event-bus/src/events/index.ts` - Added interaction events to registry
+- `packages/shared-event-bus/src/index.ts` - Exported interaction event types
+- `packages/web-remote-hello/package.json` - Added @universal/shared-event-bus dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Emits BUTTON_PRESSED event on click
+- `packages/web-remote-hello/src/standalone.tsx` - Added I18nProvider and language toggle
+- `packages/mobile-remote-hello/package.json` - Added @universal/shared-event-bus dependency
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Emits BUTTON_PRESSED event on click
+- `packages/mobile-remote-hello/src/App.tsx` - Added I18nProvider and language toggle
+- `packages/web-shell/src/App.tsx` - Listens for BUTTON_PRESSED events, updates press count
+- `packages/mobile-host/src/App.tsx` - Listens for BUTTON_PRESSED events, updates press count
+- `packages/shared-event-bus/package.json` - Fixed React version (peerDependencies only)
+- `packages/shared-event-bus/src/EventBusProvider.tsx` - Global singleton pattern via globalThis
+
+**Key implementation details:**
+- EventBusProvider uses global singleton (`globalThis.__UNIVERSAL_EVENT_BUS__`) to ensure all MFEs share the same event bus instance
+- Remote MFEs emit `BUTTON_PRESSED` events with buttonId, label, and metadata
+- Host apps listen for events via `useEventListener<ButtonPressedEvent>` hook
+- Press count is updated via event bus instead of prop callbacks (demonstrates decoupled communication)
+- Standalone apps have language toggle matching host/shell apps
+
+**Verified:**
+- Web shell and remote: Events flow correctly, press count updates
+- iOS host and remote: Events flow correctly, press count updates
+- Android host and remote: Events flow correctly, press count updates
+- Standalone apps: Theme and language toggles work correctly
+
+### Task 5.7: Update build configuration ✅ COMPLETE
+**Status:** No changes required
+
+**Analysis:**
+- Turborepo automatically discovers `@universal/shared-event-bus` via Yarn workspaces
+- Generic task definitions in `turbo.json` apply to all workspace packages
+- `dependsOn: ["^build"]` ensures correct build order based on package.json dependencies
+- The dependency graph shows shared-event-bus is correctly identified with dependents:
+  - `@universal/mobile-host`
+  - `@universal/mobile-remote-hello`
+  - `@universal/web-remote-hello`
+  - `@universal/web-shell`
+
+**Verified:**
+- `yarn turbo run build --dry-run` shows shared-event-bus in pipeline
+- `yarn build:shared` - 7 packages built successfully with FULL TURBO caching
+- Build order is correct: shared-event-bus builds before its dependents
+
+### Task 5.8: Establish MFE local state pattern ✅ COMPLETE
 **Purpose:** Each MFE maintains its own Zustand store for local state, ensuring loose coupling. Event bus communicates *events*, not state — MFEs react to events by updating their own stores.
 
-**Files to create:**
-- `packages/web-remote-hello/src/store/localStore.ts` - Example MFE-local Zustand store
-- `packages/mobile-remote-hello/src/store/localStore.ts` - Example MFE-local Zustand store
+**Files created:**
+- `packages/web-remote-hello/src/store/localStore.ts` - MFE-local Zustand store with:
+  - `localPressCount` - Button press count local to MFE
+  - `lastPressedAt` - Timestamp of last press
+  - `preferences` - MFE-local preferences (showAnimations, customGreeting)
+  - Selector hooks for optimized re-renders
+- `packages/mobile-remote-hello/src/store/localStore.ts` - Same pattern for mobile
+
+**Files modified:**
+- `packages/web-remote-hello/package.json` - Added zustand@5.0.5 dependency
+- `packages/mobile-remote-hello/package.json` - Added zustand@5.0.5 dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Integrated local store:
+  - Updates `localPressCount` on button press
+  - Includes `localPressCount` in event metadata
+  - Demonstrates state → event → callback flow
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Same integration
 
 **Pattern established:**
 - MFEs own their state (Zustand store per MFE)
 - Host app owns shared/global state (e.g., auth, theme via shared-auth-store)
 - Event bus bridges communication without coupling state
-- Example flow: Remote emits `USER_ACTION` event → Host receives → Host updates its store → Host emits `STATE_UPDATED` → Remote reacts if needed
+- Example flow:
+  1. Button press → Update local state (Zustand)
+  2. Then → Emit event (Event Bus) with metadata including local state info
+  3. Then → Call legacy callback (backward compatibility)
+  4. Host receives event → Updates its own state
 
-### Task 5.9: Implement remote loading failure & degradation strategy
+**Key principle:** Events carry *information*, not state references. Each MFE maintains its own source of truth.
+
+**Verified:**
+- `yarn typecheck` - 18 tasks pass
+- `yarn install` - Dependencies installed successfully
+
+### Task 5.9: Implement remote loading failure & degradation strategy ✅ COMPLETE
 **Purpose:** Define standard behavior when remote MFEs fail to load, ensuring graceful degradation.
 
-**Files to create:**
-- `packages/shared-event-bus/src/components/RemoteErrorBoundary.tsx` - Error boundary for remote loading failures
-- `packages/shared-event-bus/src/components/RemoteLoadingFallback.tsx` - Loading state component
-- `packages/shared-event-bus/src/components/RemoteErrorFallback.tsx` - Error state component with retry
+**Files created:**
+- `packages/shared-event-bus/src/components/RemoteLoadingFallback.tsx` - Themed loading indicator
+- `packages/shared-event-bus/src/components/RemoteErrorFallback.tsx` - Error display with retry button
+- `packages/shared-event-bus/src/components/RemoteErrorBoundary.tsx` - React Error Boundary for render errors
+- `packages/shared-event-bus/src/components/useRemoteLoader.ts` - Hook with retry logic and event emission
+- `packages/shared-event-bus/src/components/index.ts` - Barrel exports
 
-**Files to modify:**
-- `packages/web-shell/src/App.tsx` - wrap remote imports with error boundary
-- `packages/mobile-host/src/App.tsx` - wrap remote imports with error boundary
+**Files modified:**
+- `packages/shared-event-bus/src/index.ts` - Export remote loading components
+- `packages/shared-event-bus/src/events/remote.ts` - Added RENDER_ERROR and LOAD_ERROR to errorCode union
+- `packages/shared-event-bus/package.json` - Added react-native peer dependency for RN primitives
+- `packages/web-shell/rspack.config.mjs` - Fixed react-native alias for transitive dependencies
+- `packages/web-shell/src/App.tsx` - User-friendly error messages and proper MF cache handling
 
-**Failure handling strategy:**
-- **Timeout**: Remote load times out after configurable duration (default: 10s)
-- **Retry**: Automatic retry with exponential backoff (max 3 attempts)
-- **Fallback UI**: Show error state with manual retry button
-- **Event emission**: Emit `REMOTE_LOAD_FAILED` event for analytics/logging
-- **Partial availability**: App remains functional even if some remotes fail
+**Components provided:**
+- **RemoteLoadingFallback**: Accessible loading indicator with customizable message
+- **RemoteErrorFallback**: Error display with retry button, shows error details in dev mode
+- **RemoteErrorBoundary**: Catches render errors, emits events, supports custom fallbacks
+- **useRemoteLoader**: Hook with timeout, exponential backoff retry, event emission
+
+**Failure handling strategy implemented:**
+- **Timeout**: Configurable timeout (default: 10s), rejects with descriptive error
+- **Retry**: Exponential backoff with jitter (base: 1s, max: 30s), configurable attempts
+- **Fallback UI**: RemoteErrorFallback with retry button, shows error details in dev
+- **Event emission**: Emits REMOTE_LOADING, REMOTE_LOADED, REMOTE_RETRYING, REMOTE_LOAD_FAILED
+- **Error Boundary**: Catches render errors, emits REMOTE_LOAD_FAILED with RENDER_ERROR code
+- **Partial availability**: Components designed for graceful degradation
+
+**Web shell improvements:**
+- User-friendly error messages (replaced cryptic Module Federation errors)
+- Proper handling of MF cached failures (MF caches failed loads as empty objects)
+- "Reload Page" button (MF requires page reload to truly retry after failure)
+- Validation that loaded component is a valid function before rendering
+
+**Note:** Host apps (web-shell, mobile-host) already have manual loading/error handling.
+The new components are exported for use when more sophisticated loading is needed.
+
+### Task 5.10: Implement theme and locale sync via Event Bus ✅ COMPLETE
+**Purpose:** Enable host-to-remote synchronization of theme and locale using Event Bus instead of prop drilling.
+
+**Files modified:**
+- `packages/web-shell/src/App.tsx` - Emit THEME_CHANGED and LOCALE_CHANGED events
+- `packages/mobile-host/src/App.tsx` - Emit THEME_CHANGED and LOCALE_CHANGED events
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Listen for events and sync state
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Listen for events and sync state
+
+**Implementation pattern:**
+1. **Host emits events**: When user toggles theme/locale, host emits corresponding event
+   - `THEME_CHANGED`: `{ theme: 'dark' | 'light', previousTheme }`
+   - `LOCALE_CHANGED`: `{ locale: string, previousLocale }`
+2. **Remotes listen**: Remotes use `useEventListener` hook to receive events
+3. **Remotes update providers**: On event, remotes update their internal state which triggers provider re-render
+
+**Benefits over prop drilling:**
+- Decoupled communication (no need to pass props through multiple layers)
+- Works even when remote is loaded after theme/locale change
+- Consistent with event bus pattern for all inter-MFE communication
+- Backwards compatible (initial props still work for first render)
+
+**Standalone mode support:**
+HelloRemote components also support direct prop changes for standalone mode (where no event bus events are emitted). This is implemented via `useEffect` hooks that sync internal state when `theme` or `locale` props change:
+- `packages/web-remote-hello/src/standalone.tsx` - passes `theme={themeName}` prop
+- `packages/mobile-remote-hello/src/App.tsx` - passes `theme={themeName}` prop
+- HelloRemote uses `useEffect` to sync state when props change
+
+**Verified:**
+- Web shell and remote: Theme and locale sync correctly
+- Mobile host and remote: Theme and locale sync correctly
+- Web remote standalone: Theme and locale sync correctly
+- Mobile remote standalone: Theme and locale sync correctly
+- Events logged in console in development mode
+
+---
+
+## Phase 5 Complete ✅
+
+All Event Bus tasks completed:
+- Task 5.1: Created shared-event-bus package with core pub/sub
+- Task 5.2: Created React hooks (useEventBus, useEventListener, useEventEmitter)
+- Task 5.3: Defined standard event types with versioning
+- Task 5.4: Added debugging and devtools support
+- Task 5.5: Integrated event bus into host applications
+- Task 5.6: Created example inter-MFE communication (BUTTON_PRESSED)
+- Task 5.7: Verified build configuration
+- Task 5.8: Established MFE local state pattern with Zustand
+- Task 5.9: Implemented remote loading failure & degradation strategy
+- Task 5.10: Implemented theme and locale sync via Event Bus
 
 ---
 
