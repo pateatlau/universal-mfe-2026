@@ -641,12 +641,29 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - `yarn workspace @universal/shared-event-bus typecheck` - Passes
 - ESLint architecture rules pass (0 errors)
 
-### Task 5.2: Create React integration hooks
-**Files to create:**
-- `packages/shared-event-bus/src/hooks/useEventBus.ts` - Access event bus instance
-- `packages/shared-event-bus/src/hooks/useEventListener.ts` - Subscribe to events with auto-cleanup
-- `packages/shared-event-bus/src/hooks/useEventEmitter.ts` - Emit events
-- `packages/shared-event-bus/src/EventBusProvider.tsx` - Context provider
+### Task 5.2: Create React integration hooks ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/EventBusProvider.tsx` - React context provider:
+  - `EventBusProvider` - Provides event bus instance to component tree
+  - `useEventBusContext` - Access event bus from context (throws if not wrapped)
+- `packages/shared-event-bus/src/hooks/useEventBus.ts` - Direct event bus access hook
+- `packages/shared-event-bus/src/hooks/useEventListener.ts` - Subscription hooks:
+  - `useEventListener` - Subscribe with auto-cleanup on unmount
+  - `useEventListenerOnce` - Single event subscription
+  - `useEventListenerMultiple` - Subscribe to multiple event types
+  - `useEventSubscriber` - Imperative subscription management
+- `packages/shared-event-bus/src/hooks/useEventEmitter.ts` - Emission hooks:
+  - `useEventEmitter` - Memoized emit function with source/correlationId
+  - `useTypedEmitter` - Type-safe emitter for single event type
+  - `useEventEmitters` - Multiple typed emitters at once
+  - `useEmitOnCondition` - Emit when condition becomes true
+- `packages/shared-event-bus/src/hooks/index.ts` - Barrel export
+- `packages/shared-event-bus/src/index.ts` - Updated with React exports
+
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
 
 ### Task 5.3: Define standard event types with versioning
 **Files to create:**

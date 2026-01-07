@@ -47,3 +47,24 @@ export type {
 
 // Core implementation
 export { createEventBus, WILDCARD_EVENT, type EventBus } from './EventBus';
+
+// React integration
+export {
+  EventBusProvider,
+  useEventBusContext,
+  type EventBusProviderProps,
+} from './EventBusProvider';
+
+// React hooks
+export {
+  useEventBus,
+  useEventListener,
+  useEventListenerOnce,
+  useEventListenerMultiple,
+  useEventSubscriber,
+  useEventEmitter,
+  useTypedEmitter,
+  useEventEmitters,
+  useEmitOnCondition,
+  type UseEventEmitterOptions,
+} from './hooks';
