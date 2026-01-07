@@ -7,7 +7,7 @@
  * Uses manual loading pattern with error handling for consistency with mobile.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -30,12 +30,28 @@ import {
   availableLocales,
   getLocaleDisplayName,
 } from '@universal/shared-i18n';
+import {
+  EventBusProvider,
+  useEventBus,
+  useEventListener,
+  createEventLogger,
+  InteractionEventTypes,
+  ThemeEventTypes,
+  LocaleEventTypes,
+  type AppEvents,
+  type ButtonPressedEvent,
+} from '@universal/shared-event-bus';
+
+// Enable event logging in development
+const __DEV__ = process.env.NODE_ENV !== 'production';
 
 interface AppState {
   remoteComponent: React.ComponentType<any> | null;
   loading: boolean;
   error: string | null;
   pressCount: number;
+  loadAttempt: number; // Track load attempts for cache busting
+  requiresReload: boolean; // True when MF cached a failed load and requires page reload
 }
 
 interface Styles {
@@ -191,34 +207,130 @@ function createStyles(theme: Theme): Styles {
 }
 
 /**
+ * Component that enables event logging in development mode.
+ */
+function EventLogger() {
+  const bus = useEventBus<AppEvents>();
+
+  useEffect(() => {
+    if (__DEV__) {
+      const unsubscribe = createEventLogger(bus, {
+        prefix: '[WebShell]',
+        showTimestamp: true,
+        showPayload: true,
+      });
+      return unsubscribe;
+    }
+  }, [bus]);
+
+  return null;
+}
+
+/**
  * Inner app component that uses theme and i18n context.
  */
 function AppContent() {
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { theme, isDark, toggleTheme, themeName } = useTheme();
   const { locale, setLocale } = useLocale();
   const { t } = useTranslation('common');
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const bus = useEventBus<AppEvents>();
+
+  // Emit THEME_CHANGED event when theme changes
+  // This allows remote MFEs to sync their theme via event bus
+  const handleThemeToggle = useCallback(() => {
+    const previousTheme = themeName;
+    toggleTheme();
+    const newTheme = themeName === 'light' ? 'dark' : 'light';
+    bus.emit(
+      ThemeEventTypes.THEME_CHANGED,
+      {
+        theme: newTheme,
+        previousTheme,
+      },
+      1,
+      { source: 'WebShell' }
+    );
+  }, [bus, themeName, toggleTheme]);
+
+  // Emit LOCALE_CHANGED event when locale changes
+  // This allows remote MFEs to sync their locale via event bus
+  const handleLocaleChange = useCallback(
+    (newLocale: string) => {
+      const previousLocale = locale;
+      setLocale(newLocale as typeof locale);
+      bus.emit(
+        LocaleEventTypes.LOCALE_CHANGED,
+        {
+          locale: newLocale,
+          previousLocale,
+        },
+        1,
+        { source: 'WebShell' }
+      );
+    },
+    [bus, locale, setLocale]
+  );
 
   const [state, setState] = useState<AppState>({
     remoteComponent: null,
     loading: false,
     error: null,
     pressCount: 0,
+    loadAttempt: 0,
+    requiresReload: false,
   });
 
+  // Listen for BUTTON_PRESSED events from remote MFEs
+  // This demonstrates event-based communication without prop drilling
+  useEventListener<ButtonPressedEvent>(
+    InteractionEventTypes.BUTTON_PRESSED,
+    (event) => {
+      // Update press count when remote button is pressed
+      setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
+      console.info(
+        `[WebShell] Received BUTTON_PRESSED from ${event.source}:`,
+        event.payload
+      );
+    }
+  );
+
   // Cycle through available locales
-  const cycleLocale = () => {
+  const cycleLocale = useCallback(() => {
     const currentIndex = availableLocales.indexOf(locale);
     const nextIndex = (currentIndex + 1) % availableLocales.length;
-    setLocale(availableLocales[nextIndex]);
-  };
+    handleLocaleChange(availableLocales[nextIndex]);
+  }, [locale, handleLocaleChange]);
 
   const loadRemote = async () => {
-    setState((prev) => ({ ...prev, loading: true, error: null }));
+    // Reset component and increment attempt counter on retry
+    setState((prev) => ({
+      ...prev,
+      remoteComponent: null,
+      loading: true,
+      error: null,
+      loadAttempt: prev.loadAttempt + 1,
+      requiresReload: false,
+    }));
 
     try {
+      // Dynamic import - Module Federation handles caching
       const RemoteModule = await import('hello_remote/HelloRemote');
-      const HelloRemote = RemoteModule.default || RemoteModule;
+      const HelloRemote = RemoteModule.default;
+
+      // Validate that we got a valid React component (must be a function)
+      // Module Federation caches failed loads as empty objects, so we need to detect this
+      if (typeof HelloRemote !== 'function') {
+        // MF cached a failed load - need page reload to retry properly
+        setState((prev) => ({
+          ...prev,
+          remoteComponent: null,
+          loading: false,
+          error: 'Remote module is not available. Please ensure the remote server is running and reload the page.',
+          requiresReload: true,
+        }));
+        return;
+      }
 
       setState((prev) => ({
         ...prev,
@@ -226,18 +338,32 @@ function AppContent() {
         loading: false,
       }));
     } catch (error) {
+      // Log the original error for debugging
       console.error('Failed to load remote:', error);
+
+      // Show user-friendly error message
+      // Module Federation errors are technical - translate to user-friendly message
       setState((prev) => ({
         ...prev,
+        remoteComponent: null,
         loading: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Unable to load remote component. The remote server may be unavailable. Please check that it is running and reload the page.',
+        requiresReload: true, // Always require reload since MF caches failures
       }));
     }
   };
 
+  const reloadPage = () => {
+    window.location.reload();
+  };
+
+  // Legacy callback - no longer needed since we use event bus
+  // Kept for demonstration of backward compatibility
+  // The remote still calls onPress, but host now listens via event bus instead
   const handleRemotePress = () => {
-    setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
-    console.info('Remote button pressed!', state.pressCount + 1);
+    // Note: Press count is now updated by the BUTTON_PRESSED event listener above
+    // This callback could be used for additional host-specific logic
+    console.info('[WebShell] Legacy onPress callback triggered');
   };
 
   const HelloRemote = state.remoteComponent;
@@ -249,7 +375,7 @@ function AppContent() {
           <Text style={styles.title}>{t('appName')} - Web Shell</Text>
         </View>
         <View style={styles.controlsRow}>
-          <Pressable style={styles.themeToggle} onPress={toggleTheme}>
+          <Pressable style={styles.themeToggle} onPress={handleThemeToggle}>
             <Text style={styles.themeToggleText}>
               {isDark ? '☀️ Light' : '🌙 Dark'}
             </Text>
@@ -284,15 +410,15 @@ function AppContent() {
 
         {state.error && (
           <View style={styles.error}>
-            <Text style={styles.errorText}>{t('error')}: {state.error}</Text>
-            <Pressable style={styles.retryButton} onPress={loadRemote}>
-              <Text style={styles.retryButtonText}>{t('retry')}</Text>
+            <Text style={styles.errorText}>{state.error}</Text>
+            <Pressable style={styles.retryButton} onPress={reloadPage}>
+              <Text style={styles.retryButtonText}>Reload Page</Text>
             </Pressable>
           </View>
         )}
 
         {HelloRemote && (
-          <View style={styles.remoteContainer}>
+          <View style={styles.remoteContainer} key={`remote-${state.loadAttempt}`}>
             <HelloRemote name="Web User" onPress={handleRemotePress} locale={locale} />
           </View>
         )}
@@ -310,15 +436,22 @@ function AppContent() {
 }
 
 /**
- * Root React component that wraps the app with ThemeProvider and I18nProvider.
+ * Root React component that wraps the app with providers.
+ * Provider order (outermost to innermost):
+ * 1. EventBusProvider - Event bus for inter-MFE communication
+ * 2. I18nProvider - Internationalization
+ * 3. ThemeProvider - Theming
  */
 function App() {
   return (
-    <I18nProvider translations={locales} initialLocale="en">
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
-    </I18nProvider>
+    <EventBusProvider options={{ debug: __DEV__, name: 'WebShell' }}>
+      <I18nProvider translations={locales} initialLocale="en">
+        <ThemeProvider>
+          <EventLogger />
+          <AppContent />
+        </ThemeProvider>
+      </I18nProvider>
+    </EventBusProvider>
   );
 }
 

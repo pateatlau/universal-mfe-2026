@@ -7,7 +7,7 @@
  * Hermes is required for execution.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,17 @@ import {
   availableLocales,
   getLocaleDisplayName,
 } from '@universal/shared-i18n';
+import {
+  EventBusProvider,
+  useEventBus,
+  useEventListener,
+  createEventLogger,
+  InteractionEventTypes,
+  ThemeEventTypes,
+  LocaleEventTypes,
+  type AppEvents,
+  type ButtonPressedEvent,
+} from '@universal/shared-event-bus';
 
 // Platform-specific remote host configuration
 // Android uses port 9004, iOS uses port 9005 to allow simultaneous testing
@@ -246,14 +257,41 @@ function createStyles(theme: Theme): Styles {
   });
 }
 
+// Development mode check for conditional logging
+const __DEV__ = process.env.NODE_ENV !== 'production';
+
+/**
+ * EventLogger component - enables debug logging in development mode.
+ * This subscribes to all events and logs them to the console.
+ */
+function EventLogger() {
+  const bus = useEventBus<AppEvents>();
+
+  useEffect(() => {
+    if (!__DEV__) return;
+
+    const unsubscribe = createEventLogger(bus, {
+      prefix: '[MobileHost]',
+      showTimestamp: true,
+      showPayload: true,
+      useColors: false, // Mobile console doesn't support CSS colors
+    });
+
+    return unsubscribe;
+  }, [bus]);
+
+  return null;
+}
+
 /**
  * Inner app component that uses theme context.
  */
 function AppContent() {
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { theme, isDark, toggleTheme, themeName } = useTheme();
   const { locale, setLocale } = useLocale();
   const { t } = useTranslation('common');
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const bus = useEventBus<AppEvents>();
 
   const [state, setState] = useState<AppState>({
     remoteComponent: null,
@@ -262,12 +300,62 @@ function AppContent() {
     pressCount: 0,
   });
 
+  // Listen for BUTTON_PRESSED events from remote MFEs
+  // This demonstrates event-based communication without prop drilling
+  useEventListener<ButtonPressedEvent>(
+    InteractionEventTypes.BUTTON_PRESSED,
+    (event) => {
+      // Update press count when remote button is pressed
+      setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
+      console.log(
+        `[MobileHost] Received BUTTON_PRESSED from ${event.source}:`,
+        event.payload
+      );
+    }
+  );
+
+  // Emit THEME_CHANGED event when theme changes
+  // This allows remote MFEs to sync their theme via event bus
+  const handleThemeToggle = useCallback(() => {
+    const previousTheme = themeName;
+    toggleTheme();
+    const newTheme = themeName === 'light' ? 'dark' : 'light';
+    bus.emit(
+      ThemeEventTypes.THEME_CHANGED,
+      {
+        theme: newTheme,
+        previousTheme,
+      },
+      1,
+      { source: 'MobileHost' }
+    );
+  }, [bus, themeName, toggleTheme]);
+
+  // Emit LOCALE_CHANGED event when locale changes
+  // This allows remote MFEs to sync their locale via event bus
+  const handleLocaleChange = useCallback(
+    (newLocale: string) => {
+      const previousLocale = locale;
+      setLocale(newLocale as typeof locale);
+      bus.emit(
+        LocaleEventTypes.LOCALE_CHANGED,
+        {
+          locale: newLocale,
+          previousLocale,
+        },
+        1,
+        { source: 'MobileHost' }
+      );
+    },
+    [bus, locale, setLocale]
+  );
+
   // Cycle through available locales
-  const cycleLocale = () => {
+  const cycleLocale = useCallback(() => {
     const currentIndex = availableLocales.indexOf(locale);
     const nextIndex = (currentIndex + 1) % availableLocales.length;
-    setLocale(availableLocales[nextIndex]);
-  };
+    handleLocaleChange(availableLocales[nextIndex]);
+  }, [locale, handleLocaleChange]);
 
   const loadRemote = async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
@@ -301,9 +389,13 @@ function AppContent() {
     }
   };
 
+  // Legacy callback - no longer needed since we use event bus
+  // Kept for demonstration of backward compatibility
+  // The remote still calls onPress, but host now listens via event bus instead
   const handleRemotePress = () => {
-    setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
-    console.log('Remote button pressed!', state.pressCount + 1);
+    // Note: Press count is now updated by the BUTTON_PRESSED event listener above
+    // This callback could be used for additional host-specific logic
+    console.log('[MobileHost] Legacy onPress callback triggered');
   };
 
   const HelloRemote = state.remoteComponent;
@@ -315,7 +407,7 @@ function AppContent() {
           <Text style={styles.title}>{t('appName')} - Mobile Host</Text>
         </View>
         <View style={styles.controlsRow}>
-          <Pressable style={styles.themeToggle} onPress={toggleTheme}>
+          <Pressable style={styles.themeToggle} onPress={handleThemeToggle}>
             <Text style={styles.themeToggleText}>
               {isDark ? '☀️ Light' : '🌙 Dark'}
             </Text>
@@ -376,15 +468,18 @@ function AppContent() {
 }
 
 /**
- * Root React component that wraps the app with I18nProvider and ThemeProvider.
+ * Root React component that wraps the app with EventBusProvider, I18nProvider, and ThemeProvider.
  */
 function App() {
   return (
-    <I18nProvider translations={locales} initialLocale="en">
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
-    </I18nProvider>
+    <EventBusProvider options={{ debug: __DEV__, name: 'MobileHost' }}>
+      <I18nProvider translations={locales} initialLocale="en">
+        <ThemeProvider>
+          <EventLogger />
+          <AppContent />
+        </ThemeProvider>
+      </I18nProvider>
+    </EventBusProvider>
   );
 }
 

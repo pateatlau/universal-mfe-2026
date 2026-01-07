@@ -34,7 +34,7 @@ This document outlines the implementation plan to enhance the Universal Microfro
 | Design Tokens & Theming (dark/light mode) | ✅ Complete | 2 |
 | Accessibility | ✅ Complete | 3 |
 | Internationalization (i18n) | ✅ Complete | 4 |
-| Event Bus (Inter-MFE Communication) | Pending | 5 |
+| Event Bus (Inter-MFE Communication) | ✅ Complete | 5 |
 | React Query (TanStack Query) | Pending | 6 |
 | React Router 7 | Pending | 7 |
 | RN Component Unit Testing | Pending | 8 |
@@ -301,16 +301,17 @@ All Turborepo migration tasks completed:
 - Verified: `yarn lint:architecture` - No architecture rule violations
 - Verified: Web shell, web remote standalone, mobile host (iOS/Android), mobile remote standalone all work with theming
 
-**TODO - Theme Synchronization Discussion:**
-Remote MFE components have their own `ThemeProvider` and do NOT sync with the host's theme. This is intentional for MFE independence (each remote can be deployed independently with its own default theme). However, this means:
-- Host toggles theme → only host UI changes
-- Remote component stays on its default theme (light)
+**Theme Synchronization via Event Bus: ✅ IMPLEMENTED**
+Theme synchronization between host and remote MFEs is now implemented using Event Bus (see Phase 5):
+- Host emits `THEME_CHANGED` event when user toggles theme
+- Remote MFEs listen for this event and update their internal ThemeProvider
+- This approach maintains MFE independence while enabling UI consistency
 
-**Future options to discuss:**
-1. **Accept current behavior** - Each MFE is independent, consistent with MFE principles
-2. **Theme via props** - Pass `themeName` prop from host to remote, remote uses it as `defaultTheme`
-3. **Shared state** - Use event bus (Phase 5) to broadcast theme changes, remotes subscribe
-4. **Context bridging** - Advanced: Share React context across MF boundaries (complex, requires MF shared config)
+Implementation details:
+- `packages/web-shell/src/App.tsx` - emits THEME_CHANGED on toggle
+- `packages/mobile-host/src/App.tsx` - emits THEME_CHANGED on toggle
+- `packages/web-remote-hello/src/HelloRemote.tsx` - listens and syncs theme
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - listens and syncs theme
 
 ### Task 2.5: Update build scripts ✅ COMPLETE
 **Status:** No changes required
@@ -591,10 +592,17 @@ Implement internationalization with a lightweight, universal approach that works
 - `packages/mobile-remote-hello/package.json` - added @universal/shared-i18n dependency
 - `packages/mobile-remote-hello/src/HelloRemote.tsx` - wrapped with I18nProvider, accepts `locale` prop
 
-**Locale synchronization pattern:**
-- Host passes current locale to remote via `locale` prop
-- Remote wraps with `I18nProvider key={locale}` to force re-render on locale change
-- **Future enhancement:** Replace prop drilling with Event Bus (Phase 5) for cleaner cross-MFE locale synchronization
+**Locale Synchronization via Event Bus: ✅ IMPLEMENTED**
+Locale synchronization between host and remote MFEs is now implemented using Event Bus (see Phase 5):
+- Host emits `LOCALE_CHANGED` event when user changes language
+- Remote MFEs listen for this event and update their internal I18nProvider
+- This approach maintains MFE independence while enabling consistent translations
+
+Implementation details:
+- `packages/web-shell/src/App.tsx` - emits LOCALE_CHANGED on language toggle
+- `packages/mobile-host/src/App.tsx` - emits LOCALE_CHANGED on language toggle
+- `packages/web-remote-hello/src/HelloRemote.tsx` - listens and syncs locale
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - listens and syncs locale
 
 **Notes:**
 - Removed `getGreeting` from shared-utils (now handled by i18n)
@@ -614,91 +622,333 @@ Implement internationalization with a lightweight, universal approach that works
 
 Implement a lightweight, type-safe event bus for communication between microfrontends without tight coupling.
 
-### Task 5.1: Create shared-event-bus package
-**Files to create:**
+### Task 5.1: Create shared-event-bus package ✅ COMPLETE
+**Files created:**
 - `packages/shared-event-bus/package.json`
 - `packages/shared-event-bus/tsconfig.json`
-- `packages/shared-event-bus/src/types.ts` - Event types, payload types
-- `packages/shared-event-bus/src/EventBus.ts` - Core pub/sub implementation
-- `packages/shared-event-bus/src/index.ts`
+- `packages/shared-event-bus/src/types.ts` - Core types:
+  - `BaseEvent` - Base interface with type, version, payload, timestamp, source, correlationId
+  - `EventHandler`, `Subscription`, `EventFilter` - Handler and subscription types
+  - `SubscribeOptions`, `EmitOptions`, `EventBusOptions` - Configuration options
+  - `EventBusStats`, `EventHistoryEntry` - Statistics and debugging types
+  - `EventDefinition`, `EventType`, `EventPayload`, `EventUnion` - Helper types
+- `packages/shared-event-bus/src/EventBus.ts` - Core pub/sub implementation:
+  - `createEventBus<Events>()` - Factory function with type-safe events
+  - `subscribe()`, `subscribeOnce()` - Subscribe with filter, priority, once options
+  - `emit()` - Emit events with version, source, correlationId
+  - `waitFor()` - Promise-based event waiting with timeout
+  - `getHistory()`, `clearHistory()` - Event history for debugging
+  - `getStats()` - Statistics (total events, subscriptions, counts)
+  - `WILDCARD_EVENT` - Subscribe to all events with '*'
+- `packages/shared-event-bus/src/index.ts` - Exports
 
 **No external dependencies** - Pure TypeScript implementation
 
-### Task 5.2: Create React integration hooks
-**Files to create:**
-- `packages/shared-event-bus/src/hooks/useEventBus.ts` - Access event bus instance
-- `packages/shared-event-bus/src/hooks/useEventListener.ts` - Subscribe to events with auto-cleanup
-- `packages/shared-event-bus/src/hooks/useEventEmitter.ts` - Emit events
-- `packages/shared-event-bus/src/EventBusProvider.tsx` - Context provider
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
 
-### Task 5.3: Define standard event types with versioning
-**Files to create:**
-- `packages/shared-event-bus/src/events/navigation.ts` - Navigation events (NAVIGATE_TO, BACK, etc.)
-- `packages/shared-event-bus/src/events/auth.ts` - Auth events (LOGIN, LOGOUT, SESSION_EXPIRED)
-- `packages/shared-event-bus/src/events/theme.ts` - Theme events (THEME_CHANGED)
-- `packages/shared-event-bus/src/events/remote.ts` - Remote module events (REMOTE_LOADED, REMOTE_ERROR)
-- `packages/shared-event-bus/src/events/index.ts` - Event registry with version metadata
+### Task 5.2: Create React integration hooks ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/EventBusProvider.tsx` - React context provider:
+  - `EventBusProvider` - Provides event bus instance to component tree
+  - `useEventBusContext` - Access event bus from context (throws if not wrapped)
+- `packages/shared-event-bus/src/hooks/useEventBus.ts` - Direct event bus access hook
+- `packages/shared-event-bus/src/hooks/useEventListener.ts` - Subscription hooks:
+  - `useEventListener` - Subscribe with auto-cleanup on unmount
+  - `useEventListenerOnce` - Single event subscription
+  - `useEventListenerMultiple` - Subscribe to multiple event types
+  - `useEventSubscriber` - Imperative subscription management
+- `packages/shared-event-bus/src/hooks/useEventEmitter.ts` - Emission hooks:
+  - `useEventEmitter` - Memoized emit function with source/correlationId
+  - `useTypedEmitter` - Type-safe emitter for single event type
+  - `useEventEmitters` - Multiple typed emitters at once
+  - `useEmitOnCondition` - Emit when condition becomes true
+- `packages/shared-event-bus/src/hooks/index.ts` - Barrel export
+- `packages/shared-event-bus/src/index.ts` - Updated with React exports
 
-**Event governance rules:**
-- All events include a `version` field (e.g., `{ type: 'NAVIGATE_TO', version: 1, payload: {...} }`)
-- Event evolution is **append-only**: new fields can be added, existing fields cannot be removed or changed
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
+
+### Task 5.3: Define standard event types with versioning ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/events/navigation.ts` - Navigation events:
+  - `NavigateToEvent` - Request navigation to path with params
+  - `NavigateBackEvent` - Request to go back with fallback
+  - `NavigationCompletedEvent` - Notification after navigation completes
+  - `OpenExternalUrlEvent` - Request to open external URL
+- `packages/shared-event-bus/src/events/auth.ts` - Auth events:
+  - `UserLoggedInEvent` - User logged in with userId, email, roles
+  - `UserLoggedOutEvent` - User logged out with reason
+  - `SessionExpiredEvent` - Session expired with redirect
+  - `AuthErrorEvent` - Auth error with code, message, retryable
+  - `LoginRequiredEvent` - Request to show login UI
+  - `UserProfileUpdatedEvent` - Profile changes notification
+- `packages/shared-event-bus/src/events/theme.ts` - Theme events:
+  - `ThemeChangedEvent` - Theme changed (host → MFEs)
+  - `ThemeChangeRequestEvent` - Theme change request (MFE → host)
+- `packages/shared-event-bus/src/events/locale.ts` - Locale events:
+  - `LocaleChangedEvent` - Locale changed (host → MFEs)
+  - `LocaleChangeRequestEvent` - Locale change request (MFE → host)
+- `packages/shared-event-bus/src/events/remote.ts` - Remote module events:
+  - `RemoteLoadingEvent`, `RemoteLoadedEvent`, `RemoteLoadFailedEvent`
+  - `RemoteRetryingEvent`, `RemoteUnloadedEvent`
+- `packages/shared-event-bus/src/events/index.ts` - Event registry:
+  - `AppEvents` - Union of all standard events
+  - `EventTypes` - All event type constants combined
+  - `EventVersions` - Version metadata for compatibility checks
+
+**Event governance rules (documented in events/index.ts):**
+- All events include a `version` field (currently v1 for all events)
+- Event evolution is **append-only**: new fields can be added, existing fields cannot be removed
 - Breaking changes require a new event type (e.g., `NAVIGATE_TO_V2`)
 - Host is responsible for handling multiple event versions during migration periods
 
-### Task 5.4: Add debugging and devtools support
-**Files to create:**
-- `packages/shared-event-bus/src/devtools/EventLogger.ts` - Console logging for dev mode
-- `packages/shared-event-bus/src/devtools/EventHistory.ts` - Event history for debugging
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
 
-### Task 5.5: Integrate event bus into host applications
-**Files to modify:**
-- `packages/web-shell/package.json` - add @universal/shared-event-bus dependency
-- `packages/web-shell/src/App.tsx` - wrap with EventBusProvider
-- `packages/mobile-host/package.json` - add @universal/shared-event-bus dependency
-- `packages/mobile-host/src/App.tsx` - wrap with EventBusProvider
+### Task 5.4: Add debugging and devtools support ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/devtools/EventLogger.ts` - Console logging:
+  - `createEventLogger` - Formatted console output with colors, timestamps, filters
+  - `createGroupedEventLogger` - Groups events by correlationId for tracing
+  - `createTableLogger` - Batch events into console.table format
+- `packages/shared-event-bus/src/devtools/EventHistory.ts` - History viewer:
+  - `createHistoryViewer` - Query, filter, and analyze event history
+  - `filter()` - Filter by type, source, time range, correlationId, version
+  - `search()` - Search payloads by string/regex
+  - `getStats()` - Statistics (counts by type/source, events per minute, most frequent)
+  - `groupBy()` - Group events by type, source, or custom key
+  - `export()` - Export history as JSON for external analysis
+  - `print()` - Formatted console output with grouping
+- `packages/shared-event-bus/src/devtools/index.ts` - Barrel export
 
-### Task 5.6: Create example inter-MFE communication
-**Files to modify:**
-- `packages/web-remote-hello/src/HelloRemote.tsx` - emit event on button click
-- `packages/mobile-remote-hello/src/HelloRemote.tsx` - emit event on button click
-- `packages/web-shell/src/App.tsx` - listen for remote events
-- `packages/mobile-host/src/App.tsx` - listen for remote events
+**Files modified:**
+- `packages/shared-event-bus/tsconfig.json` - Added DOM lib for TypeScript type definitions
+- `packages/shared-event-bus/src/index.ts` - Added devtools exports
 
-### Task 5.7: Update build configuration
-**Files to modify:**
-- `turbo.json` - add shared-event-bus to pipeline
+**Note on DOM lib in tsconfig:**
+The `"DOM"` lib is included for TypeScript type checking only. This is consistent with other shared packages (shared-i18n, shared-a11y) that need platform detection:
+- **TypeScript needs DOM lib** to recognize `window`, `document` etc. for `typeof` checks
+- **Platform detection patterns** like `typeof window !== 'undefined'` are safe and explicitly allowed
+- **ESLint architecture rule** (`no-dom-in-shared.js`) prevents actual runtime usage of browser APIs
+- **Devtools gracefully degrade** on non-web platforms (e.g., colored logs only when `window` exists)
 
-### Task 5.8: Establish MFE local state pattern
+This combination (DOM lib for types + ESLint rule for runtime safety) is the correct pattern.
+
+**Note on ESLint exception:**
+Unlike shared-a11y and shared-i18n, shared-event-bus does NOT require an ESLint exception because:
+- Devtools only use `console` (universal API available in all JS runtimes, not in forbidden list)
+- Platform checks use `typeof window !== 'undefined'` (explicitly allowed by the rule)
+- No direct usage of forbidden globals (window, document, localStorage, etc.)
+
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
+
+### Task 5.5: Integrate event bus into host applications ✅ COMPLETE
+**Files modified:**
+- `packages/web-shell/package.json` - added @universal/shared-event-bus dependency
+- `packages/web-shell/src/App.tsx` - wrapped with EventBusProvider, added EventLogger component
+- `packages/mobile-host/package.json` - added @universal/shared-event-bus dependency
+- `packages/mobile-host/src/App.tsx` - wrapped with EventBusProvider, added EventLogger component
+
+**Implementation:**
+- Both hosts wrap the app with `EventBusProvider` with `debug: __DEV__` and named instances
+- `EventLogger` component subscribes to all events and logs in development mode
+- Web uses colored console output; mobile uses plain text (no CSS colors support)
+- Event bus is now available via `useEventBus()` hook in all child components
+
+**Verified:**
+- `yarn build:shared` - Success (7 packages)
+- `yarn typecheck` - 18 tasks pass
+- `yarn lint:architecture` - 0 errors (33 warnings for console statements - expected for debug code)
+
+### Task 5.6: Create example inter-MFE communication ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/events/interaction.ts` - Interaction events:
+  - `ButtonPressedEvent` - Button click with buttonId, label, metadata
+  - `FormSubmittedEvent` - Form submission with formId, data, validation status
+  - `ItemSelectedEvent` - Item selection with itemId, itemType, metadata
+  - `CustomActionEvent` - Custom action with actionId, payload
+
+**Files modified:**
+- `packages/shared-event-bus/src/events/index.ts` - Added interaction events to registry
+- `packages/shared-event-bus/src/index.ts` - Exported interaction event types
+- `packages/web-remote-hello/package.json` - Added @universal/shared-event-bus dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Emits BUTTON_PRESSED event on click
+- `packages/web-remote-hello/src/standalone.tsx` - Added I18nProvider and language toggle
+- `packages/mobile-remote-hello/package.json` - Added @universal/shared-event-bus dependency
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Emits BUTTON_PRESSED event on click
+- `packages/mobile-remote-hello/src/App.tsx` - Added I18nProvider and language toggle
+- `packages/web-shell/src/App.tsx` - Listens for BUTTON_PRESSED events, updates press count
+- `packages/mobile-host/src/App.tsx` - Listens for BUTTON_PRESSED events, updates press count
+- `packages/shared-event-bus/package.json` - Fixed React version (peerDependencies only)
+- `packages/shared-event-bus/src/EventBusProvider.tsx` - Global singleton pattern via globalThis
+
+**Key implementation details:**
+- EventBusProvider uses global singleton (`globalThis.__UNIVERSAL_EVENT_BUS__`) to ensure all MFEs share the same event bus instance
+- Remote MFEs emit `BUTTON_PRESSED` events with buttonId, label, and metadata
+- Host apps listen for events via `useEventListener<ButtonPressedEvent>` hook
+- Press count is updated via event bus instead of prop callbacks (demonstrates decoupled communication)
+- Standalone apps have language toggle matching host/shell apps
+
+**Verified:**
+- Web shell and remote: Events flow correctly, press count updates
+- iOS host and remote: Events flow correctly, press count updates
+- Android host and remote: Events flow correctly, press count updates
+- Standalone apps: Theme and language toggles work correctly
+
+### Task 5.7: Update build configuration ✅ COMPLETE
+**Status:** No changes required
+
+**Analysis:**
+- Turborepo automatically discovers `@universal/shared-event-bus` via Yarn workspaces
+- Generic task definitions in `turbo.json` apply to all workspace packages
+- `dependsOn: ["^build"]` ensures correct build order based on package.json dependencies
+- The dependency graph shows shared-event-bus is correctly identified with dependents:
+  - `@universal/mobile-host`
+  - `@universal/mobile-remote-hello`
+  - `@universal/web-remote-hello`
+  - `@universal/web-shell`
+
+**Verified:**
+- `yarn turbo run build --dry-run` shows shared-event-bus in pipeline
+- `yarn build:shared` - 7 packages built successfully with FULL TURBO caching
+- Build order is correct: shared-event-bus builds before its dependents
+
+### Task 5.8: Establish MFE local state pattern ✅ COMPLETE
 **Purpose:** Each MFE maintains its own Zustand store for local state, ensuring loose coupling. Event bus communicates *events*, not state — MFEs react to events by updating their own stores.
 
-**Files to create:**
-- `packages/web-remote-hello/src/store/localStore.ts` - Example MFE-local Zustand store
-- `packages/mobile-remote-hello/src/store/localStore.ts` - Example MFE-local Zustand store
+**Files created:**
+- `packages/web-remote-hello/src/store/localStore.ts` - MFE-local Zustand store with:
+  - `localPressCount` - Button press count local to MFE
+  - `lastPressedAt` - Timestamp of last press
+  - `preferences` - MFE-local preferences (showAnimations, customGreeting)
+  - Selector hooks for optimized re-renders
+- `packages/mobile-remote-hello/src/store/localStore.ts` - Same pattern for mobile
+
+**Files modified:**
+- `packages/web-remote-hello/package.json` - Added zustand@5.0.5 dependency
+- `packages/mobile-remote-hello/package.json` - Added zustand@5.0.5 dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Integrated local store:
+  - Updates `localPressCount` on button press
+  - Includes `localPressCount` in event metadata
+  - Demonstrates state → event → callback flow
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Same integration
 
 **Pattern established:**
 - MFEs own their state (Zustand store per MFE)
 - Host app owns shared/global state (e.g., auth, theme via shared-auth-store)
 - Event bus bridges communication without coupling state
-- Example flow: Remote emits `USER_ACTION` event → Host receives → Host updates its store → Host emits `STATE_UPDATED` → Remote reacts if needed
+- Example flow:
+  1. Button press → Update local state (Zustand)
+  2. Then → Emit event (Event Bus) with metadata including local state info
+  3. Then → Call legacy callback (backward compatibility)
+  4. Host receives event → Updates its own state
 
-### Task 5.9: Implement remote loading failure & degradation strategy
+**Key principle:** Events carry *information*, not state references. Each MFE maintains its own source of truth.
+
+**Verified:**
+- `yarn typecheck` - 18 tasks pass
+- `yarn install` - Dependencies installed successfully
+
+### Task 5.9: Implement remote loading failure & degradation strategy ✅ COMPLETE
 **Purpose:** Define standard behavior when remote MFEs fail to load, ensuring graceful degradation.
 
-**Files to create:**
-- `packages/shared-event-bus/src/components/RemoteErrorBoundary.tsx` - Error boundary for remote loading failures
-- `packages/shared-event-bus/src/components/RemoteLoadingFallback.tsx` - Loading state component
-- `packages/shared-event-bus/src/components/RemoteErrorFallback.tsx` - Error state component with retry
+**Files created:**
+- `packages/shared-event-bus/src/components/RemoteLoadingFallback.tsx` - Themed loading indicator
+- `packages/shared-event-bus/src/components/RemoteErrorFallback.tsx` - Error display with retry button
+- `packages/shared-event-bus/src/components/RemoteErrorBoundary.tsx` - React Error Boundary for render errors
+- `packages/shared-event-bus/src/components/useRemoteLoader.ts` - Hook with retry logic and event emission
+- `packages/shared-event-bus/src/components/index.ts` - Barrel exports
 
-**Files to modify:**
-- `packages/web-shell/src/App.tsx` - wrap remote imports with error boundary
-- `packages/mobile-host/src/App.tsx` - wrap remote imports with error boundary
+**Files modified:**
+- `packages/shared-event-bus/src/index.ts` - Export remote loading components
+- `packages/shared-event-bus/src/events/remote.ts` - Added RENDER_ERROR and LOAD_ERROR to errorCode union
+- `packages/shared-event-bus/package.json` - Added react-native peer dependency for RN primitives
+- `packages/web-shell/rspack.config.mjs` - Fixed react-native alias for transitive dependencies
+- `packages/web-shell/src/App.tsx` - User-friendly error messages and proper MF cache handling
 
-**Failure handling strategy:**
-- **Timeout**: Remote load times out after configurable duration (default: 10s)
-- **Retry**: Automatic retry with exponential backoff (max 3 attempts)
-- **Fallback UI**: Show error state with manual retry button
-- **Event emission**: Emit `REMOTE_LOAD_FAILED` event for analytics/logging
-- **Partial availability**: App remains functional even if some remotes fail
+**Components provided:**
+- **RemoteLoadingFallback**: Accessible loading indicator with customizable message
+- **RemoteErrorFallback**: Error display with retry button, shows error details in dev mode
+- **RemoteErrorBoundary**: Catches render errors, emits events, supports custom fallbacks
+- **useRemoteLoader**: Hook with timeout, exponential backoff retry, event emission
+
+**Failure handling strategy implemented:**
+- **Timeout**: Configurable timeout (default: 10s), rejects with descriptive error
+- **Retry**: Exponential backoff with jitter (base: 1s, max: 30s), configurable attempts
+- **Fallback UI**: RemoteErrorFallback with retry button, shows error details in dev
+- **Event emission**: Emits REMOTE_LOADING, REMOTE_LOADED, REMOTE_RETRYING, REMOTE_LOAD_FAILED
+- **Error Boundary**: Catches render errors, emits REMOTE_LOAD_FAILED with RENDER_ERROR code
+- **Partial availability**: Components designed for graceful degradation
+
+**Web shell improvements:**
+- User-friendly error messages (replaced cryptic Module Federation errors)
+- Proper handling of MF cached failures (MF caches failed loads as empty objects)
+- "Reload Page" button (MF requires page reload to truly retry after failure)
+- Validation that loaded component is a valid function before rendering
+
+**Note:** Host apps (web-shell, mobile-host) already have manual loading/error handling.
+The new components are exported for use when more sophisticated loading is needed.
+
+### Task 5.10: Implement theme and locale sync via Event Bus ✅ COMPLETE
+**Purpose:** Enable host-to-remote synchronization of theme and locale using Event Bus instead of prop drilling.
+
+**Files modified:**
+- `packages/web-shell/src/App.tsx` - Emit THEME_CHANGED and LOCALE_CHANGED events
+- `packages/mobile-host/src/App.tsx` - Emit THEME_CHANGED and LOCALE_CHANGED events
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Listen for events and sync state
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Listen for events and sync state
+
+**Implementation pattern:**
+1. **Host emits events**: When user toggles theme/locale, host emits corresponding event
+   - `THEME_CHANGED`: `{ theme: 'dark' | 'light', previousTheme }`
+   - `LOCALE_CHANGED`: `{ locale: string, previousLocale }`
+2. **Remotes listen**: Remotes use `useEventListener` hook to receive events
+3. **Remotes update providers**: On event, remotes update their internal state which triggers provider re-render
+
+**Benefits over prop drilling:**
+- Decoupled communication (no need to pass props through multiple layers)
+- Works even when remote is loaded after theme/locale change
+- Consistent with event bus pattern for all inter-MFE communication
+- Backwards compatible (initial props still work for first render)
+
+**Standalone mode support:**
+HelloRemote components also support direct prop changes for standalone mode (where no event bus events are emitted). This is implemented via `useEffect` hooks that sync internal state when `theme` or `locale` props change:
+- `packages/web-remote-hello/src/standalone.tsx` - passes `theme={themeName}` prop
+- `packages/mobile-remote-hello/src/App.tsx` - passes `theme={themeName}` prop
+- HelloRemote uses `useEffect` to sync state when props change
+
+**Verified:**
+- Web shell and remote: Theme and locale sync correctly
+- Mobile host and remote: Theme and locale sync correctly
+- Web remote standalone: Theme and locale sync correctly
+- Mobile remote standalone: Theme and locale sync correctly
+- Events logged in console in development mode
+
+---
+
+## Phase 5 Complete ✅
+
+All Event Bus tasks completed:
+- Task 5.1: Created shared-event-bus package with core pub/sub
+- Task 5.2: Created React hooks (useEventBus, useEventListener, useEventEmitter)
+- Task 5.3: Defined standard event types with versioning
+- Task 5.4: Added debugging and devtools support
+- Task 5.5: Integrated event bus into host applications
+- Task 5.6: Created example inter-MFE communication (BUTTON_PRESSED)
+- Task 5.7: Verified build configuration
+- Task 5.8: Established MFE local state pattern with Zustand
+- Task 5.9: Implemented remote loading failure & degradation strategy
+- Task 5.10: Implemented theme and locale sync via Event Bus
 
 ---
 
