@@ -1,23 +1,23 @@
 /**
  * @universal/shared-hello-ui
  *
- * Universal React Native UI component with theme support and accessibility.
+ * Universal React Native UI component with theme support, accessibility, and i18n.
  *
  * Constraints:
  * - MUST use React Native primitives only (View, Text, Pressable, etc.)
  * - NO DOM elements (<div>, <span>, <button>, etc.)
  * - NO platform-specific code (except Platform.select)
  * - NO host-specific dependencies
- * - Can import from @universal/shared-utils
  * - Uses theme tokens from @universal/shared-theme-context
  * - Uses accessibility utilities from @universal/shared-a11y
+ * - Uses translations from @universal/shared-i18n
  */
 
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { getGreeting } from '@universal/shared-utils';
 import { useTheme, Theme } from '@universal/shared-theme-context';
 import { A11yRoles, A11yLabels, A11Y_MIN_TOUCH_TARGET } from '@universal/shared-a11y';
+import { useTranslation } from '@universal/shared-i18n';
 
 export interface HelloUniversalProps {
   /** Name to display in the greeting */
@@ -48,8 +48,13 @@ export function HelloUniversal({
   buttonAccessibilityHint,
 }: HelloUniversalProps) {
   const { theme } = useTheme();
-  const greeting = getGreeting(name);
+  const { t } = useTranslation('hello');
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  // Use translated greeting with name interpolation
+  const greeting = name
+    ? t('greetingWithName', { params: { name } })
+    : t('greeting');
 
   return (
     <View
@@ -69,10 +74,10 @@ export function HelloUniversal({
           style={styles.button}
           onPress={onPress}
           accessibilityRole={A11yRoles.BUTTON}
-          accessibilityLabel={buttonAccessibilityLabel ?? 'Press Me'}
-          accessibilityHint={buttonAccessibilityHint ?? A11yLabels.format('Double tap to activate', 'greeting button')}
+          accessibilityLabel={buttonAccessibilityLabel ?? t('buttonLabel')}
+          accessibilityHint={buttonAccessibilityHint ?? t('buttonHint')}
         >
-          <Text style={styles.buttonText}>Press Me</Text>
+          <Text style={styles.buttonText}>{t('buttonLabel')}</Text>
         </Pressable>
       )}
     </View>

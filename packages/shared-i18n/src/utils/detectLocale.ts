@@ -1,4 +1,3 @@
-import { Platform, NativeModules } from 'react-native';
 import type { LocaleCode } from '../types';
 import { DEFAULT_LOCALE } from '../types';
 import { availableLocales, isLocaleSupported } from '../locales';
@@ -10,7 +9,75 @@ import { availableLocales, isLocaleSupported } from '../locales';
  * - React Native: Device settings via NativeModules
  * - Web: navigator.language/languages
  * - Fallback: DEFAULT_LOCALE ('en')
+ *
+ * Note: This module uses environment detection to work on both
+ * web and mobile without static imports from react-native.
+ * Mobile locale detection requires the host app to configure
+ * NativeModules access separately.
  */
+
+// Environment detection helpers
+// Detect if we're in a browser environment
+const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
+
+// Cache for mobile platform detection result
+let _mobileNativeModules: Record<string, unknown> | null | undefined = undefined;
+
+/**
+ * Get NativeModules if running in React Native.
+ * Returns null if not available (web environment).
+ */
+function getMobileNativeModules(): Record<string, unknown> | null {
+  if (_mobileNativeModules !== undefined) {
+    return _mobileNativeModules;
+  }
+
+  // In browser, no NativeModules
+  if (isBrowser) {
+    _mobileNativeModules = null;
+    return null;
+  }
+
+  // Try to access NativeModules via global (set by host app)
+  // This avoids static require('react-native') which breaks web builds
+  if (typeof global !== 'undefined') {
+    const g = global as Record<string, unknown>;
+    // Host app should expose NativeModules on global for i18n
+    if (g.__i18n_NativeModules) {
+      _mobileNativeModules = g.__i18n_NativeModules as Record<string, unknown>;
+      return _mobileNativeModules;
+    }
+  }
+
+  _mobileNativeModules = null;
+  return null;
+}
+
+/**
+ * Detect platform based on environment.
+ */
+function getPlatformOS(): 'web' | 'ios' | 'android' {
+  // Browser check first
+  if (isBrowser) {
+    return 'web';
+  }
+
+  // Check for mobile via NativeModules availability
+  const nativeModules = getMobileNativeModules();
+  if (nativeModules) {
+    // iOS has SettingsManager
+    if (nativeModules.SettingsManager) {
+      return 'ios';
+    }
+    // Android has I18nManager with localeIdentifier
+    if ((nativeModules.I18nManager as Record<string, unknown>)?.localeIdentifier) {
+      return 'android';
+    }
+  }
+
+  // Fallback - assume web-like environment
+  return 'web';
+}
 
 /**
  * Get the device's preferred locale on iOS.
@@ -19,11 +86,14 @@ import { availableLocales, isLocaleSupported } from '../locales';
  */
 function getIOSLocale(): string | undefined {
   try {
-    const settings = NativeModules.SettingsManager?.settings;
+    const nativeModules = getMobileNativeModules();
+    if (!nativeModules) return undefined;
+
+    const settings = (nativeModules.SettingsManager as { settings?: Record<string, unknown> })?.settings;
     // iOS returns locale as 'en_US', we want 'en-US'
     const locale =
-      settings?.AppleLocale || // iOS 12 and earlier
-      settings?.AppleLanguages?.[0]; // iOS 13+
+      (settings?.AppleLocale as string | undefined) || // iOS 12 and earlier
+      (settings?.AppleLanguages as string[] | undefined)?.[0]; // iOS 13+
 
     return locale?.replace('_', '-');
   } catch {
@@ -38,7 +108,10 @@ function getIOSLocale(): string | undefined {
  */
 function getAndroidLocale(): string | undefined {
   try {
-    const locale = NativeModules.I18nManager?.localeIdentifier;
+    const nativeModules = getMobileNativeModules();
+    if (!nativeModules) return undefined;
+
+    const locale = (nativeModules.I18nManager as { localeIdentifier?: string })?.localeIdentifier;
     // Android returns locale as 'en_US', we want 'en-US'
     return locale?.replace('_', '-');
   } catch {
@@ -68,12 +141,13 @@ function getWebLocale(): string | undefined {
  */
 export function getDeviceLocale(): string {
   let locale: string | undefined;
+  const platformOS = getPlatformOS();
 
-  if (Platform.OS === 'ios') {
+  if (platformOS === 'ios') {
     locale = getIOSLocale();
-  } else if (Platform.OS === 'android') {
+  } else if (platformOS === 'android') {
     locale = getAndroidLocale();
-  } else if (Platform.OS === 'web') {
+  } else {
     locale = getWebLocale();
   }
 
@@ -90,8 +164,9 @@ export function getDeviceLocale(): string {
  */
 export function getPreferredLocales(): string[] {
   const locales: string[] = [];
+  const platformOS = getPlatformOS();
 
-  if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+  if (platformOS === 'web' && typeof navigator !== 'undefined') {
     // Web: Use navigator.languages for full preference list
     if (navigator.languages && navigator.languages.length > 0) {
       locales.push(...navigator.languages);

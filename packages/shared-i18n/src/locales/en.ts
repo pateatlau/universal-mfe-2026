@@ -20,6 +20,10 @@ export const en: Translations = {
   common: {
     appName: 'Universal MFE',
     loading: 'Loading...',
+    loadingRemote: 'Loading remote component...',
+    loadRemote: 'Load Remote Component',
+    subtitle: 'Dynamically loading remote component via Module Federation',
+    subtitleMobile: 'Dynamically loading remote via ScriptManager + MFv2',
     error: 'An error occurred',
     retry: 'Retry',
     cancel: 'Cancel',
@@ -47,6 +51,11 @@ export const en: Translations = {
       zero: 'No items',
       one: '{{count}} item',
       other: '{{count}} items',
+    },
+    pressCount: {
+      zero: 'No presses yet',
+      one: 'Remote button pressed {{count}} time',
+      other: 'Remote button pressed {{count}} times',
     },
     selected: {
       zero: 'None selected',

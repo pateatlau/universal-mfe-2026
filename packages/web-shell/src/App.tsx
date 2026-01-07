@@ -22,6 +22,14 @@ import {
   useTheme,
   Theme,
 } from '@universal/shared-theme-context';
+import {
+  I18nProvider,
+  useTranslation,
+  useLocale,
+  locales,
+  availableLocales,
+  getLocaleDisplayName,
+} from '@universal/shared-i18n';
 
 interface AppState {
   remoteComponent: React.ComponentType<any> | null;
@@ -34,10 +42,13 @@ interface Styles {
   container: ViewStyle;
   header: ViewStyle;
   headerRow: ViewStyle;
+  controlsRow: ViewStyle;
   title: TextStyle;
   subtitle: TextStyle;
   themeToggle: ViewStyle;
   themeToggleText: TextStyle;
+  langToggle: ViewStyle;
+  langToggleText: TextStyle;
   content: ViewStyle;
   loadButton: ViewStyle;
   loadButtonText: TextStyle;
@@ -74,11 +85,17 @@ function createStyles(theme: Theme): Styles {
       width: '100%',
       marginBottom: theme.spacing.element.gap,
     },
+    controlsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.element.gap,
+      marginBottom: theme.spacing.element.gap,
+    },
     title: {
       fontSize: theme.typography.fontSizes['2xl'],
       fontWeight: theme.typography.fontWeights.bold,
       color: theme.colors.text.primary,
-      marginRight: theme.spacing.element.gap,
     },
     subtitle: {
       fontSize: theme.typography.fontSizes.sm,
@@ -92,6 +109,17 @@ function createStyles(theme: Theme): Styles {
       borderRadius: theme.spacing.component.borderRadius,
     },
     themeToggleText: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.text.primary,
+      fontWeight: theme.typography.fontWeights.medium,
+    },
+    langToggle: {
+      backgroundColor: theme.colors.surface.tertiary,
+      paddingHorizontal: theme.spacing.component.padding,
+      paddingVertical: theme.spacing.element.gap,
+      borderRadius: theme.spacing.component.borderRadius,
+    },
+    langToggleText: {
       fontSize: theme.typography.fontSizes.sm,
       color: theme.colors.text.primary,
       fontWeight: theme.typography.fontWeights.medium,
@@ -163,10 +191,12 @@ function createStyles(theme: Theme): Styles {
 }
 
 /**
- * Inner app component that uses theme context.
+ * Inner app component that uses theme and i18n context.
  */
 function AppContent() {
   const { theme, isDark, toggleTheme } = useTheme();
+  const { locale, setLocale } = useLocale();
+  const { t } = useTranslation('common');
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [state, setState] = useState<AppState>({
@@ -175,6 +205,13 @@ function AppContent() {
     error: null,
     pressCount: 0,
   });
+
+  // Cycle through available locales
+  const cycleLocale = () => {
+    const currentIndex = availableLocales.indexOf(locale);
+    const nextIndex = (currentIndex + 1) % availableLocales.length;
+    setLocale(availableLocales[nextIndex]);
+  };
 
   const loadRemote = async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
@@ -209,22 +246,29 @@ function AppContent() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Universal MFE - Web Shell</Text>
+          <Text style={styles.title}>{t('appName')} - Web Shell</Text>
+        </View>
+        <View style={styles.controlsRow}>
           <Pressable style={styles.themeToggle} onPress={toggleTheme}>
             <Text style={styles.themeToggleText}>
               {isDark ? '☀️ Light' : '🌙 Dark'}
             </Text>
           </Pressable>
+          <Pressable style={styles.langToggle} onPress={cycleLocale}>
+            <Text style={styles.langToggleText}>
+              🌐 {getLocaleDisplayName(locale)}
+            </Text>
+          </Pressable>
         </View>
         <Text style={styles.subtitle}>
-          Dynamically loading remote component via Module Federation
+          {t('subtitle')}
         </Text>
       </View>
 
       <View style={styles.content}>
         {!HelloRemote && !state.loading && !state.error && (
           <Pressable style={styles.loadButton} onPress={loadRemote}>
-            <Text style={styles.loadButtonText}>Load Remote Component</Text>
+            <Text style={styles.loadButtonText}>{t('loadRemote')}</Text>
           </Pressable>
         )}
 
@@ -234,30 +278,29 @@ function AppContent() {
               size="large"
               color={theme.colors.interactive.primary}
             />
-            <Text style={styles.loadingText}>Loading remote component...</Text>
+            <Text style={styles.loadingText}>{t('loading')}</Text>
           </View>
         )}
 
         {state.error && (
           <View style={styles.error}>
-            <Text style={styles.errorText}>Error: {state.error}</Text>
+            <Text style={styles.errorText}>{t('error')}: {state.error}</Text>
             <Pressable style={styles.retryButton} onPress={loadRemote}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{t('retry')}</Text>
             </Pressable>
           </View>
         )}
 
         {HelloRemote && (
           <View style={styles.remoteContainer}>
-            <HelloRemote name="Web User" onPress={handleRemotePress} />
+            <HelloRemote name="Web User" onPress={handleRemotePress} locale={locale} />
           </View>
         )}
 
         {state.pressCount > 0 && (
           <View style={styles.counter}>
             <Text style={styles.counterText}>
-              Remote button pressed {state.pressCount} time
-              {state.pressCount !== 1 ? 's' : ''}
+              {t('pressCount', { count: state.pressCount })}
             </Text>
           </View>
         )}
@@ -267,13 +310,15 @@ function AppContent() {
 }
 
 /**
- * Root React component that wraps the app with ThemeProvider.
+ * Root React component that wraps the app with ThemeProvider and I18nProvider.
  */
 function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <I18nProvider translations={locales} initialLocale="en">
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </I18nProvider>
   );
 }
 

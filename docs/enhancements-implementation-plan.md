@@ -1,7 +1,7 @@
 # Enterprise Enhancements Implementation Plan
 
 **Status:** In Progress
-**Last Updated:** 2026-01-06
+**Last Updated:** 2026-01-07
 **Target:** Seed project foundation for enterprise-level applications
 **Branch:** `enhancements`
 
@@ -33,7 +33,7 @@ This document outlines the implementation plan to enhance the Universal Microfro
 | Turborepo Migration | ✅ Complete | 1 |
 | Design Tokens & Theming (dark/light mode) | ✅ Complete | 2 |
 | Accessibility | ✅ Complete | 3 |
-| Internationalization (i18n) | Pending | 4 |
+| Internationalization (i18n) | ✅ Complete | 4 |
 | Event Bus (Inter-MFE Communication) | Pending | 5 |
 | React Query (TanStack Query) | Pending | 6 |
 | React Router 7 | Pending | 7 |
@@ -564,21 +564,49 @@ Implement internationalization with a lightweight, universal approach that works
 - Verified: `yarn typecheck` - 15 tasks pass
 - Verified: `yarn lint:architecture` - 0 errors
 
-### Task 4.4: Integrate i18n into host applications
-**Files to modify:**
-- `packages/web-shell/package.json` - add @universal/shared-i18n dependency
-- `packages/web-shell/src/App.tsx` - wrap with I18nProvider
-- `packages/mobile-host/package.json` - add @universal/shared-i18n dependency
-- `packages/mobile-host/src/App.tsx` - wrap with I18nProvider
+### Task 4.4: Integrate i18n into host applications ✅ COMPLETE
+**Files modified:**
+- `packages/web-shell/package.json` - added @universal/shared-i18n dependency
+- `packages/web-shell/src/App.tsx` - wrapped with I18nProvider, added language toggle button, used translations
+- `packages/mobile-host/package.json` - added @universal/shared-i18n dependency
+- `packages/mobile-host/src/App.tsx` - wrapped with I18nProvider, added language toggle button, used translations
 
-### Task 4.5: Add i18n to shared-hello-ui (example)
-**Files to modify:**
-- `packages/shared-hello-ui/package.json` - add @universal/shared-i18n dependency
-- `packages/shared-hello-ui/src/HelloUniversal.tsx` - use useTranslation hook
+**Translation keys used:**
+- `common.appName`, `common.subtitle`, `common.subtitleMobile`
+- `common.loading`, `common.loadRemote`, `common.error`, `common.retry`
+- `common.pressCount` (with pluralization)
 
-### Task 4.6: Update build configuration
-**Files to modify:**
-- `turbo.json` - add shared-i18n to pipeline
+**Notes:**
+- Language toggle cycles through available locales (en/es)
+- Locale is passed to remote components via props (see Task 4.5)
+
+### Task 4.5: Add i18n to shared-hello-ui and remotes ✅ COMPLETE
+**Files modified:**
+- `packages/shared-hello-ui/package.json` - added @universal/shared-i18n dependency
+- `packages/shared-hello-ui/src/HelloUniversal.tsx` - uses `useTranslation('hello')` hook for:
+  - `hello.greeting` / `hello.greetingWithName` (with {{name}} interpolation)
+  - `hello.buttonLabel`, `hello.buttonHint`
+- `packages/web-remote-hello/package.json` - added @universal/shared-i18n dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - wrapped with I18nProvider, accepts `locale` prop
+- `packages/mobile-remote-hello/package.json` - added @universal/shared-i18n dependency
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - wrapped with I18nProvider, accepts `locale` prop
+
+**Locale synchronization pattern:**
+- Host passes current locale to remote via `locale` prop
+- Remote wraps with `I18nProvider key={locale}` to force re-render on locale change
+- **Future enhancement:** Replace prop drilling with Event Bus (Phase 5) for cleaner cross-MFE locale synchronization
+
+**Notes:**
+- Removed `getGreeting` from shared-utils (now handled by i18n)
+- Verified: All translations work on web (en/es)
+- Verified: Locale changes in host immediately reflect in remote
+
+### Task 4.6: Update build configuration ✅ COMPLETE
+**Notes:**
+- Turborepo automatically includes shared-i18n in build pipeline via dependency detection
+- No manual turbo.json changes required - `dependsOn: ["^build"]` handles it
+- Verified: `yarn build:shared` builds shared-i18n correctly
+- Verified: `yarn typecheck` passes for all 16 tasks
 
 ---
 
