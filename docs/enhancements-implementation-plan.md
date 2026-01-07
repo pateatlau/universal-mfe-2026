@@ -1022,10 +1022,23 @@ All Event Bus tasks completed:
 - `yarn typecheck` - 19 tasks pass
 - `yarn lint:architecture` - 0 errors
 
-### Task 6.3: Integrate QueryProvider into hosts
-**Files to modify:**
-- `packages/web-shell/src/App.tsx`
-- `packages/mobile-host/src/App.tsx`
+### Task 6.3: Integrate QueryProvider into hosts ✅ COMPLETE
+**Files modified:**
+- `packages/web-shell/package.json` - Added `@universal/shared-data-layer` dependency
+- `packages/web-shell/src/App.tsx` - Added `QueryProvider` import, wrapped app with provider
+- `packages/mobile-host/package.json` - Added `@universal/shared-data-layer` dependency
+- `packages/mobile-host/src/App.tsx` - Added `QueryProvider` import, wrapped app with provider
+
+**Provider order (outermost to innermost):**
+1. QueryProvider - Data fetching (React Query)
+2. EventBusProvider - Event bus for inter-MFE communication
+3. I18nProvider - Internationalization
+4. ThemeProvider - Theming
+
+**Verified:**
+- `yarn typecheck` - 20 tasks pass
+- `yarn lint:architecture` - 0 errors
+- `yarn build:shared` - 8 packages built
 
 ### Task 6.4: Update build configuration
 **Files to modify:**

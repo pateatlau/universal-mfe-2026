@@ -43,6 +43,7 @@ import {
   type AppEvents,
   type ButtonPressedEvent,
 } from '@universal/shared-event-bus';
+import { QueryProvider } from '@universal/shared-data-layer';
 
 // Platform-specific remote host configuration
 // Android uses port 9004, iOS uses port 9005 to allow simultaneous testing
@@ -468,18 +469,25 @@ function AppContent() {
 }
 
 /**
- * Root React component that wraps the app with EventBusProvider, I18nProvider, and ThemeProvider.
+ * Root React component that wraps the app with providers.
+ * Provider order (outermost to innermost):
+ * 1. QueryProvider - Data fetching (React Query)
+ * 2. EventBusProvider - Event bus for inter-MFE communication
+ * 3. I18nProvider - Internationalization
+ * 4. ThemeProvider - Theming
  */
 function App() {
   return (
-    <EventBusProvider options={{ debug: __DEV__, name: 'MobileHost' }}>
-      <I18nProvider translations={locales} initialLocale="en">
-        <ThemeProvider>
-          <EventLogger />
-          <AppContent />
-        </ThemeProvider>
-      </I18nProvider>
-    </EventBusProvider>
+    <QueryProvider>
+      <EventBusProvider options={{ debug: __DEV__, name: 'MobileHost' }}>
+        <I18nProvider translations={locales} initialLocale="en">
+          <ThemeProvider>
+            <EventLogger />
+            <AppContent />
+          </ThemeProvider>
+        </I18nProvider>
+      </EventBusProvider>
+    </QueryProvider>
   );
 }
 

@@ -41,6 +41,7 @@ import {
   type AppEvents,
   type ButtonPressedEvent,
 } from '@universal/shared-event-bus';
+import { QueryProvider } from '@universal/shared-data-layer';
 
 // Enable event logging in development
 const __DEV__ = process.env.NODE_ENV !== 'production';
@@ -438,20 +439,23 @@ function AppContent() {
 /**
  * Root React component that wraps the app with providers.
  * Provider order (outermost to innermost):
- * 1. EventBusProvider - Event bus for inter-MFE communication
- * 2. I18nProvider - Internationalization
- * 3. ThemeProvider - Theming
+ * 1. QueryProvider - Data fetching (React Query)
+ * 2. EventBusProvider - Event bus for inter-MFE communication
+ * 3. I18nProvider - Internationalization
+ * 4. ThemeProvider - Theming
  */
 function App() {
   return (
-    <EventBusProvider options={{ debug: __DEV__, name: 'WebShell' }}>
-      <I18nProvider translations={locales} initialLocale="en">
-        <ThemeProvider>
-          <EventLogger />
-          <AppContent />
-        </ThemeProvider>
-      </I18nProvider>
-    </EventBusProvider>
+    <QueryProvider>
+      <EventBusProvider options={{ debug: __DEV__, name: 'WebShell' }}>
+        <I18nProvider translations={locales} initialLocale="en">
+          <ThemeProvider>
+            <EventLogger />
+            <AppContent />
+          </ThemeProvider>
+        </I18nProvider>
+      </EventBusProvider>
+    </QueryProvider>
   );
 }
 
