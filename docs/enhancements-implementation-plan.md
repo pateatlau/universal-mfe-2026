@@ -800,18 +800,41 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - `yarn build:shared` - 7 packages built successfully with FULL TURBO caching
 - Build order is correct: shared-event-bus builds before its dependents
 
-### Task 5.8: Establish MFE local state pattern
+### Task 5.8: Establish MFE local state pattern ✅ COMPLETE
 **Purpose:** Each MFE maintains its own Zustand store for local state, ensuring loose coupling. Event bus communicates *events*, not state — MFEs react to events by updating their own stores.
 
-**Files to create:**
-- `packages/web-remote-hello/src/store/localStore.ts` - Example MFE-local Zustand store
-- `packages/mobile-remote-hello/src/store/localStore.ts` - Example MFE-local Zustand store
+**Files created:**
+- `packages/web-remote-hello/src/store/localStore.ts` - MFE-local Zustand store with:
+  - `localPressCount` - Button press count local to MFE
+  - `lastPressedAt` - Timestamp of last press
+  - `preferences` - MFE-local preferences (showAnimations, customGreeting)
+  - Selector hooks for optimized re-renders
+- `packages/mobile-remote-hello/src/store/localStore.ts` - Same pattern for mobile
+
+**Files modified:**
+- `packages/web-remote-hello/package.json` - Added zustand@5.0.5 dependency
+- `packages/mobile-remote-hello/package.json` - Added zustand@5.0.5 dependency
+- `packages/web-remote-hello/src/HelloRemote.tsx` - Integrated local store:
+  - Updates `localPressCount` on button press
+  - Includes `localPressCount` in event metadata
+  - Demonstrates state → event → callback flow
+- `packages/mobile-remote-hello/src/HelloRemote.tsx` - Same integration
 
 **Pattern established:**
 - MFEs own their state (Zustand store per MFE)
 - Host app owns shared/global state (e.g., auth, theme via shared-auth-store)
 - Event bus bridges communication without coupling state
-- Example flow: Remote emits `USER_ACTION` event → Host receives → Host updates its store → Host emits `STATE_UPDATED` → Remote reacts if needed
+- Example flow:
+  1. Button press → Update local state (Zustand)
+  2. Then → Emit event (Event Bus) with metadata including local state info
+  3. Then → Call legacy callback (backward compatibility)
+  4. Host receives event → Updates its own state
+
+**Key principle:** Events carry *information*, not state references. Each MFE maintains its own source of truth.
+
+**Verified:**
+- `yarn typecheck` - 18 tasks pass
+- `yarn install` - Dependencies installed successfully
 
 ### Task 5.9: Implement remote loading failure & degradation strategy
 **Purpose:** Define standard behavior when remote MFEs fail to load, ensuring graceful degradation.

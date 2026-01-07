@@ -15,7 +15,8 @@
     "@universal/shared-utils": "*",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-native-web": "0.21.2"
+    "react-native-web": "0.21.2",
+    "zustand": "5.0.5"
   },
   "devDependencies": {
     "@module-federation/enhanced": "0.21.6",

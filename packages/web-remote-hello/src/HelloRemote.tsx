@@ -6,12 +6,21 @@
  * This component uses the universal HelloUniversal component from shared-hello-ui,
  * which will be rendered via React Native Web on the web platform.
  *
- * ## Event Bus Integration
+ * ## MFE State Pattern
  *
- * This remote demonstrates inter-MFE communication via the event bus:
- * - Emits `BUTTON_PRESSED` event when the button is clicked
- * - Host receives the event and can react (e.g., update state, analytics)
- * - Still supports `onPress` callback for backward compatibility
+ * This remote demonstrates the recommended MFE state pattern:
+ *
+ * 1. **Local State (Zustand)**: Each MFE owns its local state
+ *    - Press count, preferences, etc. are MFE-local
+ *    - State mutations happen within the MFE
+ *    - No direct state sharing with host/other MFEs
+ *
+ * 2. **Inter-MFE Communication (Event Bus)**: Events notify other MFEs
+ *    - Emits `BUTTON_PRESSED` event when the button is clicked
+ *    - Host receives the event and can react (e.g., update its own state)
+ *    - Events carry information, not state references
+ *
+ * 3. **Backward Compatibility**: Still supports `onPress` callback
  */
 
 import React, { useCallback } from 'react';
@@ -24,6 +33,7 @@ import {
   InteractionEventTypes,
   type AppEvents,
 } from '@universal/shared-event-bus';
+import { useHelloLocalStore } from './store/localStore';
 
 export interface HelloRemoteProps {
   name?: string;
@@ -33,27 +43,44 @@ export interface HelloRemoteProps {
 }
 
 /**
- * Inner component that has access to event bus context.
+ * Inner component that has access to event bus and local store.
+ *
+ * Pattern demonstrated:
+ * 1. Button press → Update local state (Zustand)
+ * 2. Then → Emit event (Event Bus) for cross-MFE communication
+ * 3. Then → Call legacy callback (backward compatibility)
  */
 function HelloRemoteInner({ name, onPress }: Omit<HelloRemoteProps, 'locale'>) {
   const bus = useEventBus<AppEvents>();
+  const incrementPressCount = useHelloLocalStore(
+    (state) => state.incrementPressCount
+  );
+  const localPressCount = useHelloLocalStore((state) => state.localPressCount);
 
   const handlePress = useCallback(() => {
-    // Emit event via event bus for inter-MFE communication
+    // 1. Update local state first (MFE owns its state)
+    incrementPressCount();
+
+    // 2. Emit event via event bus for inter-MFE communication
+    // Include local press count in metadata so host can see MFE-local stats
     bus.emit(
       InteractionEventTypes.BUTTON_PRESSED,
       {
         buttonId: 'hello-remote-press-me',
         label: 'Press Me',
-        metadata: { remoteName: 'web-remote-hello', userName: name },
+        metadata: {
+          remoteName: 'web-remote-hello',
+          userName: name,
+          localPressCount: localPressCount + 1, // +1 because state hasn't updated yet
+        },
       },
       1, // version
       { source: 'HelloRemote' }
     );
 
-    // Also call the legacy callback for backward compatibility
+    // 3. Call legacy callback for backward compatibility
     onPress?.();
-  }, [bus, name, onPress]);
+  }, [bus, name, onPress, incrementPressCount, localPressCount]);
 
   return <HelloUniversal name={name} onPress={handlePress} />;
 }

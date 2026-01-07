@@ -31,7 +31,8 @@
     "@universal/shared-theme-context": "*",
     "@universal/shared-utils": "*",
     "react": "19.1.0",
-    "react-native": "0.80.0"
+    "react-native": "0.80.0",
+    "zustand": "5.0.5"
   },
   "devDependencies": {
     "@babel/plugin-syntax-typescript": "7.27.1",

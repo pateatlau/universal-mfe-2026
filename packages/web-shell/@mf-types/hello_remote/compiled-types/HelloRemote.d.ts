@@ -6,12 +6,21 @@
  * This component uses the universal HelloUniversal component from shared-hello-ui,
  * which will be rendered via React Native Web on the web platform.
  *
- * ## Event Bus Integration
+ * ## MFE State Pattern
  *
- * This remote demonstrates inter-MFE communication via the event bus:
- * - Emits `BUTTON_PRESSED` event when the button is clicked
- * - Host receives the event and can react (e.g., update state, analytics)
- * - Still supports `onPress` callback for backward compatibility
+ * This remote demonstrates the recommended MFE state pattern:
+ *
+ * 1. **Local State (Zustand)**: Each MFE owns its local state
+ *    - Press count, preferences, etc. are MFE-local
+ *    - State mutations happen within the MFE
+ *    - No direct state sharing with host/other MFEs
+ *
+ * 2. **Inter-MFE Communication (Event Bus)**: Events notify other MFEs
+ *    - Emits `BUTTON_PRESSED` event when the button is clicked
+ *    - Host receives the event and can react (e.g., update its own state)
+ *    - Events carry information, not state references
+ *
+ * 3. **Backward Compatibility**: Still supports `onPress` callback
  */
 import { type LocaleCode } from '@universal/shared-i18n';
 export interface HelloRemoteProps {
