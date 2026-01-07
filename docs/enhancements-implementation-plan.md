@@ -665,19 +665,44 @@ Implement a lightweight, type-safe event bus for communication between microfron
 - `yarn workspace @universal/shared-event-bus typecheck` - Passes
 - ESLint architecture rules pass (0 errors)
 
-### Task 5.3: Define standard event types with versioning
-**Files to create:**
-- `packages/shared-event-bus/src/events/navigation.ts` - Navigation events (NAVIGATE_TO, BACK, etc.)
-- `packages/shared-event-bus/src/events/auth.ts` - Auth events (LOGIN, LOGOUT, SESSION_EXPIRED)
-- `packages/shared-event-bus/src/events/theme.ts` - Theme events (THEME_CHANGED)
-- `packages/shared-event-bus/src/events/remote.ts` - Remote module events (REMOTE_LOADED, REMOTE_ERROR)
-- `packages/shared-event-bus/src/events/index.ts` - Event registry with version metadata
+### Task 5.3: Define standard event types with versioning ✅ COMPLETE
+**Files created:**
+- `packages/shared-event-bus/src/events/navigation.ts` - Navigation events:
+  - `NavigateToEvent` - Request navigation to path with params
+  - `NavigateBackEvent` - Request to go back with fallback
+  - `NavigationCompletedEvent` - Notification after navigation completes
+  - `OpenExternalUrlEvent` - Request to open external URL
+- `packages/shared-event-bus/src/events/auth.ts` - Auth events:
+  - `UserLoggedInEvent` - User logged in with userId, email, roles
+  - `UserLoggedOutEvent` - User logged out with reason
+  - `SessionExpiredEvent` - Session expired with redirect
+  - `AuthErrorEvent` - Auth error with code, message, retryable
+  - `LoginRequiredEvent` - Request to show login UI
+  - `UserProfileUpdatedEvent` - Profile changes notification
+- `packages/shared-event-bus/src/events/theme.ts` - Theme events:
+  - `ThemeChangedEvent` - Theme changed (host → MFEs)
+  - `ThemeChangeRequestEvent` - Theme change request (MFE → host)
+- `packages/shared-event-bus/src/events/locale.ts` - Locale events:
+  - `LocaleChangedEvent` - Locale changed (host → MFEs)
+  - `LocaleChangeRequestEvent` - Locale change request (MFE → host)
+- `packages/shared-event-bus/src/events/remote.ts` - Remote module events:
+  - `RemoteLoadingEvent`, `RemoteLoadedEvent`, `RemoteLoadFailedEvent`
+  - `RemoteRetryingEvent`, `RemoteUnloadedEvent`
+- `packages/shared-event-bus/src/events/index.ts` - Event registry:
+  - `AppEvents` - Union of all standard events
+  - `EventTypes` - All event type constants combined
+  - `EventVersions` - Version metadata for compatibility checks
 
-**Event governance rules:**
-- All events include a `version` field (e.g., `{ type: 'NAVIGATE_TO', version: 1, payload: {...} }`)
-- Event evolution is **append-only**: new fields can be added, existing fields cannot be removed or changed
+**Event governance rules (documented in events/index.ts):**
+- All events include a `version` field (currently v1 for all events)
+- Event evolution is **append-only**: new fields can be added, existing fields cannot be removed
 - Breaking changes require a new event type (e.g., `NAVIGATE_TO_V2`)
 - Host is responsible for handling multiple event versions during migration periods
+
+**Verified:**
+- `yarn workspace @universal/shared-event-bus build` - Success
+- `yarn workspace @universal/shared-event-bus typecheck` - Passes
+- ESLint architecture rules pass (0 errors)
 
 ### Task 5.4: Add debugging and devtools support
 **Files to create:**
