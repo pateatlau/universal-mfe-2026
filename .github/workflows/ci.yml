@@ -33,6 +33,14 @@ jobs:
           yarn install --frozen-lockfile
           echo "::endgroup::"
 
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
       - name: Validate versions
         run: |
           echo "::group::Validating versions"
@@ -60,7 +68,7 @@ jobs:
       - name: Run unit tests
         run: |
           echo "::group::Running unit tests"
-          yarn test --coverage
+          npx jest --coverage
           echo "::endgroup::"
 
       - name: Security audit
@@ -93,6 +101,14 @@ jobs:
           echo "::group::Installing dependencies"
           yarn install --frozen-lockfile
           echo "::endgroup::"
+
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
 
       - name: Build shared packages
         run: |
@@ -161,6 +177,14 @@ jobs:
           yarn install --frozen-lockfile
           echo "::endgroup::"
 
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
       - name: Build shared packages
         run: |
           echo "::group::Building shared packages"
@@ -228,6 +252,14 @@ jobs:
           yarn install --frozen-lockfile
           echo "::endgroup::"
 
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
       - name: Build shared packages
         run: |
           echo "::group::Building shared packages"
@@ -288,6 +320,14 @@ jobs:
           echo "::group::Installing dependencies"
           yarn install --frozen-lockfile
           echo "::endgroup::"
+
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
 
       - name: Build shared packages
         run: |
@@ -403,6 +443,14 @@ jobs:
           echo "::group::Installing dependencies"
           yarn install --frozen-lockfile
           echo "::endgroup::"
+
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
 
       - name: Build shared packages
         run: |

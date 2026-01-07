@@ -28,6 +28,8 @@
     "@callstack/repack": "5.2.0",
     "@module-federation/enhanced": "0.21.6",
     "@swc/helpers": "0.5.17",
+    "@universal/shared-i18n": "*",
+    "@universal/shared-theme-context": "*",
     "react": "19.1.0",
     "react-native": "0.80.0"
   },

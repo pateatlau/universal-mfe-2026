@@ -8,31 +8,129 @@
  * a consistent experience for testing the remote in isolation.
  */
 
-import React, { useState } from "react";
-import { createRoot } from "react-dom/client";
-import { View, Text, StyleSheet } from "react-native";
-import HelloRemote from "./HelloRemote";
+import React, { useState, useMemo } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+} from 'react-native';
+import {
+  ThemeProvider,
+  useTheme,
+  Theme,
+} from '@universal/shared-theme-context';
+import HelloRemote from './HelloRemote';
+
+interface Styles {
+  container: ViewStyle;
+  header: ViewStyle;
+  headerRow: ViewStyle;
+  title: TextStyle;
+  subtitle: TextStyle;
+  themeToggle: ViewStyle;
+  themeToggleText: TextStyle;
+  content: ViewStyle;
+  remoteContainer: ViewStyle;
+  counter: ViewStyle;
+  counterText: TextStyle;
+}
+
+function createStyles(theme: Theme): Styles {
+  return StyleSheet.create<Styles>({
+    container: {
+      flex: 1,
+      width: '100%' as unknown as number,
+      minHeight: '100vh' as unknown as number,
+      backgroundColor: theme.colors.surface.background,
+    },
+    header: {
+      padding: theme.spacing.layout.screenPadding,
+      backgroundColor: theme.colors.surface.primary,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border.default,
+      alignItems: 'center',
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      marginBottom: theme.spacing.element.gap,
+    },
+    title: {
+      fontSize: theme.typography.fontSizes['2xl'],
+      fontWeight: theme.typography.fontWeights.bold,
+      color: theme.colors.text.primary,
+      marginRight: theme.spacing.element.gap,
+    },
+    subtitle: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.text.secondary,
+      textAlign: 'center',
+    },
+    themeToggle: {
+      backgroundColor: theme.colors.surface.tertiary,
+      paddingHorizontal: theme.spacing.component.padding,
+      paddingVertical: theme.spacing.element.gap,
+      borderRadius: theme.spacing.component.borderRadius,
+    },
+    themeToggleText: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.text.primary,
+      fontWeight: theme.typography.fontWeights.medium,
+    },
+    content: {
+      flex: 1,
+      padding: theme.spacing.layout.screenPadding,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    remoteContainer: {
+      width: '100%' as unknown as number,
+      alignItems: 'center',
+    },
+    counter: {
+      marginTop: theme.spacing.layout.screenPadding,
+      padding: theme.spacing.component.padding,
+      backgroundColor: theme.colors.surface.tertiary,
+      borderRadius: theme.spacing.component.borderRadius,
+    },
+    counterText: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.interactive.primary,
+      fontWeight: theme.typography.fontWeights.medium,
+    },
+  });
+}
 
 /**
- * Renders a standalone testing UI for the HelloRemote component that includes a header and a press counter.
- *
- * The component increments an internal press counter each time the remote's action is triggered and displays the total presses when greater than zero.
- *
- * @returns The React element for the standalone testing interface.
+ * Inner standalone app component that uses theme context.
  */
-function StandaloneApp() {
+function StandaloneAppContent() {
+  const { theme, isDark, toggleTheme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [pressCount, setPressCount] = useState(0);
 
   const handlePress = () => {
     setPressCount((prev) => prev + 1);
-    // Using console.info instead of console.log to satisfy lint rules
-    console.info("Remote button pressed!", pressCount + 1);
+    console.info('Remote button pressed!', pressCount + 1);
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Web Remote - Standalone Mode</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Web Remote - Standalone Mode</Text>
+          <Pressable style={styles.themeToggle} onPress={toggleTheme}>
+            <Text style={styles.themeToggleText}>
+              {isDark ? '☀️ Light' : '🌙 Dark'}
+            </Text>
+          </Pressable>
+        </View>
         <Text style={styles.subtitle}>
           Testing remote component in isolation
         </Text>
@@ -47,7 +145,7 @@ function StandaloneApp() {
           <View style={styles.counter}>
             <Text style={styles.counterText}>
               Remote button pressed {pressCount} time
-              {pressCount !== 1 ? "s" : ""}
+              {pressCount !== 1 ? 's' : ''}
             </Text>
           </View>
         )}
@@ -56,57 +154,20 @@ function StandaloneApp() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: "100%" as unknown as number,
-    minHeight: "100vh" as unknown as number,
-    backgroundColor: "#f5f5f5",
-  },
-  header: {
-    padding: 24,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#333",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  remoteContainer: {
-    width: "100%" as unknown as number,
-    alignItems: "center",
-  },
-  counter: {
-    marginTop: 24,
-    padding: 12,
-    backgroundColor: "#e3f2fd",
-    borderRadius: 8,
-  },
-  counterText: {
-    fontSize: 14,
-    color: "#1976d2",
-    fontWeight: "500",
-  },
-});
+/**
+ * Root standalone app component that wraps with ThemeProvider.
+ */
+function StandaloneApp() {
+  return (
+    <ThemeProvider>
+      <StandaloneAppContent />
+    </ThemeProvider>
+  );
+}
 
-const container = document.getElementById("root");
+const container = document.getElementById('root');
 if (!container) {
-  throw new Error("Root element not found");
+  throw new Error('Root element not found');
 }
 
 const root = createRoot(container);

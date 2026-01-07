@@ -7,7 +7,7 @@
  * Hermes is required for execution.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,23 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
 import { ScriptManager, Federated } from '@callstack/repack/client';
+import {
+  ThemeProvider,
+  useTheme,
+  Theme,
+} from '@universal/shared-theme-context';
+import {
+  I18nProvider,
+  useTranslation,
+  useLocale,
+  locales,
+  availableLocales,
+  getLocaleDisplayName,
+} from '@universal/shared-i18n';
 
 // Platform-specific remote host configuration
 // Android uses port 9004, iOS uses port 9005 to allow simultaneous testing
@@ -80,20 +95,179 @@ interface AppState {
   pressCount: number;
 }
 
+interface Styles {
+  container: ViewStyle;
+  header: ViewStyle;
+  headerRow: ViewStyle;
+  controlsRow: ViewStyle;
+  title: TextStyle;
+  subtitle: TextStyle;
+  themeToggle: ViewStyle;
+  themeToggleText: TextStyle;
+  langToggle: ViewStyle;
+  langToggleText: TextStyle;
+  content: ViewStyle;
+  loadButton: ViewStyle;
+  loadButtonText: TextStyle;
+  loading: ViewStyle;
+  loadingText: TextStyle;
+  error: ViewStyle;
+  errorText: TextStyle;
+  retryButton: ViewStyle;
+  retryButtonText: TextStyle;
+  remoteContainer: ViewStyle;
+  counter: ViewStyle;
+  counterText: TextStyle;
+}
+
+function createStyles(theme: Theme): Styles {
+  return StyleSheet.create<Styles>({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.surface.background,
+    },
+    header: {
+      padding: theme.spacing.layout.screenPadding,
+      paddingTop: 60,
+      backgroundColor: theme.colors.surface.primary,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border.default,
+      alignItems: 'center',
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      marginBottom: theme.spacing.element.gap,
+    },
+    controlsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.element.gap,
+      marginBottom: theme.spacing.element.gap,
+    },
+    title: {
+      fontSize: theme.typography.fontSizes['2xl'],
+      fontWeight: theme.typography.fontWeights.bold,
+      color: theme.colors.text.primary,
+    },
+    subtitle: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.text.secondary,
+      textAlign: 'center',
+    },
+    themeToggle: {
+      backgroundColor: theme.colors.surface.tertiary,
+      paddingHorizontal: theme.spacing.component.padding,
+      paddingVertical: theme.spacing.element.gap,
+      borderRadius: theme.spacing.component.borderRadius,
+    },
+    themeToggleText: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.text.primary,
+      fontWeight: theme.typography.fontWeights.medium,
+    },
+    langToggle: {
+      backgroundColor: theme.colors.surface.tertiary,
+      paddingHorizontal: theme.spacing.component.padding,
+      paddingVertical: theme.spacing.element.gap,
+      borderRadius: theme.spacing.component.borderRadius,
+    },
+    langToggleText: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.text.primary,
+      fontWeight: theme.typography.fontWeights.medium,
+    },
+    content: {
+      flex: 1,
+      padding: theme.spacing.layout.screenPadding,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadButton: {
+      backgroundColor: theme.colors.interactive.primary,
+      paddingHorizontal: theme.spacing.button.paddingHorizontal,
+      paddingVertical: theme.spacing.button.paddingVertical,
+      borderRadius: theme.spacing.button.borderRadius,
+      marginBottom: theme.spacing.layout.screenPadding,
+    },
+    loadButtonText: {
+      color: theme.colors.text.inverse,
+      fontSize: theme.typography.fontSizes.base,
+      fontWeight: theme.typography.fontWeights.semibold,
+    },
+    loading: {
+      alignItems: 'center',
+      padding: theme.spacing.layout.screenPadding,
+    },
+    loadingText: {
+      marginTop: theme.spacing.component.gap,
+      fontSize: theme.typography.fontSizes.base,
+      color: theme.colors.text.tertiary,
+    },
+    error: {
+      alignItems: 'center',
+      padding: theme.spacing.layout.screenPadding,
+    },
+    errorText: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.status.error,
+      marginBottom: theme.spacing.component.gap,
+      textAlign: 'center',
+    },
+    retryButton: {
+      backgroundColor: theme.colors.status.error,
+      paddingHorizontal: theme.spacing.button.paddingHorizontalSmall,
+      paddingVertical: theme.spacing.button.paddingVerticalSmall,
+      borderRadius: theme.spacing.button.borderRadius,
+    },
+    retryButtonText: {
+      color: theme.colors.text.inverse,
+      fontSize: theme.typography.fontSizes.sm,
+      fontWeight: theme.typography.fontWeights.semibold,
+    },
+    remoteContainer: {
+      width: '100%',
+      alignItems: 'center',
+    },
+    counter: {
+      marginTop: theme.spacing.layout.screenPadding,
+      padding: theme.spacing.component.padding,
+      backgroundColor: theme.colors.surface.tertiary,
+      borderRadius: theme.spacing.component.borderRadius,
+    },
+    counterText: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.interactive.primary,
+      fontWeight: theme.typography.fontWeights.medium,
+    },
+  });
+}
+
 /**
- * Root React component for the mobile host app that dynamically loads and renders a remote federated component and exposes a press counter.
- *
- * Renders a static header, a control to load the remote component (with retry), visual loading and error states, the remote component (when loaded) with a provided `name` prop and press handler, and a counter showing how many times the remote component's button was pressed.
- *
- * @returns The rendered React element tree for the app.
+ * Inner app component that uses theme context.
  */
-function App() {
+function AppContent() {
+  const { theme, isDark, toggleTheme } = useTheme();
+  const { locale, setLocale } = useLocale();
+  const { t } = useTranslation('common');
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const [state, setState] = useState<AppState>({
     remoteComponent: null,
     loading: false,
     error: null,
     pressCount: 0,
   });
+
+  // Cycle through available locales
+  const cycleLocale = () => {
+    const currentIndex = availableLocales.indexOf(locale);
+    const nextIndex = (currentIndex + 1) % availableLocales.length;
+    setLocale(availableLocales[nextIndex]);
+  };
 
   const loadRemote = async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
@@ -137,16 +311,30 @@ function App() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Universal MFE - Mobile Host</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>{t('appName')} - Mobile Host</Text>
+        </View>
+        <View style={styles.controlsRow}>
+          <Pressable style={styles.themeToggle} onPress={toggleTheme}>
+            <Text style={styles.themeToggleText}>
+              {isDark ? '☀️ Light' : '🌙 Dark'}
+            </Text>
+          </Pressable>
+          <Pressable style={styles.langToggle} onPress={cycleLocale}>
+            <Text style={styles.langToggleText}>
+              🌐 {getLocaleDisplayName(locale)}
+            </Text>
+          </Pressable>
+        </View>
         <Text style={styles.subtitle}>
-          Dynamically loading remote via ScriptManager + MFv2
+          {t('subtitleMobile')}
         </Text>
       </View>
 
       <View style={styles.content}>
         {!HelloRemote && !state.loading && !state.error && (
           <Pressable style={styles.loadButton} onPress={loadRemote}>
-            <Text style={styles.loadButtonText}>Load Remote Component</Text>
+            <Text style={styles.loadButtonText}>{t('loadRemote')}</Text>
           </Pressable>
         )}
 
@@ -154,38 +342,31 @@ function App() {
           <View style={styles.loading}>
             <ActivityIndicator
               size="large"
-              color="#007AFF"
+              color={theme.colors.interactive.primary}
             />
-            <Text style={styles.loadingText}>Loading remote component...</Text>
+            <Text style={styles.loadingText}>{t('loading')}</Text>
           </View>
         )}
 
         {state.error && (
           <View style={styles.error}>
-            <Text style={styles.errorText}>Error: {state.error}</Text>
-            <Pressable
-              style={styles.retryButton}
-              onPress={loadRemote}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.errorText}>{t('error')}: {state.error}</Text>
+            <Pressable style={styles.retryButton} onPress={loadRemote}>
+              <Text style={styles.retryButtonText}>{t('retry')}</Text>
             </Pressable>
           </View>
         )}
 
         {HelloRemote && (
           <View style={styles.remoteContainer}>
-            <HelloRemote
-              name="Mobile User"
-              onPress={handleRemotePress}
-            />
+            <HelloRemote name="Mobile User" onPress={handleRemotePress} locale={locale} />
           </View>
         )}
 
         {state.pressCount > 0 && (
           <View style={styles.counter}>
             <Text style={styles.counterText}>
-              Remote button pressed {state.pressCount} time
-              {state.pressCount !== 1 ? 's' : ''}
+              {t('pressCount', { count: state.pressCount })}
             </Text>
           </View>
         )}
@@ -194,93 +375,17 @@ function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    padding: 24,
-    paddingTop: 60,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 24,
-  },
-  loadButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loading: {
-    alignItems: 'center',
-    padding: 24,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#999',
-  },
-  error: {
-    alignItems: 'center',
-    padding: 24,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#d32f2f',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  retryButton: {
-    backgroundColor: '#d32f2f',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  remoteContainer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  counter: {
-    marginTop: 24,
-    padding: 12,
-    backgroundColor: '#e3f2fd',
-    borderRadius: 8,
-  },
-  counterText: {
-    fontSize: 14,
-    color: '#1976d2',
-    fontWeight: '500',
-  },
-});
+/**
+ * Root React component that wraps the app with I18nProvider and ThemeProvider.
+ */
+function App() {
+  return (
+    <I18nProvider translations={locales} initialLocale="en">
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </I18nProvider>
+  );
+}
 
 export default App;

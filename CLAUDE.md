@@ -23,6 +23,7 @@ All versions are exact (no `^` or `~`) to ensure reproducibility.
 | ------------ | ------- | -------------------------------------------------- |
 | Node.js      | 24.11.0 | Locked via `.nvmrc`                                |
 | Yarn Classic | 1.22.22 | Locked via `packageManager` in root `package.json` |
+| Turborepo    | 2.7.3   | Monorepo task orchestration and caching            |
 | TypeScript   | 5.9.3   |                                                    |
 
 ### Mobile Packages (React 19.1.0 required by RN 0.80.0)
@@ -144,6 +145,61 @@ packages/
 └── shared-auth-store/            # Shared authentication state
 ```
 
+## Turborepo
+
+The project uses [Turborepo](https://turbo.build/) for monorepo task orchestration and caching.
+
+### Key Commands
+
+```bash
+# Build all packages (with dependency ordering)
+yarn build
+
+# Build only shared packages
+yarn build:shared
+
+# Build only web packages
+yarn build:web
+
+# Type check all packages
+yarn typecheck
+
+# Run ESLint
+yarn lint
+
+# Run architecture enforcement checks
+yarn lint:architecture
+
+# Run tests
+yarn test
+
+# Clean all build outputs
+yarn clean
+```
+
+### Caching
+
+Turborepo caches task outputs locally in `.turbo/` directory. Subsequent runs of the same task with unchanged inputs will be instant ("FULL TURBO").
+
+**Cached tasks:** `build`, `typecheck`, `lint`, `format:check`, `test`
+**Non-cached tasks:** `format`, `dev`, `clean` (side effects)
+
+### Architecture Enforcement
+
+Custom ESLint rules automatically enforce architectural boundaries:
+
+| Rule | Purpose |
+|------|---------|
+| `architecture/no-cross-mfe-imports` | Prevents direct imports between remote MFE packages |
+| `architecture/no-dom-in-shared` | Prevents DOM elements and browser globals in shared packages |
+
+Run `yarn lint:architecture` to check for violations.
+
+### Configuration
+
+- `turbo.json` - Task definitions, caching rules, and dependencies
+- `eslint-rules/` - Custom architecture enforcement rules
+
 ## Common Development Commands
 
 ### Initial Setup (Required First)
@@ -156,9 +212,9 @@ yarn install
 # Build all shared libraries
 yarn build:shared
 
-# Or individually
-yarn workspace @universal/shared-utils build
-yarn workspace @universal/shared-hello-ui build
+# Or individually via Turborepo filter
+yarn build --filter=@universal/shared-utils
+yarn build --filter=@universal/shared-hello-ui
 ```
 
 ### Web Development
