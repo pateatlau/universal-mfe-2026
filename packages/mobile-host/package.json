@@ -31,9 +31,11 @@
     "@universal/shared-data-layer": "*",
     "@universal/shared-event-bus": "*",
     "@universal/shared-i18n": "*",
+    "@universal/shared-router": "*",
     "@universal/shared-theme-context": "*",
     "react": "19.1.0",
-    "react-native": "0.80.0"
+    "react-native": "0.80.0",
+    "react-router-native": "6.30.0"
   },
   "devDependencies": {
     "@babel/plugin-syntax-typescript": "7.27.1",
