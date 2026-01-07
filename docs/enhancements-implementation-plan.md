@@ -1073,16 +1073,37 @@ All React Query / Data Fetching tasks completed:
 - **MFEs never import routers** - No `useNavigate`, `useLocation`, or router imports in remote packages
 - **MFEs never reference URLs** - Remotes are URL-agnostic; hosts map events to routes
 
-### Task 7.1: Create shared-router package
-**Files to create:**
+### Task 7.1: Create shared-router package ✅ COMPLETE
+**Files created:**
 - `packages/shared-router/package.json`
 - `packages/shared-router/tsconfig.json`
-- `packages/shared-router/src/types.ts` - Route types and navigation intent types
-- `packages/shared-router/src/routes.ts` - Route constants (NOT route definitions)
-- `packages/shared-router/src/index.ts`
+- `packages/shared-router/src/types.ts` - Navigation intent types, route params, guards
+- `packages/shared-router/src/routes.ts` - Route ID constants and metadata registry
+- `packages/shared-router/src/index.ts` - Exports
 
 **Dependencies:**
-- `react-router` (exact version: 7.1.1)
+- `react-router` (exact version: 7.11.0)
+
+**Route ID Constants (NOT URLs):**
+- `Routes.HOME`, `Routes.SETTINGS`, `Routes.PROFILE`, `Routes.REMOTE_HELLO`, `Routes.REMOTE_DETAIL`
+- MFEs use these to emit navigation intents via event bus
+- Hosts map these to actual URLs
+
+**Navigation Intent Types:**
+- `NavigationIntent<R>` - Type-safe navigation requests with params
+- `BackNavigationIntent` - Go back with optional fallback
+- `NavigationResult` - Result from navigation
+- `NavigationGuard` - Route guards for auth/access control
+
+**Route Metadata:**
+- `RouteMetadata` - Label keys, icons, auth requirements
+- `getNavigationRoutes()` - Routes for nav menus
+- `isProtectedRoute()` - Auth checks
+
+**Verified:**
+- `yarn workspace @universal/shared-router build` - Success
+- `yarn typecheck` - 21 tasks pass
+- `yarn lint:architecture` - 0 errors
 
 ### Task 7.2: Implement web routing
 **Files to create:**
