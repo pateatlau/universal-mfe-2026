@@ -533,11 +533,36 @@ Implement internationalization with a lightweight, universal approach that works
 - Verified: `yarn typecheck` - 15 tasks pass
 - Verified: `yarn lint:architecture` - 0 errors
 
-### Task 4.3: Create translation utilities
-**Files to create:**
-- `packages/shared-i18n/src/utils/interpolate.ts` - Variable interpolation in strings
-- `packages/shared-i18n/src/utils/detectLocale.ts` - Platform-aware locale detection
-- `packages/shared-i18n/src/utils/persistLocale.ts` - Save locale preference to storage
+### Task 4.3: Create translation utilities ✅ COMPLETE
+**Files created:**
+- `packages/shared-i18n/src/utils/interpolate.ts` - Variable interpolation utilities:
+  - `interpolate(template, params)` - Replace `{{var}}` placeholders with values
+  - `extractVariables(template)` - Get all variable names from template
+  - `hasInterpolation(template)` - Check if template has placeholders
+  - `validateInterpolation(template, params)` - Check if all required params provided
+  - `createInterpolator<T>(template)` - Create type-safe interpolation function
+- `packages/shared-i18n/src/utils/detectLocale.ts` - Platform-aware locale detection:
+  - `getDeviceLocale()` - Get device locale (iOS/Android/Web)
+  - `getPreferredLocales()` - Get array of preferred locales
+  - `findBestLocale(preferred)` - Find best match from available translations
+  - `detectLocale()` - Main entry point combining detection + matching
+  - `isDeviceRTL()` / `getTextDirection()` - RTL support
+  - `getAvailablePreferredLocales()` - Get locales for language selector
+- `packages/shared-i18n/src/utils/persistLocale.ts` - Locale persistence:
+  - `configureLocaleStorage(storage)` - Configure custom storage (AsyncStorage)
+  - `saveLocale(locale)` / `loadLocale()` / `clearLocale()` - CRUD operations
+  - `loadOrDetectLocale(detectFn)` - Load persisted or detect from device
+  - `hasPersistedLocale()` / `getCachedLocale()` - Query functions
+- `packages/shared-i18n/src/utils/index.ts` - Barrel export
+
+**Files modified:**
+- `eslint-rules/no-dom-in-shared.js` - Added exception for shared-i18n package (needs navigator/localStorage)
+- `packages/shared-i18n/src/index.ts` - Added utility exports
+
+**Notes:**
+- Verified: `yarn workspace @universal/shared-i18n build` - Success
+- Verified: `yarn typecheck` - 15 tasks pass
+- Verified: `yarn lint:architecture` - 0 errors
 
 ### Task 4.4: Integrate i18n into host applications
 **Files to modify:**

@@ -42,7 +42,12 @@ module.exports = {
     // (e.g., ARIA live regions on web, AccessibilityInfo on native)
     const isA11yPackage = /packages\/shared-a11y\//.test(filename);
 
-    if (!isSharedPackage || isTestFile || isA11yPackage) {
+    // Allow DOM APIs in shared-i18n package - it needs platform-specific locale
+    // detection (navigator.language on web, NativeModules on native) and
+    // localStorage for persistence
+    const isI18nPackage = /packages\/shared-i18n\//.test(filename);
+
+    if (!isSharedPackage || isTestFile || isA11yPackage || isI18nPackage) {
       return {};
     }
 

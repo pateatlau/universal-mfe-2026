@@ -136,3 +136,29 @@ export {
   en,
   es,
 } from './locales';
+
+// Utilities
+export {
+  // Interpolation
+  interpolate,
+  extractVariables,
+  hasInterpolation,
+  validateInterpolation,
+  createInterpolator,
+  // Locale detection
+  getDeviceLocale,
+  getPreferredLocales,
+  findBestLocale,
+  detectLocale,
+  isDeviceRTL,
+  getTextDirection,
+  getAvailablePreferredLocales,
+  // Locale persistence
+  configureLocaleStorage,
+  saveLocale,
+  loadLocale,
+  clearLocale,
+  loadOrDetectLocale,
+  hasPersistedLocale,
+  getCachedLocale,
+} from './utils';
