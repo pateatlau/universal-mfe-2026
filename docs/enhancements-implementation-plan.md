@@ -1126,7 +1126,7 @@ All React Query / Data Fetching tasks completed:
 React Router v7.11.0 has a known incompatibility with Module Federation (`@module-federation/enhanced@0.21.6`).
 The error "resolving fallback for shared module react-dom" occurs due to v7's internal ESM structure
 (`dist/development/dom-export.mjs`). Downgraded to v6.30.0 which works correctly with Module Federation.
-See: https://github.com/module-federation/core/issues/3267
+See: [module-federation/core#3267](https://github.com/module-federation/core/issues/3267)
 
 **Verified:**
 - `yarn typecheck` - 22 tasks pass
@@ -1300,7 +1300,7 @@ All React Native Component Unit Testing tasks completed:
 - Task 8.5: Verified CI workflow (no changes needed)
 - Task 8.6: Updated testing documentation
 
-**Total: 46 unit tests across 3 packages**
+Total: 46 unit tests across 3 packages
 
 ---
 
@@ -1357,7 +1357,7 @@ Integration tests verify cross-package interactions and Module Federation remote
 - Comprehensive React Native mock includes View, Text, Pressable, StyleSheet, Platform, Dimensions, Animated
 - Console warnings suppressed for expected DOM environment warnings
 
-**Total: 15 mobile integration tests (6 providers + 9 navigation)**
+Total: 15 mobile integration tests (6 providers + 9 navigation)
 
 ### Task 9.4: Create shared package integration tests ✅ COMPLETE
 **Files created:**
@@ -1372,7 +1372,7 @@ Integration tests verify cross-package interactions and Module Federation remote
 
 **Note:** shared-auth-store only has pre-built dist files (no source), so no integration tests added.
 
-**Total: 31 shared-data-layer integration tests**
+Total: 31 shared-data-layer integration tests
 - queryClient.test.ts: 20 tests for createQueryClient, getSharedQueryClient, resetSharedQueryClient, defaultQueryClientConfig
 - QueryProvider.test.tsx: 11 tests for provider rendering, shared/isolated clients, cache sharing, MFE scenarios
 
@@ -1405,7 +1405,7 @@ All Integration Testing tasks completed:
 - Task 9.5: Updated CI workflow to run integration tests
 - Task 9.6: Updated testing documentation
 
-**Total: 73 integration tests across 3 packages**
+Total: 73 integration tests across 3 packages
 
 ---
 
@@ -1557,7 +1557,7 @@ All E2E testing infrastructure is now in place:
 |---------|---------|
 | turbo | TBD (latest stable) |
 | prettier | TBD (latest stable) |
-| @tanstack/react-query | 5.62.16 |
+| @tanstack/react-query | 5.90.16 |
 | react-router | 6.30.3 |
 | react-router-dom | 6.30.3 |
 | react-router-native | 6.30.3 |

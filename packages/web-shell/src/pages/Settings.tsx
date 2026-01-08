@@ -29,7 +29,7 @@ interface Styles {
   title: TextStyle;
   section: ViewStyle;
   sectionTitle: TextStyle;
-  optionList: ViewStyle;
+  optionsRow: ViewStyle;
   optionButton: ViewStyle;
   optionButtonActive: ViewStyle;
   optionText: TextStyle;
@@ -64,7 +64,7 @@ function createStyles(theme: Theme): Styles {
       color: theme.colors.text.primary,
       marginBottom: theme.spacing.component.gap,
     },
-    optionList: {
+    optionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: theme.spacing.element.gap,
@@ -88,7 +88,7 @@ function createStyles(theme: Theme): Styles {
     },
     optionTextActive: {
       color: theme.colors.interactive.primary,
-      fontWeight: theme.typography.fontWeights.semibold,
+      fontWeight: theme.typography.fontWeights.bold,
     },
   });
 }
@@ -102,6 +102,10 @@ export function Settings() {
 
   const handleThemeChange = useCallback(
     (newTheme: 'light' | 'dark') => {
+      // Guard against unnecessary updates when theme is already set
+      if (newTheme === themeName) {
+        return;
+      }
       const previousTheme = themeName;
       setTheme(newTheme);
       bus.emit(
@@ -116,6 +120,10 @@ export function Settings() {
 
   const handleLocaleChange = useCallback(
     (newLocale: string) => {
+      // Guard against unnecessary updates when locale is already set
+      if (newLocale === locale) {
+        return;
+      }
       const previousLocale = locale;
       setLocale(newLocale as typeof locale);
       bus.emit(
@@ -141,7 +149,7 @@ export function Settings() {
       {/* Theme Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('theme.title') || 'Theme'}</Text>
-        <View style={styles.optionList}>
+        <View style={styles.optionsRow}>
           <Pressable
             style={[
               styles.optionButton,
@@ -180,7 +188,7 @@ export function Settings() {
       {/* Language Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('language.title') || 'Language'}</Text>
-        <View style={styles.optionList}>
+        <View style={styles.optionsRow}>
           {availableLocales.map((loc) => (
             <Pressable
               key={loc}

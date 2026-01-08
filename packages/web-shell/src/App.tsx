@@ -16,7 +16,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { BrowserRouter, Routes as RouterRoutes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes as RouterRoutes, Route, Link, Navigate } from 'react-router-dom';
 import {
   ThemeProvider,
   useTheme,
@@ -252,7 +252,8 @@ function AppLayout() {
       <Header />
       <View style={styles.content}>
         <RouterRoutes>
-          <Route path="/" element={<Home />} />
+          {/* Redirect root to canonical /home route */}
+          <Route path="/" element={<Navigate to={`/${Routes.HOME}`} replace />} />
           <Route path={`/${Routes.HOME}`} element={<Home />} />
           <Route path={`/${Routes.REMOTE_HELLO}`} element={<Remote />} />
           <Route path={`/${Routes.SETTINGS}`} element={<Settings />} />

@@ -202,6 +202,19 @@ function createHeaderStyles(theme: Theme): HeaderStyles {
   });
 }
 
+interface LayoutStyles {
+  container: ViewStyle;
+}
+
+function createLayoutStyles(theme: Theme): LayoutStyles {
+  return StyleSheet.create<LayoutStyles>({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.surface.background,
+    },
+  });
+}
+
 // Development mode check for conditional logging
 const __DEV__ = process.env.NODE_ENV !== 'production';
 
@@ -323,9 +336,10 @@ function Header() {
  */
 function AppLayout() {
   const { theme } = useTheme();
+  const styles = useMemo(() => createLayoutStyles(theme), [theme]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.surface.background }}>
+    <View style={styles.container}>
       <Header />
       <RouterRoutes>
         <Route path="/" element={<Home />} />

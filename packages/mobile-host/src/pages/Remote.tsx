@@ -18,10 +18,8 @@ import { ScriptManager, Federated } from '@callstack/repack/client';
 import { useTheme, Theme } from '@universal/shared-theme-context';
 import { useTranslation, useLocale } from '@universal/shared-i18n';
 import {
-  useEventBus,
   useEventListener,
   InteractionEventTypes,
-  type AppEvents,
   type ButtonPressedEvent,
 } from '@universal/shared-event-bus';
 import { Routes } from '@universal/shared-router';
@@ -135,7 +133,6 @@ function Remote() {
   const { t } = useTranslation('common');
   const { locale } = useLocale();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const bus = useEventBus<AppEvents>();
 
   const [state, setState] = useState<RemoteState>({
     remoteComponent: null,

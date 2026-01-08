@@ -82,6 +82,9 @@ export function QueryProvider({
   config,
   useSharedClient = true,
 }: QueryProviderProps): React.ReactElement {
+  // Note: config is intentionally excluded from dependencies to avoid
+  // unnecessary QueryClient recreation. Config is only used for initial
+  // creation when useSharedClient is false.
   const queryClient = useMemo(() => {
     // If a custom client is provided, use it
     if (client) {
@@ -95,7 +98,8 @@ export function QueryProvider({
 
     // Create a new isolated instance
     return createQueryClient(config);
-  }, [client, config, useSharedClient]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, useSharedClient]);
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
