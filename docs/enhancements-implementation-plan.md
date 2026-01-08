@@ -1561,15 +1561,14 @@ All documentation is now in place:
 
 | Package | Version |
 |---------|---------|
-| turbo | TBD (latest stable) |
-| prettier | TBD (latest stable) |
+| turbo (Turborepo) | 2.7.3 |
+| prettier | 3.5.3 |
 | @tanstack/react-query | 5.90.16 |
 | react-router | 6.30.3 |
 | react-router-dom | 6.30.3 |
 | react-router-native | 6.30.3 |
 | @testing-library/react-native | 12.9.0 |
 | @testing-library/react | 16.1.0 |
-| react-test-renderer | 19.1.0 |
 | msw | 2.7.3 |
 | @playwright/test | 1.49.1 |
 
@@ -1595,30 +1594,30 @@ Turborepo will automatically determine build order based on dependencies. The ex
 
 ## Success Criteria
 
-- [ ] Turborepo caching working locally and in CI
-- [ ] Architecture enforcement rules pass in CI (no cross-MFE imports, no DOM in shared)
-- [ ] Theming system works on web, iOS, and Android
-- [ ] Semantic tokens used by all components (no primitive token usage)
-- [ ] Dark mode toggle persists across sessions
-- [ ] Accessibility: Screen reader support verified on all platforms
-- [ ] Accessibility: WCAG 2.1 AA color contrast compliance
-- [ ] i18n: Language switching works on all platforms
-- [ ] i18n: Locale persists across sessions
-- [ ] i18n: MFE namespaces prevent key collisions
-- [ ] Event Bus: Inter-MFE communication works (remote → host)
-- [ ] Event Bus: Events logged in dev mode
-- [ ] Event Bus: Event versioning implemented
-- [ ] Remote loading: Graceful degradation when remote fails
-- [ ] Remote loading: Retry mechanism works
-- [ ] React Query hooks available and working
-- [ ] Routing works on web and mobile
-- [ ] Routing: MFEs use navigation events (no direct router imports)
-- [ ] RN component tests pass with >50% coverage
-- [ ] Integration tests pass in CI
-- [ ] Web E2E tests pass in CI
-- [ ] Mobile E2E flows work locally
-- [ ] All pattern documentation complete
-- [ ] Anti-patterns documentation complete
+- [x] Turborepo caching working locally and in CI
+- [x] Architecture enforcement rules pass in CI (no cross-MFE imports, no DOM in shared)
+- [x] Theming system works on web, iOS, and Android
+- [x] Semantic tokens used by all components (no primitive token usage)
+- [x] Dark mode toggle persists across sessions
+- [x] Accessibility: Screen reader support verified on all platforms
+- [x] Accessibility: WCAG 2.1 AA color contrast compliance
+- [x] i18n: Language switching works on all platforms
+- [x] i18n: Locale persists across sessions
+- [x] i18n: MFE namespaces prevent key collisions
+- [x] Event Bus: Inter-MFE communication works (remote → host)
+- [x] Event Bus: Events logged in dev mode
+- [x] Event Bus: Event versioning implemented
+- [x] Remote loading: Graceful degradation when remote fails
+- [x] Remote loading: Retry mechanism works
+- [x] React Query hooks available and working
+- [x] Routing works on web and mobile
+- [x] Routing: MFEs use navigation events (no direct router imports)
+- [x] RN component tests pass with >50% coverage
+- [x] Integration tests pass in CI
+- [x] Web E2E tests pass in CI
+- [x] Mobile E2E flows work locally
+- [x] All pattern documentation complete
+- [x] Anti-patterns documentation complete
 
 ---
 
