@@ -1452,10 +1452,25 @@ All Integration Testing tasks completed:
 
 **Test results:** 4/4 core tests passed on both Android and iOS
 
-### Task 10.3: Add E2E CI workflows
-**Files to create:**
-- `.github/workflows/e2e-web.yml`
-- `.github/workflows/e2e-mobile.yml` (optional - runs on tags only)
+### Task 10.3: Add E2E CI workflows ✅ COMPLETE
+**Files created:**
+- `.github/workflows/e2e-web.yml` - Playwright tests on push/PR to main/develop
+- `.github/workflows/e2e-mobile.yml` - Maestro tests (manual trigger + release tags)
+
+**e2e-web.yml features:**
+- Runs on push/PR to main/develop
+- Installs Playwright browsers (Chromium, Firefox, WebKit)
+- Builds web packages, runs tests with HTML reporter
+- Uploads playwright-report artifact (7 days retention)
+- Uploads test-results on failure for debugging
+
+**e2e-mobile.yml features:**
+- Manual trigger via workflow_dispatch with platform selector (android/ios/both)
+- Automatic trigger on release tags (v*)
+- Android: Uses android-emulator-runner action with API 34
+- iOS: Uses macOS-14 runner with Xcode 16.2
+- Excludes remote loading tests by default (requires remote server)
+- Uploads JUnit results and debug artifacts
 
 ### Task 10.4: Update testing documentation
 **Files to modify:**
