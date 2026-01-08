@@ -1326,11 +1326,19 @@ Integration tests verify cross-package interactions and Module Federation remote
 - EventBus hook tests skipped due to React module resolution in monorepo
 - 6 integration tests pass: ThemeProvider + I18nProvider composition, QueryProvider setup
 
-### Task 9.2: Create web integration tests
-**Files to create:**
-- `packages/web-shell/src/__integration__/providers.test.tsx` - Test ThemeProvider + QueryProvider composition
-- `packages/web-shell/src/__integration__/routing.test.tsx` - Test route transitions and data loading
-- `packages/web-shell/src/__integration__/theme-persistence.test.tsx` - Test theme + storage integration
+### Task 9.2: Create web integration tests ✅ COMPLETE
+**Files created:**
+- `packages/web-shell/src/__integration__/routing.test.tsx` - 9 tests for route transitions and state preservation
+- `packages/web-shell/src/__integration__/theme-persistence.test.tsx` - 12 tests for theme state management
+
+**Files modified:**
+- `packages/web-shell/jest.integration.config.js` - Added React module mappings to fix version conflicts
+
+**Key implementation details:**
+- Fixed React version conflict (root 19.1.0 vs web-shell 19.2.0) by mapping React modules in Jest config
+- Routing tests verify navigation between Home, Settings, and Remote pages
+- Theme persistence tests verify toggle, setTheme, and multiple consumer behavior
+- Total: 27 integration tests (6 providers + 9 routing + 12 theme)
 
 ### Task 9.3: Create mobile integration tests
 **Files to create:**

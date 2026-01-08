@@ -22,6 +22,13 @@ module.exports = {
   },
   setupFilesAfterEnv: ['<rootDir>/src/__integration__/setup.ts'],
   moduleNameMapper: {
+    // Force React to use web-shell's version (19.2.0) to avoid conflicts
+    // with root node_modules (19.1.0 for mobile)
+    '^react$': '<rootDir>/node_modules/react',
+    '^react/jsx-runtime$': '<rootDir>/node_modules/react/jsx-runtime',
+    '^react/jsx-dev-runtime$': '<rootDir>/node_modules/react/jsx-dev-runtime',
+    '^react-dom$': '<rootDir>/node_modules/react-dom',
+    '^react-dom/client$': '<rootDir>/node_modules/react-dom/client',
     // Map react-native to our mock for jsdom environment
     '^react-native$': '<rootDir>/src/__integration__/mocks/react-native.ts',
     // Map workspace dependencies to source for better debugging
