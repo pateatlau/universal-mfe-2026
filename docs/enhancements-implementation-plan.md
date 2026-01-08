@@ -1376,10 +1376,14 @@ Integration tests verify cross-package interactions and Module Federation remote
 - queryClient.test.ts: 20 tests for createQueryClient, getSharedQueryClient, resetSharedQueryClient, defaultQueryClientConfig
 - QueryProvider.test.tsx: 11 tests for provider rendering, shared/isolated clients, cache sharing, MFE scenarios
 
-### Task 9.5: Update CI workflow
-**Files to modify:**
-- `.github/workflows/ci.yml` - add integration test step
-- `turbo.json` - add `test:integration` pipeline task
+### Task 9.5: Update CI workflow ✅ COMPLETE
+**Files modified:**
+- `.github/workflows/ci.yml` - Added integration test step after unit tests
+
+**Changes:**
+- Updated job name to "Lint, Typecheck, Test (Unit + Integration)"
+- Added "Run integration tests" step using `yarn turbo run test:integration`
+- turbo.json already had `test:integration` task configured (no changes needed)
 
 ### Task 9.6: Update testing documentation
 **Files to modify:**
