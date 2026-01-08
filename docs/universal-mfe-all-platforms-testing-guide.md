@@ -14,6 +14,72 @@ yarn build:shared
 
 ---
 
+## Unit Tests
+
+The platform includes comprehensive unit tests for shared packages using Jest and @testing-library/react.
+
+### Running Tests
+
+```bash
+# Run all tests from root (recommended)
+npx jest
+
+# Run all tests with coverage
+npx jest --coverage
+
+# Run tests via Turborepo (with caching)
+yarn test
+
+# Run tests for a specific package
+yarn workspace @universal/shared-utils test
+yarn workspace @universal/shared-hello-ui test
+yarn workspace @universal/shared-theme-context test
+```
+
+### Test Coverage
+
+| Package | Tests | Coverage |
+|---------|-------|----------|
+| shared-utils | 6 | 100% |
+| shared-hello-ui | 16 | 100% |
+| shared-theme-context | 24 | 100% |
+| **Total** | **46** | **100%** |
+
+### Test Structure
+
+```
+packages/
+├── shared-utils/
+│   └── src/index.test.ts           # Utility function tests
+├── shared-hello-ui/
+│   ├── src/__mocks__/react-native.ts   # RN mock for JSDOM
+│   └── src/__tests__/HelloUniversal.test.tsx
+└── shared-theme-context/
+    └── src/__tests__/ThemeProvider.test.tsx
+```
+
+### Troubleshooting Tests
+
+**Tests fail with "Cannot find module 'react-native'"**
+```bash
+# The shared-hello-ui package uses a custom mock at src/__mocks__/react-native.ts
+# Ensure the package jest.config.js has moduleNameMapper configured
+```
+
+**Tests fail with "useTheme must be used within a ThemeProvider"**
+```bash
+# Wrap components with required providers in tests:
+# - ThemeProvider for themed components
+# - I18nProvider for i18n components
+```
+
+**Coverage not showing for a package**
+```bash
+# Ensure the package has jest.config.js and is listed in root jest.config.js projects array
+```
+
+---
+
 ## Web
 
 ### Run Web App

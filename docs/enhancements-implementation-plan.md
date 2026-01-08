@@ -1260,13 +1260,47 @@ Using v6.30.0 to match web routing (v7 has Module Federation incompatibility).
 - `npx jest` - 46/46 tests pass (3 suites in 1.031s)
 - `yarn test` - All tests pass via Turborepo (12 tasks, 9 cached)
 
-### Task 8.5: Update CI workflow
-**Files to modify:**
-- `.github/workflows/ci.yml`
+### Task 8.5: Update CI workflow ✅ COMPLETE
+**Status:** No changes required
 
-### Task 8.6: Update testing documentation
-**Files to modify:**
-- `docs/universal-mfe-all-platforms-testing-guide.md` - add unit test commands and troubleshooting
+The CI workflow already has the correct test configuration at lines 68-72:
+```yaml
+- name: Run unit tests
+  run: |
+    echo "::group::Running unit tests"
+    npx jest --coverage
+    echo "::endgroup::"
+```
+
+This command uses the root `jest.config.js` which now includes all three test packages (updated in Task 8.4).
+
+**Verified:**
+- `npx jest --coverage` - 46/46 tests pass with coverage:
+  - Statements: 100%
+  - Branches: 100%
+  - Functions: 94.73%
+  - Lines: 100%
+
+### Task 8.6: Update testing documentation ✅ COMPLETE
+**Files modified:**
+- `docs/universal-mfe-all-platforms-testing-guide.md` - Added unit test section with:
+  - Commands for running tests (root, individual packages, Turborepo)
+  - Test coverage information
+  - Troubleshooting for common issues
+
+---
+
+## Phase 8 Complete ✅
+
+All React Native Component Unit Testing tasks completed:
+- Task 8.1: Added testing dependencies (@testing-library/react-native, react-test-renderer)
+- Task 8.2: Configured Jest for shared-hello-ui with 16 tests
+- Task 8.3: Configured Jest for shared-theme-context with 24 tests
+- Task 8.4: Updated root Jest config to include all test packages
+- Task 8.5: Verified CI workflow (no changes needed)
+- Task 8.6: Updated testing documentation
+
+**Total: 46 unit tests across 3 packages**
 
 ---
 
