@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "npx rspack serve --config ./rspack.config.mjs",
     "build": "npx rspack build --config ./rspack.config.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:integration": "jest --config jest.integration.config.js"
   },
   "dependencies": {
     "@universal/shared-data-layer": "*",

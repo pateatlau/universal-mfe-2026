@@ -20,6 +20,7 @@
     "format": "turbo run format",
     "format:check": "turbo run format:check",
     "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
     "clean": "turbo run clean",
     "dev": "turbo run dev",
     "validate:versions": "node scripts/validate-versions.js"

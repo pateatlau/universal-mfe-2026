@@ -1308,18 +1308,23 @@ All React Native Component Unit Testing tasks completed:
 
 Integration tests verify cross-package interactions and Module Federation remote loading without requiring full browser/device automation.
 
-### Task 9.1: Setup integration test infrastructure
-**Files to create:**
-- `packages/web-shell/src/__integration__/setup.ts` - Test environment setup
+### Task 9.1: Setup integration test infrastructure ✅ COMPLETE
+**Files created:**
+- `packages/web-shell/src/__integration__/setup.ts` - Test environment setup with window mocks (matchMedia, IntersectionObserver, ResizeObserver)
 - `packages/web-shell/jest.integration.config.js` - Separate Jest config for integration tests
+- `packages/web-shell/src/__integration__/mocks/react-native.ts` - Comprehensive React Native mock for JSDOM environment
+- `packages/web-shell/src/__integration__/providers.test.tsx` - Provider composition tests (6 tests)
 
-**Files to modify:**
-- `packages/web-shell/package.json` - add `test:integration` script
-- `package.json` (root) - add `test:integration` script
+**Files modified:**
+- `packages/web-shell/package.json` - added `test:integration` script
+- `package.json` (root) - added `test:integration` script
+- `turbo.json` - added `test:integration` pipeline task
 
-**Dependencies:**
-- `@testing-library/react` (16.1.0) - for web integration tests
-- `msw` (2.7.3) - Mock Service Worker for API mocking
+**Key implementation details:**
+- Created custom React Native mock instead of using react-native-web (module resolution issues)
+- Uses MemoryRouter for routing tests
+- EventBus hook tests skipped due to React module resolution in monorepo
+- 6 integration tests pass: ThemeProvider + I18nProvider composition, QueryProvider setup
 
 ### Task 9.2: Create web integration tests
 **Files to create:**
