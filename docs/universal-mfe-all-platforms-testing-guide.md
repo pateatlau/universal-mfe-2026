@@ -176,6 +176,206 @@ yarn workspace @universal/web-shell test:integration --verbose
 
 ---
 
+## E2E Tests (Web) - Playwright
+
+End-to-end tests for the web platform using Playwright, covering navigation, theming, i18n, and remote module loading.
+
+### Prerequisites
+
+```bash
+# Install Playwright browsers (first time only)
+cd packages/web-shell
+npx playwright install --with-deps
+```
+
+### Running E2E Tests
+
+```bash
+# Run all E2E tests (headless)
+yarn workspace @universal/web-shell test:e2e
+
+# Run with UI mode for debugging
+cd packages/web-shell
+npx playwright test --ui
+
+# Run specific test file
+npx playwright test e2e/smoke.spec.ts
+
+# Run tests in headed mode (visible browser)
+npx playwright test --headed
+
+# Run tests for specific browser
+npx playwright test --project=chromium
+npx playwright test --project=firefox
+npx playwright test --project=webkit
+```
+
+### Test Suites
+
+| Suite | File | Description |
+|-------|------|-------------|
+| Smoke | `e2e/smoke.spec.ts` | Basic app launch, header visibility |
+| Routing | `e2e/routing.spec.ts` | SPA navigation, URL handling |
+| Theming | `e2e/theming.spec.ts` | Theme toggle, persistence |
+| Remote Loading | `e2e/remote-loading.spec.ts` | Module Federation remote loading |
+
+### Browser Coverage
+
+Tests run across 5 browser configurations:
+- Chromium (Desktop)
+- Firefox (Desktop)
+- WebKit (Desktop)
+- Mobile Chrome (Pixel 5)
+- Mobile Safari (iPhone 12)
+
+### Test Results
+
+```
+Total: 240 tests
+├── Passed: 240
+├── Skipped: 35 (remote server tests - run with remote server)
+└── Failed: 0
+```
+
+### Running Remote Loading Tests
+
+Remote loading tests require the web remote server to be running:
+
+```bash
+# Terminal 1: Start remote server
+yarn workspace @universal/web-remote-hello dev
+
+# Terminal 2: Run E2E tests (all tests including remote)
+cd packages/web-shell
+npx playwright test
+```
+
+### CI Integration
+
+Playwright tests run automatically on push/PR via `.github/workflows/e2e-web.yml`:
+- Installs Playwright browsers
+- Builds web packages
+- Runs all tests with HTML reporter
+- Uploads test report as artifact
+
+---
+
+## E2E Tests (Mobile) - Maestro
+
+End-to-end tests for mobile platforms using Maestro, covering navigation, theming, i18n, and remote module loading.
+
+### Prerequisites
+
+```bash
+# Install Maestro CLI (requires Java 17+)
+curl -fsSL "https://get.maestro.mobile.dev" | bash
+
+# Verify installation
+maestro --version
+```
+
+### Running E2E Tests
+
+```bash
+# Android - run all core tests
+yarn workspace @universal/mobile-host test:e2e:android
+
+# iOS - run all core tests
+yarn workspace @universal/mobile-host test:e2e:ios
+
+# Run specific flow
+cd packages/mobile-host
+MAESTRO_APP_ID=com.mobilehosttmp maestro test .maestro/smoke.yaml        # Android
+MAESTRO_APP_ID=com.universal.mobilehost maestro test .maestro/smoke.yaml # iOS
+
+# Run with debug output
+MAESTRO_APP_ID=com.mobilehosttmp maestro test .maestro/smoke.yaml --debug-output ./maestro-debug
+```
+
+### Test Flows
+
+| Flow | File | Description | Tags |
+|------|------|-------------|------|
+| Smoke | `smoke.yaml` | App launch, header, navigation links | smoke, core |
+| Navigation | `navigation.yaml` | Page transitions, header nav | navigation, core |
+| Theming | `theming.yaml` | Theme toggle from header and settings | theming, core |
+| i18n | `i18n.yaml` | Language switching (EN/ES) | i18n, core |
+| Remote Loading | `remote-loading.yaml` | Module Federation loading | remote, federation |
+
+### App Identifiers
+
+| Platform | App ID |
+|----------|--------|
+| Android | `com.mobilehosttmp` |
+| iOS | `com.universal.mobilehost` |
+
+### Test Results
+
+```
+Total: 5 flows
+├── Core tests (4): All passing on Android and iOS
+└── Remote loading (1): Requires remote server
+```
+
+### Running Remote Loading Tests
+
+Remote loading tests require the mobile remote server:
+
+```bash
+# Android
+# Terminal 1: Build and serve remote
+cd packages/mobile-remote-hello
+PLATFORM=android yarn build:remote
+PLATFORM=android yarn serve
+
+# Terminal 2: Run Maestro tests (include remote tag)
+cd packages/mobile-host
+MAESTRO_APP_ID=com.mobilehosttmp maestro test .maestro/
+
+# iOS
+# Terminal 1: Build and serve remote
+cd packages/mobile-remote-hello
+PLATFORM=ios yarn build:remote
+PLATFORM=ios yarn serve
+
+# Terminal 2: Run Maestro tests
+cd packages/mobile-host
+MAESTRO_APP_ID=com.universal.mobilehost maestro test .maestro/
+```
+
+### CI Integration
+
+Maestro tests can be triggered via `.github/workflows/e2e-mobile.yml`:
+- **Manual trigger**: Use workflow_dispatch with platform selector (android/ios/both)
+- **Automatic on tags**: Runs on release tags (v*)
+- Excludes remote loading tests by default (requires remote server)
+
+### Troubleshooting Maestro
+
+**"Unable to launch app"**
+```bash
+# Ensure app is installed on device/emulator
+adb shell pm list packages | grep mobilehosttmp  # Android
+xcrun simctl listapps booted | grep mobilehost   # iOS
+```
+
+**Tests timeout**
+```bash
+# Increase timeout in YAML
+- extendedWaitUntil:
+    visible: "Universal MFE - Mobile"
+    timeout: 15000  # 15 seconds
+```
+
+**Element not found**
+```bash
+# Use regex patterns for flexible matching
+- assertVisible: ".*Welcome.*"
+- tapOn: ".*Settings.*"
+```
+
+---
+
 ## Web
 
 ### Run Web App
