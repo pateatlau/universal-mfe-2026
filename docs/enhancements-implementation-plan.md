@@ -1221,10 +1221,32 @@ Using v6.30.0 to match web routing (v7 has Module Federation incompatibility).
 - `yarn workspace @universal/shared-hello-ui test` - 16/16 tests pass
 - `yarn workspace @universal/shared-utils test` - 6/6 tests pass (regression check)
 
-### Task 8.3: Configure Jest for shared-theme-context
-**Files to create:**
-- `packages/shared-theme-context/jest.config.js`
-- `packages/shared-theme-context/src/__tests__/ThemeProvider.test.tsx`
+### Task 8.3: Configure Jest for shared-theme-context ✅ COMPLETE
+**Files created:**
+- `packages/shared-theme-context/jest.config.js` - Jest configuration with:
+  - JSDOM test environment
+  - Workspace dependency mapping (@universal/shared-design-tokens)
+  - ts-jest transformer
+- `packages/shared-theme-context/src/__tests__/ThemeProvider.test.tsx` - 24 unit tests:
+  - ThemeProvider initialization (3 tests)
+  - toggleTheme (3 tests)
+  - setTheme (2 tests)
+  - onThemeChange callback (3 tests)
+  - Theme object (3 tests)
+  - useTheme hook (3 tests)
+  - useThemeTokens (2 tests)
+  - useThemeColors (3 tests)
+  - useThemeSpacing (2 tests)
+
+**Files modified:**
+- `packages/shared-theme-context/package.json` - added `test` script
+- `packages/shared-theme-context/tsconfig.json` - exclude `src/__tests__` from build
+
+**Verified:**
+- `yarn workspace @universal/shared-theme-context test` - 24/24 tests pass
+- `yarn workspace @universal/shared-theme-context typecheck` - passes
+- `yarn workspace @universal/shared-theme-context build` - passes
+- `yarn test` - 46/46 tests pass (shared-utils: 6, shared-hello-ui: 16, shared-theme-context: 24)
 
 ### Task 8.4: Update root Jest config
 **Files to modify:**
