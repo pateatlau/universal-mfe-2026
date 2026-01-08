@@ -49,7 +49,7 @@ jobs:
         working-directory: packages/web-shell
         run: |
           echo "::group::Installing Playwright browsers"
-          npx playwright install --with-deps chromium firefox webkit
+          npx playwright install --with-deps chromium
           echo "::endgroup::"
 
       - name: Build web packages

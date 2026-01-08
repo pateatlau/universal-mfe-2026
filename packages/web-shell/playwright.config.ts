@@ -36,10 +36,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
 
   // Retry on CI only
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
 
-  // Opt out of parallel tests on CI
-  workers: process.env.CI ? 1 : undefined,
+  // Use multiple workers for parallelization (50% of CPU cores in CI)
+  workers: process.env.CI ? '50%' : undefined,
 
   // Reporter to use
   reporter: [
@@ -62,31 +62,39 @@ export default defineConfig({
     video: 'on-first-retry',
   },
 
-  // Configure projects for major browsers
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    // Test against mobile viewports
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
-  ],
+  // Configure projects for browsers
+  // CI: Only Chromium to reduce execution time (functional validation)
+  // Local: Full browser matrix for cross-browser testing
+  projects: process.env.CI
+    ? [
+        {
+          name: 'chromium',
+          use: { ...devices['Desktop Chrome'] },
+        },
+      ]
+    : [
+        {
+          name: 'chromium',
+          use: { ...devices['Desktop Chrome'] },
+        },
+        {
+          name: 'firefox',
+          use: { ...devices['Desktop Firefox'] },
+        },
+        {
+          name: 'webkit',
+          use: { ...devices['Desktop Safari'] },
+        },
+        // Test against mobile viewports
+        {
+          name: 'Mobile Chrome',
+          use: { ...devices['Pixel 5'] },
+        },
+        {
+          name: 'Mobile Safari',
+          use: { ...devices['iPhone 12'] },
+        },
+      ],
 
   // Run local dev servers before starting the tests
   // Note: For CI, we build and serve instead of running dev server
