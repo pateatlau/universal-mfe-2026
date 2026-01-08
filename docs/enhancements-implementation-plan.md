@@ -1248,9 +1248,17 @@ Using v6.30.0 to match web routing (v7 has Module Federation incompatibility).
 - `yarn workspace @universal/shared-theme-context build` - passes
 - `yarn test` - 46/46 tests pass (shared-utils: 6, shared-hello-ui: 16, shared-theme-context: 24)
 
-### Task 8.4: Update root Jest config
-**Files to modify:**
-- `jest.config.js` (root) - add new projects
+### Task 8.4: Update root Jest config ✅ COMPLETE
+**Files modified:**
+- `jest.config.js` (root) - Updated projects array to include all test packages:
+  - `<rootDir>/packages/shared-utils`
+  - `<rootDir>/packages/shared-hello-ui`
+  - `<rootDir>/packages/shared-theme-context`
+
+**Verified:**
+- `npx jest --listTests` - Shows all 3 test files discovered
+- `npx jest` - 46/46 tests pass (3 suites in 1.031s)
+- `yarn test` - All tests pass via Turborepo (12 tasks, 9 cached)
 
 ### Task 8.5: Update CI workflow
 **Files to modify:**
