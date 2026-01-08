@@ -64,8 +64,50 @@ export const en: Translations = {
     },
     lastUpdated: 'Last updated {{date}}',
     createdBy: 'Created by {{author}}',
+    // Navigation nested inside common (used via t('navigation.home') with namespace 'common')
+    navigation: {
+      title: 'Navigate',
+      home: 'Home',
+      settings: 'Settings',
+      remoteHello: 'Remote Module',
+      profile: 'Profile',
+      help: 'Help',
+      about: 'About',
+      logout: 'Log out',
+      login: 'Log in',
+      signUp: 'Sign up',
+      menu: 'Menu',
+      openMenu: 'Open menu',
+      closeMenu: 'Close menu',
+    },
+    // Theme nested inside common (used via t('theme.light') with namespace 'common')
+    theme: {
+      title: 'Theme',
+      light: 'Light',
+      dark: 'Dark',
+      system: 'System',
+      toggle: 'Toggle theme',
+      currentTheme: 'Current theme: {{theme}}',
+    },
+    // Language nested inside common (used via t('language.title') with namespace 'common')
+    language: {
+      title: 'Language',
+      select: 'Select language',
+      current: 'Current language: {{language}}',
+      english: 'English',
+      spanish: 'Spanish',
+      french: 'French',
+      german: 'German',
+      italian: 'Italian',
+      portuguese: 'Portuguese',
+      chinese: 'Chinese',
+      japanese: 'Japanese',
+      korean: 'Korean',
+      arabic: 'Arabic',
+    },
   },
 
+  // Keep root-level navigation for backward compatibility
   navigation: {
     home: 'Home',
     settings: 'Settings',

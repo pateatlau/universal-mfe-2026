@@ -69,6 +69,17 @@
       ],
       "outputs": ["coverage/**"]
     },
+    "test:e2e": {
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "e2e/**",
+        "playwright.config.ts",
+        "package.json"
+      ],
+      "outputs": ["playwright-report/**", "test-results/**"],
+      "cache": false
+    },
     "dev": {
       "cache": false,
       "persistent": true

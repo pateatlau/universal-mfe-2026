@@ -26,15 +26,19 @@ export default {
     },
     // Enable SPA fallback for client-side routing
     historyApiFallback: true,
+    // Disable error overlay (interferes with E2E tests)
+    client: {
+      overlay: false,
+    },
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
     alias: {
       // Use absolute path to ensure alias works for all imports including transitive deps
       'react-native$': path.resolve(__dirname, 'node_modules/react-native-web'),
-      // Force correct react-router resolution (avoid mock/test packages in node_modules)
+      // Force correct react-router resolution (hoisted to root node_modules)
       'react-router': path.resolve(__dirname, '../../node_modules/react-router'),
-      'react-router-dom': path.resolve(__dirname, 'node_modules/react-router-dom'),
+      'react-router-dom': path.resolve(__dirname, '../../node_modules/react-router-dom'),
     },
     fallback: {
       // Exclude React Native native modules that don't work on web

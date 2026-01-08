@@ -6,7 +6,12 @@
     "dev": "npx rspack serve --config ./rspack.config.mjs",
     "build": "npx rspack build --config ./rspack.config.mjs",
     "typecheck": "tsc --noEmit",
-    "test:integration": "jest --config jest.integration.config.js"
+    "test:integration": "jest --config jest.integration.config.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@universal/shared-data-layer": "*",
@@ -21,6 +26,7 @@
   },
   "devDependencies": {
     "@module-federation/enhanced": "0.21.6",
+    "@playwright/test": "1.49.1",
     "@rspack/cli": "1.6.5",
     "@rspack/core": "1.6.5",
     "@rspack/dev-server": "1.1.4",
