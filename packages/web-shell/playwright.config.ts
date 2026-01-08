@@ -102,8 +102,9 @@ export default defineConfig({
   webServer: process.env.CI
     ? [
         // In CI, we expect pre-built apps served statically
+        // -s flag enables SPA mode (rewrites all routes to index.html)
         {
-          command: 'npx serve dist -l 9001',
+          command: 'npx serve dist -s -l 9001',
           url: `http://localhost:${WEB_SHELL_PORT}`,
           reuseExistingServer: false,
           timeout: 30 * 1000,
