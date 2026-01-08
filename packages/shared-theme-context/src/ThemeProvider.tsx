@@ -27,6 +27,15 @@ import { Theme, ThemeName, lightTheme, darkTheme } from '@universal/shared-desig
 const THEME_STORAGE_KEY = '@universal/theme';
 
 /**
+ * Check if we're in a browser environment with localStorage support.
+ * React Native doesn't have window.localStorage or window.addEventListener.
+ */
+const isBrowser =
+  typeof window !== 'undefined' &&
+  typeof window.localStorage !== 'undefined' &&
+  typeof window.addEventListener === 'function';
+
+/**
  * Theme context value type.
  */
 export interface ThemeContextValue {
@@ -63,11 +72,11 @@ export interface ThemeProviderProps {
  * Get initial theme from storage or default.
  */
 function getInitialTheme(defaultTheme: ThemeName): ThemeName {
-  if (typeof window === 'undefined') {
+  if (!isBrowser) {
     return defaultTheme;
   }
   try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === 'light' || stored === 'dark') {
       return stored;
     }
@@ -98,11 +107,13 @@ export function ThemeProvider({
   const setTheme = useCallback(
     (newThemeName: ThemeName) => {
       setThemeNameState(newThemeName);
-      // Persist to localStorage
-      try {
-        localStorage.setItem(THEME_STORAGE_KEY, newThemeName);
-      } catch {
-        // localStorage not available
+      // Persist to localStorage (web only)
+      if (isBrowser) {
+        try {
+          window.localStorage.setItem(THEME_STORAGE_KEY, newThemeName);
+        } catch {
+          // localStorage not available
+        }
       }
       onThemeChange?.(newThemeName);
     },
@@ -114,8 +125,12 @@ export function ThemeProvider({
     setTheme(newThemeName);
   }, [themeName, setTheme]);
 
-  // Sync with localStorage on mount (in case another tab changed it)
+  // Sync with localStorage on mount (web only - for cross-tab sync)
   useEffect(() => {
+    if (!isBrowser) {
+      return;
+    }
+
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === THEME_STORAGE_KEY && e.newValue) {
         const newTheme = e.newValue as ThemeName;

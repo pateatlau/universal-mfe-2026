@@ -1,0 +1,35 @@
+# Smoke Test - Basic app launch and visibility
+# Verifies the app launches successfully and shows core UI elements
+
+appId: ${MAESTRO_APP_ID}
+name: Smoke Test
+tags:
+  - smoke
+  - core
+---
+
+# Launch the app
+- launchApp:
+    clearState: true
+
+# Wait for app to fully load (header should be visible)
+- extendedWaitUntil:
+    visible: "Universal MFE - Mobile"
+    timeout: 10000
+
+# Verify main header elements
+- assertVisible: "Universal MFE - Mobile"
+
+# Verify navigation links are present
+- assertVisible: "Home"
+- assertVisible: "Remote Module"
+- assertVisible: "Settings"
+
+# Verify theme toggle is present (light mode default shows Dark option)
+- assertVisible: ".*Dark.*"
+
+# Verify language toggle is present
+- assertVisible: ".*English.*"
+
+# Verify home page content
+- assertVisible: "Welcome"

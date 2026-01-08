@@ -16,6 +16,9 @@ playwright-report/
 test-results/
 playwright/.cache/
 
+# Maestro E2E
+maestro-debug/
+
 # Android build artifacts
 packages/mobile-host/android/app/.cxx/
 packages/mobile-host/android/.gradle/

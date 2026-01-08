@@ -1411,24 +1411,46 @@ All Integration Testing tasks completed:
 
 ## Phase 10: E2E Testing
 
-### Task 10.1: Setup Playwright for web
-**Files to create:**
-- `packages/web-shell/playwright.config.ts`
-- `packages/web-shell/e2e/smoke.spec.ts`
-- `packages/web-shell/e2e/remote-loading.spec.ts`
-- `packages/web-shell/e2e/routing.spec.ts`
-- `packages/web-shell/e2e/theming.spec.ts`
+### Task 10.1: Setup Playwright for web ✅ COMPLETE
+**Files created:**
+- `packages/web-shell/playwright.config.ts` - Multi-browser config (Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari)
+- `packages/web-shell/e2e/smoke.spec.ts` - Basic app launch and visibility checks
+- `packages/web-shell/e2e/remote-loading.spec.ts` - Module Federation remote loading tests
+- `packages/web-shell/e2e/routing.spec.ts` - SPA navigation tests
+- `packages/web-shell/e2e/theming.spec.ts` - Theme toggle functionality tests
 
-**Files to modify:**
-- `packages/web-shell/package.json` - add `@playwright/test`
+**Files modified:**
+- `packages/web-shell/package.json` - added `@playwright/test: 1.49.1`
+- `packages/web-shell/rspack.config.mjs` - added `REMOTE_HELLO_URL` env var support
+- `turbo.json` - added `test:e2e` task
+- `.gitignore` - added Playwright artifacts
 
-### Task 10.2: Setup Maestro for mobile
-**Files to create:**
-- `packages/mobile-host/.maestro/README.md`
-- `packages/mobile-host/.maestro/smoke.yaml`
-- `packages/mobile-host/.maestro/remote-loading.yaml`
-- `packages/mobile-host/.maestro/navigation.yaml`
-- `packages/mobile-host/.maestro/theming.yaml`
+**Bug fixes discovered through E2E testing:**
+- Fixed i18n: Nested `navigation`/`theme`/`language` inside `common` namespace
+- Fixed ThemeProvider: Added localStorage persistence for theme state (web only)
+- Added cross-tab theme sync via storage event listener
+
+**Test results:** 240 passed, 35 skipped (remote server tests), 0 failures
+
+### Task 10.2: Setup Maestro for mobile ✅ COMPLETE
+**Files created:**
+- `packages/mobile-host/.maestro/README.md` - Documentation with installation and usage
+- `packages/mobile-host/.maestro/smoke.yaml` - Basic app launch and visibility checks
+- `packages/mobile-host/.maestro/navigation.yaml` - Page navigation tests
+- `packages/mobile-host/.maestro/theming.yaml` - Theme toggle functionality tests
+- `packages/mobile-host/.maestro/i18n.yaml` - Language switching tests (English/Spanish)
+- `packages/mobile-host/.maestro/remote-loading.yaml` - Module Federation remote loading tests
+
+**Files modified:**
+- `packages/mobile-host/package.json` - added `test:e2e:android` and `test:e2e:ios` scripts
+- `.gitignore` - added `maestro-debug/`
+
+**Bug fixes discovered through Maestro testing:**
+- Fixed ThemeProvider: Added `isBrowser` check to prevent crash on mobile (window.addEventListener doesn't exist in RN)
+- Fixed i18n: Added missing `homeDescription` translation key
+- Fixed i18n: Added missing `settings.theme` and `settings.language` translation keys
+
+**Test results:** 4/4 core tests passed on both Android and iOS
 
 ### Task 10.3: Add E2E CI workflows
 **Files to create:**

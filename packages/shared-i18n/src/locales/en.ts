@@ -47,6 +47,7 @@ export const en: Translations = {
     done: 'Done',
     welcome: 'Welcome',
     welcomeUser: 'Welcome, {{name}}!',
+    homeDescription: 'Explore the Universal Microfrontend Platform',
     items: {
       zero: 'No items',
       one: '{{count}} item',
@@ -64,6 +65,11 @@ export const en: Translations = {
     },
     lastUpdated: 'Last updated {{date}}',
     createdBy: 'Created by {{author}}',
+    // Settings page section titles
+    settings: {
+      theme: 'Theme',
+      language: 'Language',
+    },
     // Navigation nested inside common (used via t('navigation.home') with namespace 'common')
     navigation: {
       title: 'Navigate',

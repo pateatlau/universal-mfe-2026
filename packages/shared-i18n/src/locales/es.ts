@@ -38,6 +38,7 @@ export const es: Translations = {
     done: 'Hecho',
     welcome: 'Bienvenido',
     welcomeUser: '¡Bienvenido, {{name}}!',
+    homeDescription: 'Explora la Plataforma Universal de Microfrontends',
     items: {
       zero: 'Sin elementos',
       one: '{{count}} elemento',
@@ -55,6 +56,11 @@ export const es: Translations = {
     },
     lastUpdated: 'Última actualización {{date}}',
     createdBy: 'Creado por {{author}}',
+    // Settings page section titles
+    settings: {
+      theme: 'Tema',
+      language: 'Idioma',
+    },
     // Navigation nested inside common (used via t('navigation.home') with namespace 'common')
     navigation: {
       title: 'Navegar',
