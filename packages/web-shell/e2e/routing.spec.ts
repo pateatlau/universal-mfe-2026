@@ -3,9 +3,16 @@
  *
  * Tests for navigation between pages, URL handling, and route transitions.
  * These tests do NOT require the remote module server to be running.
+ *
+ * Note: Tests use i18n-aware patterns to match both English and Spanish translations.
+ * - Light theme: "Light" (en), "Claro" (es)
+ * - Dark theme: "Dark" (en), "Oscuro" (es)
  */
 
 import { test, expect } from '@playwright/test';
+
+// i18n-aware patterns for theme toggle text
+const THEME_TOGGLE_PATTERN = /☀️ (Light|Claro)|🌙 (Dark|Oscuro)/;
 
 test.describe('Routing', () => {
   test.describe('Direct URL Navigation', () => {
@@ -166,14 +173,14 @@ test.describe('Routing', () => {
       await page.goto('/');
 
       // Get initial toggle text
-      const initialToggle = await page.getByText(/☀️ Light|🌙 Dark/).first().textContent();
+      const initialToggle = await page.getByText(THEME_TOGGLE_PATTERN).first().textContent();
 
       // Click to toggle
-      await page.getByText(/☀️ Light|🌙 Dark/).first().click();
+      await page.getByText(THEME_TOGGLE_PATTERN).first().click();
       await page.waitForTimeout(100);
 
       // Toggle text should change
-      const newToggle = await page.getByText(/☀️ Light|🌙 Dark/).first().textContent();
+      const newToggle = await page.getByText(THEME_TOGGLE_PATTERN).first().textContent();
       expect(newToggle).not.toBe(initialToggle);
     });
 

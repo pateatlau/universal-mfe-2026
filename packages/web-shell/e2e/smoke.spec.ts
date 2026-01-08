@@ -3,9 +3,18 @@
  *
  * Basic tests to verify the web shell loads correctly and core functionality works.
  * These tests do NOT require the remote module server to be running.
+ *
+ * Note: Tests use i18n-aware patterns to match both English and Spanish translations.
+ * - Light theme: "Light" (en), "Claro" (es)
+ * - Dark theme: "Dark" (en), "Oscuro" (es)
  */
 
 import { test, expect } from '@playwright/test';
+
+// i18n-aware patterns for theme toggle text
+const LIGHT_THEME_PATTERN = /☀️ (Light|Claro)/;
+const DARK_THEME_PATTERN = /🌙 (Dark|Oscuro)/;
+const THEME_TOGGLE_PATTERN = /☀️ (Light|Claro)|🌙 (Dark|Oscuro)/;
 
 test.describe('Smoke Tests', () => {
   test.describe('Application Boot', () => {
@@ -28,8 +37,8 @@ test.describe('Smoke Tests', () => {
       await page.goto('/');
 
       // Should have either light or dark mode toggle visible
-      const lightToggle = page.getByText('☀️ Light');
-      const darkToggle = page.getByText('🌙 Dark');
+      const lightToggle = page.getByText(LIGHT_THEME_PATTERN);
+      const darkToggle = page.getByText(DARK_THEME_PATTERN);
 
       // One of them should be visible
       const lightVisible = await lightToggle.isVisible().catch(() => false);
@@ -90,7 +99,7 @@ test.describe('Smoke Tests', () => {
       await page.goto('/');
 
       // Get initial theme button text
-      const themeToggle = page.getByText(/☀️ Light|🌙 Dark/).first();
+      const themeToggle = page.getByText(THEME_TOGGLE_PATTERN).first();
       const initialText = await themeToggle.textContent();
 
       // Click theme toggle
@@ -100,7 +109,7 @@ test.describe('Smoke Tests', () => {
       await page.waitForTimeout(100);
 
       // Get new theme button text
-      const newText = await page.getByText(/☀️ Light|🌙 Dark/).first().textContent();
+      const newText = await page.getByText(THEME_TOGGLE_PATTERN).first().textContent();
 
       // Theme button text should have changed (light <-> dark)
       expect(newText).not.toBe(initialText);
