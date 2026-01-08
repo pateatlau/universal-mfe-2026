@@ -1359,10 +1359,22 @@ Integration tests verify cross-package interactions and Module Federation remote
 
 **Total: 15 mobile integration tests (6 providers + 9 navigation)**
 
-### Task 9.4: Create shared package integration tests
-**Files to create:**
-- `packages/shared-data-layer/src/__integration__/queryClient.test.ts` - Test QueryClient with mocked APIs
-- `packages/shared-auth-store/src/__integration__/persistence.test.ts` - Test Zustand + storage integration
+### Task 9.4: Create shared package integration tests ✅ COMPLETE
+**Files created:**
+- `packages/shared-data-layer/jest.integration.config.js` - Jest config for integration tests
+- `packages/shared-data-layer/src/__integration__/setup.ts` - Test setup with jest-dom matchers
+- `packages/shared-data-layer/src/__integration__/queryClient.test.ts` - 20 tests for QueryClient configuration and singleton
+- `packages/shared-data-layer/src/__integration__/QueryProvider.test.tsx` - 11 tests for React provider and cache sharing
+
+**Files modified:**
+- `packages/shared-data-layer/package.json` - Added `test:integration` script
+- `packages/shared-data-layer/tsconfig.json` - Excluded integration tests from build
+
+**Note:** shared-auth-store only has pre-built dist files (no source), so no integration tests added.
+
+**Total: 31 shared-data-layer integration tests**
+- queryClient.test.ts: 20 tests for createQueryClient, getSharedQueryClient, resetSharedQueryClient, defaultQueryClientConfig
+- QueryProvider.test.tsx: 11 tests for provider rendering, shared/isolated clients, cache sharing, MFE scenarios
 
 ### Task 9.5: Update CI workflow
 **Files to modify:**
