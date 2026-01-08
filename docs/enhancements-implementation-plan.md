@@ -1156,9 +1156,13 @@ Using v6.30.0 to match web routing (v7 has Module Federation incompatibility).
 - `yarn lint:architecture` - 0 errors
 - iOS: Host app works with routing (verified manually)
 
-### Task 7.4: Update build configuration
-**Files to modify:**
-- `turbo.json` - add shared-router to pipeline
+### Task 7.4: Update build configuration ✅ COMPLETE
+**Status:** No changes required - Turborepo automatically includes shared-router in the build pipeline via `^build` dependency resolution from package.json dependencies.
+
+**Verified:**
+- `yarn turbo run build --filter=@universal/web-shell --dry-run` shows shared-router in dependency chain
+- `yarn turbo run build --filter=@universal/mobile-host --dry-run` shows shared-router in dependency chain
+- All builds pass with shared-router included
 
 ---
 
