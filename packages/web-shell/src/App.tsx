@@ -1,22 +1,22 @@
 /**
  * @universal/web-shell
  *
- * Web shell application that dynamically loads remote components.
+ * Web shell application with routing and dynamic remote loading.
  *
  * Uses React Native Web to render universal RN components.
- * Uses manual loading pattern with error handling for consistency with mobile.
+ * Uses React Router for navigation between pages.
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import { BrowserRouter, Routes as RouterRoutes, Route, Link, Navigate } from 'react-router-dom';
 import {
   ThemeProvider,
   useTheme,
@@ -33,26 +33,21 @@ import {
 import {
   EventBusProvider,
   useEventBus,
-  useEventListener,
   createEventLogger,
-  InteractionEventTypes,
   ThemeEventTypes,
   LocaleEventTypes,
   type AppEvents,
-  type ButtonPressedEvent,
 } from '@universal/shared-event-bus';
+import { QueryProvider } from '@universal/shared-data-layer';
+import { Routes } from '@universal/shared-router';
+
+// Pages
+import { Home } from './pages/Home';
+import { Remote } from './pages/Remote';
+import { Settings } from './pages/Settings';
 
 // Enable event logging in development
 const __DEV__ = process.env.NODE_ENV !== 'production';
-
-interface AppState {
-  remoteComponent: React.ComponentType<any> | null;
-  loading: boolean;
-  error: string | null;
-  pressCount: number;
-  loadAttempt: number; // Track load attempts for cache busting
-  requiresReload: boolean; // True when MF cached a failed load and requires page reload
-}
 
 interface Styles {
   container: ViewStyle;
@@ -60,23 +55,15 @@ interface Styles {
   headerRow: ViewStyle;
   controlsRow: ViewStyle;
   title: TextStyle;
+  titleLink: ViewStyle;
   subtitle: TextStyle;
   themeToggle: ViewStyle;
   themeToggleText: TextStyle;
   langToggle: ViewStyle;
   langToggleText: TextStyle;
+  navLink: ViewStyle;
+  navLinkText: TextStyle;
   content: ViewStyle;
-  loadButton: ViewStyle;
-  loadButtonText: TextStyle;
-  loading: ViewStyle;
-  loadingText: TextStyle;
-  error: ViewStyle;
-  errorText: TextStyle;
-  retryButton: ViewStyle;
-  retryButtonText: TextStyle;
-  remoteContainer: ViewStyle;
-  counter: ViewStyle;
-  counterText: TextStyle;
 }
 
 function createStyles(theme: Theme): Styles {
@@ -113,6 +100,9 @@ function createStyles(theme: Theme): Styles {
       fontWeight: theme.typography.fontWeights.bold,
       color: theme.colors.text.primary,
     },
+    titleLink: {
+      // Style for the clickable title
+    },
     subtitle: {
       fontSize: theme.typography.fontSizes.sm,
       color: theme.colors.text.secondary,
@@ -140,68 +130,19 @@ function createStyles(theme: Theme): Styles {
       color: theme.colors.text.primary,
       fontWeight: theme.typography.fontWeights.medium,
     },
-    content: {
-      flex: 1,
-      padding: theme.spacing.layout.screenPadding,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    loadButton: {
-      backgroundColor: theme.colors.interactive.primary,
-      paddingHorizontal: theme.spacing.button.paddingHorizontal,
-      paddingVertical: theme.spacing.button.paddingVertical,
-      borderRadius: theme.spacing.button.borderRadius,
-      marginBottom: theme.spacing.layout.screenPadding,
-    },
-    loadButtonText: {
-      color: theme.colors.text.inverse,
-      fontSize: theme.typography.fontSizes.base,
-      fontWeight: theme.typography.fontWeights.semibold,
-    },
-    loading: {
-      alignItems: 'center',
-      padding: theme.spacing.layout.screenPadding,
-    },
-    loadingText: {
-      marginTop: theme.spacing.component.gap,
-      fontSize: theme.typography.fontSizes.base,
-      color: theme.colors.text.tertiary,
-    },
-    error: {
-      alignItems: 'center',
-      padding: theme.spacing.layout.screenPadding,
-    },
-    errorText: {
-      fontSize: theme.typography.fontSizes.sm,
-      color: theme.colors.status.error,
-      marginBottom: theme.spacing.component.gap,
-      textAlign: 'center',
-    },
-    retryButton: {
-      backgroundColor: theme.colors.status.error,
-      paddingHorizontal: theme.spacing.button.paddingHorizontalSmall,
-      paddingVertical: theme.spacing.button.paddingVerticalSmall,
-      borderRadius: theme.spacing.button.borderRadius,
-    },
-    retryButtonText: {
-      color: theme.colors.text.inverse,
-      fontSize: theme.typography.fontSizes.sm,
-      fontWeight: theme.typography.fontWeights.semibold,
-    },
-    remoteContainer: {
-      width: '100%',
-      alignItems: 'center',
-    },
-    counter: {
-      marginTop: theme.spacing.layout.screenPadding,
-      padding: theme.spacing.component.padding,
+    navLink: {
       backgroundColor: theme.colors.surface.tertiary,
+      paddingHorizontal: theme.spacing.component.padding,
+      paddingVertical: theme.spacing.element.gap,
       borderRadius: theme.spacing.component.borderRadius,
     },
-    counterText: {
+    navLinkText: {
       fontSize: theme.typography.fontSizes.sm,
       color: theme.colors.interactive.primary,
       fontWeight: theme.typography.fontWeights.medium,
+    },
+    content: {
+      flex: 1,
     },
   });
 }
@@ -227,44 +168,34 @@ function EventLogger() {
 }
 
 /**
- * Inner app component that uses theme and i18n context.
+ * Header component with navigation and controls.
  */
-function AppContent() {
+function Header() {
   const { theme, isDark, toggleTheme, themeName } = useTheme();
   const { locale, setLocale } = useLocale();
   const { t } = useTranslation('common');
   const styles = useMemo(() => createStyles(theme), [theme]);
   const bus = useEventBus<AppEvents>();
 
-  // Emit THEME_CHANGED event when theme changes
-  // This allows remote MFEs to sync their theme via event bus
   const handleThemeToggle = useCallback(() => {
     const previousTheme = themeName;
     toggleTheme();
     const newTheme = themeName === 'light' ? 'dark' : 'light';
     bus.emit(
       ThemeEventTypes.THEME_CHANGED,
-      {
-        theme: newTheme,
-        previousTheme,
-      },
+      { theme: newTheme, previousTheme },
       1,
       { source: 'WebShell' }
     );
   }, [bus, themeName, toggleTheme]);
 
-  // Emit LOCALE_CHANGED event when locale changes
-  // This allows remote MFEs to sync their locale via event bus
   const handleLocaleChange = useCallback(
     (newLocale: string) => {
       const previousLocale = locale;
       setLocale(newLocale as typeof locale);
       bus.emit(
         LocaleEventTypes.LOCALE_CHANGED,
-        {
-          locale: newLocale,
-          previousLocale,
-        },
+        { locale: newLocale, previousLocale },
         1,
         { source: 'WebShell' }
       );
@@ -272,164 +203,61 @@ function AppContent() {
     [bus, locale, setLocale]
   );
 
-  const [state, setState] = useState<AppState>({
-    remoteComponent: null,
-    loading: false,
-    error: null,
-    pressCount: 0,
-    loadAttempt: 0,
-    requiresReload: false,
-  });
-
-  // Listen for BUTTON_PRESSED events from remote MFEs
-  // This demonstrates event-based communication without prop drilling
-  useEventListener<ButtonPressedEvent>(
-    InteractionEventTypes.BUTTON_PRESSED,
-    (event) => {
-      // Update press count when remote button is pressed
-      setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
-      console.info(
-        `[WebShell] Received BUTTON_PRESSED from ${event.source}:`,
-        event.payload
-      );
-    }
-  );
-
-  // Cycle through available locales
   const cycleLocale = useCallback(() => {
     const currentIndex = availableLocales.indexOf(locale);
     const nextIndex = (currentIndex + 1) % availableLocales.length;
     handleLocaleChange(availableLocales[nextIndex]);
   }, [locale, handleLocaleChange]);
 
-  const loadRemote = async () => {
-    // Reset component and increment attempt counter on retry
-    setState((prev) => ({
-      ...prev,
-      remoteComponent: null,
-      loading: true,
-      error: null,
-      loadAttempt: prev.loadAttempt + 1,
-      requiresReload: false,
-    }));
+  return (
+    <View style={styles.header}>
+      <View style={styles.headerRow}>
+        <Link to="/" style={{ textDecoration: 'none' }}>
+          <Pressable style={styles.titleLink}>
+            <Text style={styles.title}>{t('appName')} - Web Shell</Text>
+          </Pressable>
+        </Link>
+      </View>
+      <View style={styles.controlsRow}>
+        <Pressable style={styles.themeToggle} onPress={handleThemeToggle}>
+          <Text style={styles.themeToggleText}>
+            {isDark ? '☀️ Light' : '🌙 Dark'}
+          </Text>
+        </Pressable>
+        <Pressable style={styles.langToggle} onPress={cycleLocale}>
+          <Text style={styles.langToggleText}>
+            🌐 {getLocaleDisplayName(locale)}
+          </Text>
+        </Pressable>
+        <Link to={`/${Routes.SETTINGS}`} style={{ textDecoration: 'none' }}>
+          <Pressable style={styles.navLink}>
+            <Text style={styles.navLinkText}>⚙️</Text>
+          </Pressable>
+        </Link>
+      </View>
+      <Text style={styles.subtitle}>{t('subtitle')}</Text>
+    </View>
+  );
+}
 
-    try {
-      // Dynamic import - Module Federation handles caching
-      const RemoteModule = await import('hello_remote/HelloRemote');
-      const HelloRemote = RemoteModule.default;
-
-      // Validate that we got a valid React component (must be a function)
-      // Module Federation caches failed loads as empty objects, so we need to detect this
-      if (typeof HelloRemote !== 'function') {
-        // MF cached a failed load - need page reload to retry properly
-        setState((prev) => ({
-          ...prev,
-          remoteComponent: null,
-          loading: false,
-          error: 'Remote module is not available. Please ensure the remote server is running and reload the page.',
-          requiresReload: true,
-        }));
-        return;
-      }
-
-      setState((prev) => ({
-        ...prev,
-        remoteComponent: HelloRemote,
-        loading: false,
-      }));
-    } catch (error) {
-      // Log the original error for debugging
-      console.error('Failed to load remote:', error);
-
-      // Show user-friendly error message
-      // Module Federation errors are technical - translate to user-friendly message
-      setState((prev) => ({
-        ...prev,
-        remoteComponent: null,
-        loading: false,
-        error: 'Unable to load remote component. The remote server may be unavailable. Please check that it is running and reload the page.',
-        requiresReload: true, // Always require reload since MF caches failures
-      }));
-    }
-  };
-
-  const reloadPage = () => {
-    window.location.reload();
-  };
-
-  // Legacy callback - no longer needed since we use event bus
-  // Kept for demonstration of backward compatibility
-  // The remote still calls onPress, but host now listens via event bus instead
-  const handleRemotePress = () => {
-    // Note: Press count is now updated by the BUTTON_PRESSED event listener above
-    // This callback could be used for additional host-specific logic
-    console.info('[WebShell] Legacy onPress callback triggered');
-  };
-
-  const HelloRemote = state.remoteComponent;
+/**
+ * Main layout component with header and routed content.
+ */
+function AppLayout() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>{t('appName')} - Web Shell</Text>
-        </View>
-        <View style={styles.controlsRow}>
-          <Pressable style={styles.themeToggle} onPress={handleThemeToggle}>
-            <Text style={styles.themeToggleText}>
-              {isDark ? '☀️ Light' : '🌙 Dark'}
-            </Text>
-          </Pressable>
-          <Pressable style={styles.langToggle} onPress={cycleLocale}>
-            <Text style={styles.langToggleText}>
-              🌐 {getLocaleDisplayName(locale)}
-            </Text>
-          </Pressable>
-        </View>
-        <Text style={styles.subtitle}>
-          {t('subtitle')}
-        </Text>
-      </View>
-
+      <Header />
       <View style={styles.content}>
-        {!HelloRemote && !state.loading && !state.error && (
-          <Pressable style={styles.loadButton} onPress={loadRemote}>
-            <Text style={styles.loadButtonText}>{t('loadRemote')}</Text>
-          </Pressable>
-        )}
-
-        {state.loading && (
-          <View style={styles.loading}>
-            <ActivityIndicator
-              size="large"
-              color={theme.colors.interactive.primary}
-            />
-            <Text style={styles.loadingText}>{t('loading')}</Text>
-          </View>
-        )}
-
-        {state.error && (
-          <View style={styles.error}>
-            <Text style={styles.errorText}>{state.error}</Text>
-            <Pressable style={styles.retryButton} onPress={reloadPage}>
-              <Text style={styles.retryButtonText}>Reload Page</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {HelloRemote && (
-          <View style={styles.remoteContainer} key={`remote-${state.loadAttempt}`}>
-            <HelloRemote name="Web User" onPress={handleRemotePress} locale={locale} />
-          </View>
-        )}
-
-        {state.pressCount > 0 && (
-          <View style={styles.counter}>
-            <Text style={styles.counterText}>
-              {t('pressCount', { count: state.pressCount })}
-            </Text>
-          </View>
-        )}
+        <RouterRoutes>
+          {/* Redirect root to canonical /home route */}
+          <Route path="/" element={<Navigate to={`/${Routes.HOME}`} replace />} />
+          <Route path={`/${Routes.HOME}`} element={<Home />} />
+          <Route path={`/${Routes.REMOTE_HELLO}`} element={<Remote />} />
+          <Route path={`/${Routes.SETTINGS}`} element={<Settings />} />
+        </RouterRoutes>
       </View>
     </View>
   );
@@ -438,20 +266,26 @@ function AppContent() {
 /**
  * Root React component that wraps the app with providers.
  * Provider order (outermost to innermost):
- * 1. EventBusProvider - Event bus for inter-MFE communication
- * 2. I18nProvider - Internationalization
- * 3. ThemeProvider - Theming
+ * 1. BrowserRouter - Web routing
+ * 2. QueryProvider - Data fetching (React Query)
+ * 3. EventBusProvider - Event bus for inter-MFE communication
+ * 4. I18nProvider - Internationalization
+ * 5. ThemeProvider - Theming
  */
 function App() {
   return (
-    <EventBusProvider options={{ debug: __DEV__, name: 'WebShell' }}>
-      <I18nProvider translations={locales} initialLocale="en">
-        <ThemeProvider>
-          <EventLogger />
-          <AppContent />
-        </ThemeProvider>
-      </I18nProvider>
-    </EventBusProvider>
+    <BrowserRouter>
+      <QueryProvider>
+        <EventBusProvider options={{ debug: __DEV__, name: 'WebShell' }}>
+          <I18nProvider translations={locales} initialLocale="en">
+            <ThemeProvider>
+              <EventLogger />
+              <AppLayout />
+            </ThemeProvider>
+          </I18nProvider>
+        </EventBusProvider>
+      </QueryProvider>
+    </BrowserRouter>
   );
 }
 

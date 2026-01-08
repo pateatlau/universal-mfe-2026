@@ -38,6 +38,7 @@ export const es: Translations = {
     done: 'Hecho',
     welcome: 'Bienvenido',
     welcomeUser: '¡Bienvenido, {{name}}!',
+    homeDescription: 'Explora la Plataforma Universal de Microfrontends',
     items: {
       zero: 'Sin elementos',
       one: '{{count}} elemento',
@@ -55,8 +56,55 @@ export const es: Translations = {
     },
     lastUpdated: 'Última actualización {{date}}',
     createdBy: 'Creado por {{author}}',
+    // Settings page section titles
+    settings: {
+      theme: 'Tema',
+      language: 'Idioma',
+    },
+    // Navigation nested inside common (used via t('navigation.home') with namespace 'common')
+    navigation: {
+      title: 'Navegar',
+      home: 'Inicio',
+      settings: 'Configuración',
+      remoteHello: 'Módulo Remoto',
+      profile: 'Perfil',
+      help: 'Ayuda',
+      about: 'Acerca de',
+      logout: 'Cerrar sesión',
+      login: 'Iniciar sesión',
+      signUp: 'Registrarse',
+      menu: 'Menú',
+      openMenu: 'Abrir menú',
+      closeMenu: 'Cerrar menú',
+    },
+    // Theme nested inside common (used via t('theme.light') with namespace 'common')
+    theme: {
+      title: 'Tema',
+      light: 'Claro',
+      dark: 'Oscuro',
+      system: 'Sistema',
+      toggle: 'Cambiar tema',
+      currentTheme: 'Tema actual: {{theme}}',
+    },
+    // Language nested inside common (used via t('language.title') with namespace 'common')
+    language: {
+      title: 'Idioma',
+      select: 'Seleccionar idioma',
+      current: 'Idioma actual: {{language}}',
+      english: 'Inglés',
+      spanish: 'Español',
+      french: 'Francés',
+      german: 'Alemán',
+      italian: 'Italiano',
+      portuguese: 'Portugués',
+      chinese: 'Chino',
+      japanese: 'Japonés',
+      korean: 'Coreano',
+      arabic: 'Árabe',
+    },
   },
 
+  // Keep root-level navigation for backward compatibility
   navigation: {
     home: 'Inicio',
     settings: 'Configuración',
