@@ -2,7 +2,7 @@ name: E2E Web Tests
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
 
 # Cancel in-progress runs for the same branch
 concurrency:
@@ -49,7 +49,7 @@ jobs:
         working-directory: packages/web-shell
         run: |
           echo "::group::Installing Playwright browsers"
-          npx playwright install --with-deps chromium firefox webkit
+          npx playwright install --with-deps chromium
           echo "::endgroup::"
 
       - name: Build web packages

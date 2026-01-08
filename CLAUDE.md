@@ -136,13 +136,25 @@ This removes `android/build/`, `android/.gradle/`, and other generated files tha
 
 ```
 packages/
-├── web-shell/                    # Web host (Rspack + MF v2, port 9001)
-├── web-remote-hello/             # Web remote module (Rspack + MF v2, port 9003)
-├── mobile-host/                  # Mobile host (Re.Pack + MF v2, Android: 8081, iOS: 8082)
-├── mobile-remote-hello/          # Mobile remote (Re.Pack + MF v2, ports 9004/9005)
-├── shared-utils/                 # Pure TypeScript utilities (platform-agnostic)
-├── shared-hello-ui/              # Universal React Native UI components
-└── shared-auth-store/            # Shared authentication state
+├── Host Applications
+│   ├── web-shell/                    # Web host (Rspack + MF v2, port 9001)
+│   └── mobile-host/                  # Mobile host (Re.Pack + MF v2, Android: 8081, iOS: 8082)
+│
+├── Remote MFEs
+│   ├── web-remote-hello/             # Web remote module (Rspack + MF v2, port 9003)
+│   └── mobile-remote-hello/          # Mobile remote (Re.Pack + MF v2, ports 9004/9005)
+│
+└── Shared Libraries (Platform-Agnostic)
+    ├── shared-utils/                 # Pure TypeScript utilities
+    ├── shared-hello-ui/              # Universal React Native UI components
+    ├── shared-auth-store/            # Shared authentication state (Zustand)
+    ├── shared-design-tokens/         # Two-tier design token system
+    ├── shared-theme-context/         # Theme provider with persistence
+    ├── shared-a11y/                  # WCAG 2.1 AA accessibility utilities
+    ├── shared-i18n/                  # Zero-dependency internationalization
+    ├── shared-event-bus/             # Type-safe inter-MFE communication
+    ├── shared-data-layer/            # React Query v5 setup
+    └── shared-router/                # Host-owned routing abstraction
 ```
 
 ## Turborepo
@@ -373,6 +385,23 @@ The codebase uses stub files to replace incompatible dependencies:
 3. **Platform Separation** - Web uses Rspack + browser runtime, Mobile uses Re.Pack + Hermes + ScriptManager
 4. **Shared Code Constraints** - Shared libraries must be platform-agnostic (pure TS or RN primitives)
 5. **Version Exactness** - Use exact versions for all core dependencies to ensure Module Federation compatibility
+6. **Host-Owned Routing** - Hosts define all routes; MFEs are URL-agnostic and request navigation via event bus
+7. **Loose Coupling** - MFEs communicate through typed events, never direct imports
+
+## Enterprise Feature Summary
+
+| Feature | Package | Pattern Doc |
+|---------|---------|-------------|
+| Design Tokens | `shared-design-tokens` | `PATTERNS-THEMING.md` |
+| Theming | `shared-theme-context` | `PATTERNS-THEMING.md` |
+| Accessibility | `shared-a11y` | `PATTERNS-ACCESSIBILITY.md` |
+| Internationalization | `shared-i18n` | `PATTERNS-I18N.md` |
+| Event Bus | `shared-event-bus` | `PATTERNS-EVENT-BUS.md` |
+| Data Fetching | `shared-data-layer` | `PATTERNS-DATA-FETCHING.md` |
+| Routing | `shared-router` | `PATTERNS-ROUTING.md` |
+| State Management | `shared-auth-store` | `PATTERNS-STATE-MANAGEMENT.md` |
+
+For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 
 ## Critical Development Rules
 
@@ -403,9 +432,23 @@ The codebase uses stub files to replace incompatible dependencies:
 
 **Documentation:**
 
+- `docs/ENTERPRISE-ENHANCEMENTS.md` - Overview of all enterprise features
 - `docs/universal-mfe-architecture-overview.md` - Complete system design
-- `docs/universal-mfe-all-platforms-testing-guide.md` - Testing strategy
-- `docs/universal-mfe-mf-v2-migration-analysis.md` - MF v2 implementation details
+- `docs/universal-mfe-all-platforms-testing-guide.md` - Running apps and testing guide
+- `docs/universal-mfe-mf-v2-implementation.md` - MF v2 implementation details
+- `docs/CI-CD-IMPLEMENTATION-PLAN.md` - CI/CD workflows and deployment
+
+**Pattern Documentation:**
+
+- `docs/PATTERNS-STATE-MANAGEMENT.md` - Zustand stores, storage abstraction
+- `docs/PATTERNS-DATA-FETCHING.md` - React Query patterns
+- `docs/PATTERNS-ROUTING.md` - Host-owned routing model
+- `docs/PATTERNS-THEMING.md` - Design tokens, theme system
+- `docs/PATTERNS-ACCESSIBILITY.md` - WCAG 2.1 AA utilities
+- `docs/PATTERNS-I18N.md` - Internationalization
+- `docs/PATTERNS-EVENT-BUS.md` - Inter-MFE communication
+- `docs/PATTERNS-TESTING.md` - Testing patterns and pyramid
+- `docs/ANTI-PATTERNS.md` - Common mistakes to avoid
 
 ## Common Pitfalls to Avoid
 
