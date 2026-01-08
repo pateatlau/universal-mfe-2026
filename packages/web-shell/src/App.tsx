@@ -221,7 +221,7 @@ function Header() {
       <View style={styles.controlsRow}>
         <Pressable style={styles.themeToggle} onPress={handleThemeToggle}>
           <Text style={styles.themeToggleText}>
-            {isDark ? '☀️ Light' : '🌙 Dark'}
+            {isDark ? `☀️ ${t('theme.light')}` : `🌙 ${t('theme.dark')}`}
           </Text>
         </Pressable>
         <Pressable style={styles.langToggle} onPress={cycleLocale}>
