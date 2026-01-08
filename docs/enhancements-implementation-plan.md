@@ -1168,14 +1168,25 @@ Using v6.30.0 to match web routing (v7 has Module Federation incompatibility).
 
 ## Phase 8: React Native Component Unit Testing
 
-### Task 8.1: Add testing dependencies
-**Files to modify:**
-- `package.json` (root) - add:
+### Task 8.1: Add testing dependencies ✅ COMPLETE
+**Files modified:**
+- `package.json` (root) - added:
   - `@testing-library/react-native` (12.9.0)
   - `react-test-renderer` (19.1.0)
+- `packages/shared-utils/package.json` - added `test` script
 
-**Files to create:**
-- `jest.setup.js` (root) - React Native mocks
+**Files created:**
+- `jest.setup.js` (root) - React Native mocks including:
+  - Mock for `react-native` module (NativeModules, AccessibilityInfo, Animated)
+  - Mock for NativeEventEmitter
+  - Mock for RCTDeviceEventEmitter
+  - Global mocks for `requestAnimationFrame`/`cancelAnimationFrame`
+  - Console filtering for known React Native warnings
+
+**Verified:**
+- `yarn install` - Success
+- `yarn test` - 6 tests pass (shared-utils)
+- `yarn typecheck` - All packages pass
 
 ### Task 8.2: Configure Jest for shared-hello-ui
 **Files to create:**
