@@ -35,10 +35,10 @@ This document outlines the implementation plan to enhance the Universal Microfro
 | Accessibility | ✅ Complete | 3 |
 | Internationalization (i18n) | ✅ Complete | 4 |
 | Event Bus (Inter-MFE Communication) | ✅ Complete | 5 |
-| React Query (TanStack Query) | Pending | 6 |
-| React Router 7 | Pending | 7 |
-| RN Component Unit Testing | Pending | 8 |
-| Integration Testing | Pending | 9 |
+| React Query (TanStack Query) | ✅ Complete | 6 |
+| React Router 7 | ✅ Complete | 7 |
+| RN Component Unit Testing | ✅ Complete | 8 |
+| Integration Testing | ✅ Complete | 9 |
 | E2E Testing (Playwright + Maestro) | Pending | 10 |
 | Documentation & Patterns | Pending | 11 |
 
@@ -954,31 +954,114 @@ All Event Bus tasks completed:
 
 ## Phase 6: Data Fetching with React Query
 
-### Task 6.1: Create shared-data-layer package
-**Files to create:**
+### Task 6.1: Create shared-data-layer package ✅ COMPLETE
+**Files created:**
 - `packages/shared-data-layer/package.json`
 - `packages/shared-data-layer/tsconfig.json`
-- `packages/shared-data-layer/src/queryClient.ts`
-- `packages/shared-data-layer/src/QueryProvider.tsx`
-- `packages/shared-data-layer/src/index.ts`
+- `packages/shared-data-layer/src/queryClient.ts` - QueryClient factory with sensible defaults
+- `packages/shared-data-layer/src/QueryProvider.tsx` - React provider with shared/isolated client options
+- `packages/shared-data-layer/src/index.ts` - Exports + re-exported React Query hooks
 
 **Dependencies:**
-- `@tanstack/react-query` (exact version: 5.62.16)
+- `@tanstack/react-query` (exact version: 5.90.16)
 
-### Task 6.2: Create example API hooks
-**Files to create:**
-- `packages/shared-data-layer/src/api/exampleApi.ts`
-- `packages/shared-data-layer/src/hooks/useExampleQuery.ts`
-- `packages/shared-data-layer/src/hooks/useExampleMutation.ts`
+**API provided:**
+- `createQueryClient(config?)` - Create new QueryClient with optional overrides
+- `getSharedQueryClient()` - Get/create singleton instance for cache sharing
+- `resetSharedQueryClient()` - Reset singleton (for testing)
+- `defaultQueryClientConfig` - Default configuration object
+- `QueryProvider` - React provider with `useSharedClient`, `config`, `client` props
+- Re-exported hooks: `useQuery`, `useMutation`, `useQueryClient`, `useInfiniteQuery`, etc.
 
-### Task 6.3: Integrate QueryProvider into hosts
-**Files to modify:**
-- `packages/web-shell/src/App.tsx`
-- `packages/mobile-host/src/App.tsx`
+**Default configuration:**
+- `staleTime`: 30 seconds
+- `gcTime`: 5 minutes
+- `retry`: 3 for queries, 1 for mutations
+- `refetchOnWindowFocus`: false (less noisy on mobile)
+- `refetchOnReconnect`: true
 
-### Task 6.4: Update build configuration
-**Files to modify:**
-- `turbo.json` - add shared-data-layer to pipeline
+**Verified:**
+- `yarn workspace @universal/shared-data-layer build` - Success
+- `yarn typecheck` - 19 tasks pass
+- `yarn lint:architecture` - 0 errors
+- `yarn build:shared` - 8 packages built
+
+### Task 6.2: Create example API hooks ✅ COMPLETE
+**Files created:**
+- `packages/shared-data-layer/src/api/exampleApi.ts` - Typed API functions using JSONPlaceholder
+- `packages/shared-data-layer/src/api/index.ts` - API barrel exports
+- `packages/shared-data-layer/src/hooks/useExampleQuery.ts` - Query hooks with key factories
+- `packages/shared-data-layer/src/hooks/useExampleMutation.ts` - Mutation hooks with optimistic updates
+- `packages/shared-data-layer/src/hooks/index.ts` - Hooks barrel exports
+
+**Files modified:**
+- `packages/shared-data-layer/src/index.ts` - Added API and hooks exports
+- `eslint-rules/no-dom-in-shared.js` - Added exception for shared-data-layer (fetch is universal)
+
+**API functions provided:**
+- Posts: `fetchPosts`, `fetchPost`, `fetchPostsByUser`, `createPost`, `updatePost`, `deletePost`
+- Users: `fetchUsers`, `fetchUser`
+- Comments: `fetchComments`
+- Types: `Post`, `User`, `Comment`, `CreatePostParams`, `UpdatePostParams`, `ApiError`
+
+**Query hooks provided:**
+- `usePosts()`, `usePost(id)`, `usePostsByUser(userId)` - Posts queries
+- `useUsers()`, `useUser(id)` - Users queries
+- `useComments(postId)` - Comments query
+- `usePostWithDetails(postId)` - Parallel fetch: post + author + comments
+- Query key factories: `postKeys`, `userKeys`, `commentKeys`
+
+**Mutation hooks provided (with optimistic updates):**
+- `useCreatePost()` - Create post with cache invalidation
+- `useUpdatePost()` - Update with optimistic update + rollback
+- `useDeletePost()` - Delete with optimistic removal + rollback
+- `useBulkDeletePosts()` - Bulk delete multiple posts
+
+**Verified:**
+- `yarn workspace @universal/shared-data-layer build` - Success
+- `yarn typecheck` - 19 tasks pass
+- `yarn lint:architecture` - 0 errors
+
+### Task 6.3: Integrate QueryProvider into hosts ✅ COMPLETE
+**Files modified:**
+- `packages/web-shell/package.json` - Added `@universal/shared-data-layer` dependency
+- `packages/web-shell/src/App.tsx` - Added `QueryProvider` import, wrapped app with provider
+- `packages/mobile-host/package.json` - Added `@universal/shared-data-layer` dependency
+- `packages/mobile-host/src/App.tsx` - Added `QueryProvider` import, wrapped app with provider
+
+**Provider order (outermost to innermost):**
+1. QueryProvider - Data fetching (React Query)
+2. EventBusProvider - Event bus for inter-MFE communication
+3. I18nProvider - Internationalization
+4. ThemeProvider - Theming
+
+**Verified:**
+- `yarn typecheck` - 20 tasks pass
+- `yarn lint:architecture` - 0 errors
+- `yarn build:shared` - 8 packages built
+
+### Task 6.4: Update build configuration ✅ COMPLETE
+**Status:** No changes required
+
+**Analysis:**
+Turborepo automatically discovers workspace packages via Yarn workspaces configuration.
+The generic task definitions in `turbo.json` apply to all packages, including `@universal/shared-data-layer`.
+
+**Verified:**
+- `yarn turbo run build --dry-run` - shared-data-layer appears in pipeline
+- `yarn build` - 10 tasks successful
+- `yarn typecheck` - 20 tasks pass (FULL TURBO)
+- Build order correct: shared-data-layer builds after its dependencies
+
+---
+
+## Phase 6 Complete ✅
+
+All React Query / Data Fetching tasks completed:
+- Task 6.1: Created shared-data-layer package with QueryClient and QueryProvider
+- Task 6.2: Created example API hooks (queries and mutations with optimistic updates)
+- Task 6.3: Integrated QueryProvider into host applications
+- Task 6.4: Verified build configuration (no changes needed)
 
 ---
 
@@ -990,75 +1073,234 @@ All Event Bus tasks completed:
 - **MFEs never import routers** - No `useNavigate`, `useLocation`, or router imports in remote packages
 - **MFEs never reference URLs** - Remotes are URL-agnostic; hosts map events to routes
 
-### Task 7.1: Create shared-router package
-**Files to create:**
+### Task 7.1: Create shared-router package ✅ COMPLETE
+**Files created:**
 - `packages/shared-router/package.json`
 - `packages/shared-router/tsconfig.json`
-- `packages/shared-router/src/types.ts` - Route types and navigation intent types
-- `packages/shared-router/src/routes.ts` - Route constants (NOT route definitions)
-- `packages/shared-router/src/index.ts`
+- `packages/shared-router/src/types.ts` - Navigation intent types, route params, guards
+- `packages/shared-router/src/routes.ts` - Route ID constants and metadata registry
+- `packages/shared-router/src/index.ts` - Exports
 
 **Dependencies:**
-- `react-router` (exact version: 7.1.1)
+- `react-router` (exact version: 6.30.3)
 
-### Task 7.2: Implement web routing
-**Files to create:**
-- `packages/web-shell/src/pages/Home.tsx`
-- `packages/web-shell/src/pages/Remote.tsx`
-- `packages/web-shell/src/pages/Settings.tsx`
+**Route ID Constants (NOT URLs):**
+- `Routes.HOME`, `Routes.SETTINGS`, `Routes.PROFILE`, `Routes.REMOTE_HELLO`, `Routes.REMOTE_DETAIL`
+- MFEs use these to emit navigation intents via event bus
+- Hosts map these to actual URLs
 
-**Files to modify:**
-- `packages/web-shell/package.json` - add `react-router-dom`
-- `packages/web-shell/src/App.tsx` - add BrowserRouter and routes
+**Navigation Intent Types:**
+- `NavigationIntent<R>` - Type-safe navigation requests with params
+- `BackNavigationIntent` - Go back with optional fallback
+- `NavigationResult` - Result from navigation
+- `NavigationGuard` - Route guards for auth/access control
 
-### Task 7.3: Implement mobile routing
-**Files to create:**
-- `packages/mobile-host/src/pages/Home.tsx`
-- `packages/mobile-host/src/pages/Remote.tsx`
-- `packages/mobile-host/src/pages/Settings.tsx`
+**Route Metadata:**
+- `RouteMetadata` - Label keys, icons, auth requirements
+- `getNavigationRoutes()` - Routes for nav menus
+- `isProtectedRoute()` - Auth checks
 
-**Files to modify:**
-- `packages/mobile-host/package.json` - add `react-router-native`
-- `packages/mobile-host/src/App.tsx` - add NativeRouter and routes
+**Verified:**
+- `yarn workspace @universal/shared-router build` - Success
+- `yarn typecheck` - 21 tasks pass
+- `yarn lint:architecture` - 0 errors
 
-### Task 7.4: Update build configuration
-**Files to modify:**
-- `turbo.json` - add shared-router to pipeline
+### Task 7.2: Implement web routing ✅ COMPLETE
+**Files created:**
+- `packages/web-shell/src/pages/Home.tsx` - Welcome page with navigation links
+- `packages/web-shell/src/pages/Remote.tsx` - Remote MFE loading page
+- `packages/web-shell/src/pages/Settings.tsx` - Theme and language settings
+
+**Files modified:**
+- `packages/web-shell/package.json` - added `react-router-dom@6.30.0`
+- `packages/web-shell/src/App.tsx` - added BrowserRouter, Header, and routes
+- `packages/web-shell/rspack.config.mjs` - added `historyApiFallback: true` for SPA routing, added react-router aliases
+- `packages/shared-router/package.json` - updated to `react-router@6.30.0`
+
+**Routes implemented:**
+- `/` and `/home` - Home page
+- `/remote-hello` - Remote module page
+- `/settings` - Settings page
+
+**Note on react-router version:**
+React Router v7.11.0 has a known incompatibility with Module Federation (`@module-federation/enhanced@0.21.6`).
+The error "resolving fallback for shared module react-dom" occurs due to v7's internal ESM structure
+(`dist/development/dom-export.mjs`). Downgraded to v6.30.0 which works correctly with Module Federation.
+See: [module-federation/core#3267](https://github.com/module-federation/core/issues/3267)
+
+**Verified:**
+- `yarn typecheck` - 22 tasks pass
+- `yarn turbo run build --filter='@universal/web-*'` - 11 tasks pass
+- Manual verification: Navigation works between all pages
+
+### Task 7.3: Implement mobile routing ✅ COMPLETE
+**Files created:**
+- `packages/mobile-host/src/pages/Home.tsx` - Welcome page with navigation links
+- `packages/mobile-host/src/pages/Remote.tsx` - Remote MFE loading page
+- `packages/mobile-host/src/pages/Settings.tsx` - Theme and language settings
+
+**Files modified:**
+- `packages/mobile-host/package.json` - added `react-router-native@6.30.0` and `@universal/shared-router`
+- `packages/mobile-host/src/App.tsx` - added NativeRouter, Header, and routes
+
+**Routes implemented:**
+- `/` and `/home` - Home page
+- `/remote-hello` - Remote module page
+- `/settings` - Settings page
+
+**Note on react-router-native version:**
+Using v6.30.0 to match web routing (v7 has Module Federation incompatibility).
+
+**Verified:**
+- `yarn typecheck` - 22 tasks pass
+- `yarn lint:architecture` - 0 errors
+- iOS: Host app works with routing (verified manually)
+
+### Task 7.4: Update build configuration ✅ COMPLETE
+**Status:** No changes required - Turborepo automatically includes shared-router in the build pipeline via `^build` dependency resolution from package.json dependencies.
+
+**Verified:**
+- `yarn turbo run build --filter=@universal/web-shell --dry-run` shows shared-router in dependency chain
+- `yarn turbo run build --filter=@universal/mobile-host --dry-run` shows shared-router in dependency chain
+- All builds pass with shared-router included
 
 ---
 
 ## Phase 8: React Native Component Unit Testing
 
-### Task 8.1: Add testing dependencies
-**Files to modify:**
-- `package.json` (root) - add:
+### Task 8.1: Add testing dependencies ✅ COMPLETE
+**Files modified:**
+- `package.json` (root) - added:
   - `@testing-library/react-native` (12.9.0)
   - `react-test-renderer` (19.1.0)
+- `packages/shared-utils/package.json` - added `test` script
 
-**Files to create:**
-- `jest.setup.js` (root) - React Native mocks
+**Files created:**
+- `jest.setup.js` (root) - React Native mocks including:
+  - Mock for `react-native` module (NativeModules, AccessibilityInfo, Animated)
+  - Mock for NativeEventEmitter
+  - Mock for RCTDeviceEventEmitter
+  - Global mocks for `requestAnimationFrame`/`cancelAnimationFrame`
+  - Console filtering for known React Native warnings
 
-### Task 8.2: Configure Jest for shared-hello-ui
-**Files to create:**
-- `packages/shared-hello-ui/jest.config.js`
-- `packages/shared-hello-ui/src/__tests__/HelloUniversal.test.tsx`
+**Verified:**
+- `yarn install` - Success
+- `yarn test` - 6 tests pass (shared-utils)
+- `yarn typecheck` - All packages pass
 
-### Task 8.3: Configure Jest for shared-theme-context
-**Files to create:**
-- `packages/shared-theme-context/jest.config.js`
-- `packages/shared-theme-context/src/__tests__/ThemeProvider.test.tsx`
+### Task 8.2: Configure Jest for shared-hello-ui ✅ COMPLETE
+**Files created:**
+- `packages/shared-hello-ui/jest.config.js` - Jest configuration with:
+  - JSDOM test environment
+  - Custom react-native mock mapping
+  - Workspace dependency mapping (@universal/shared-*)
+  - Coverage thresholds (50%)
+- `packages/shared-hello-ui/src/__mocks__/react-native.ts` - Comprehensive RN mock:
+  - View, Text, Pressable, Image, TextInput, ScrollView, etc.
+  - StyleSheet, Platform, Dimensions, Animated, etc.
+  - Proper accessibility attribute passthrough
+- `packages/shared-hello-ui/src/__tests__/HelloUniversal.test.tsx` - 16 unit tests:
+  - Rendering (4 tests)
+  - Button interaction (2 tests)
+  - Accessibility (4 tests)
+  - i18n integration (3 tests)
+  - Theme integration (3 tests)
 
-### Task 8.4: Update root Jest config
-**Files to modify:**
-- `jest.config.js` (root) - add new projects
+**Files modified:**
+- `packages/shared-hello-ui/package.json` - added `test` script
+- `packages/shared-hello-ui/tsconfig.json` - exclude `__tests__` and `__mocks__` from build
+- `package.json` (root) - added testing dependencies:
+  - `@testing-library/dom` (10.4.0)
+  - `@testing-library/react` (16.1.0)
+  - `react` (19.1.0) and `react-dom` (19.1.0) for root devDependencies
+  - `jest-environment-jsdom` (29.7.0)
+- `jest.setup.js` (root) - added `@testing-library/jest-dom` import and `accessible` prop warning filter
 
-### Task 8.5: Update CI workflow
-**Files to modify:**
-- `.github/workflows/ci.yml`
+**Verified:**
+- `yarn turbo run build --filter=@universal/shared-hello-ui` - Success
+- `yarn workspace @universal/shared-hello-ui test` - 16/16 tests pass
+- `yarn workspace @universal/shared-utils test` - 6/6 tests pass (regression check)
 
-### Task 8.6: Update testing documentation
-**Files to modify:**
-- `docs/universal-mfe-all-platforms-testing-guide.md` - add unit test commands and troubleshooting
+### Task 8.3: Configure Jest for shared-theme-context ✅ COMPLETE
+**Files created:**
+- `packages/shared-theme-context/jest.config.js` - Jest configuration with:
+  - JSDOM test environment
+  - Workspace dependency mapping (@universal/shared-design-tokens)
+  - ts-jest transformer
+- `packages/shared-theme-context/src/__tests__/ThemeProvider.test.tsx` - 24 unit tests:
+  - ThemeProvider initialization (3 tests)
+  - toggleTheme (3 tests)
+  - setTheme (2 tests)
+  - onThemeChange callback (3 tests)
+  - Theme object (3 tests)
+  - useTheme hook (3 tests)
+  - useThemeTokens (2 tests)
+  - useThemeColors (3 tests)
+  - useThemeSpacing (2 tests)
+
+**Files modified:**
+- `packages/shared-theme-context/package.json` - added `test` script
+- `packages/shared-theme-context/tsconfig.json` - exclude `src/__tests__` from build
+
+**Verified:**
+- `yarn workspace @universal/shared-theme-context test` - 24/24 tests pass
+- `yarn workspace @universal/shared-theme-context typecheck` - passes
+- `yarn workspace @universal/shared-theme-context build` - passes
+- `yarn test` - 46/46 tests pass (shared-utils: 6, shared-hello-ui: 16, shared-theme-context: 24)
+
+### Task 8.4: Update root Jest config ✅ COMPLETE
+**Files modified:**
+- `jest.config.js` (root) - Updated projects array to include all test packages:
+  - `<rootDir>/packages/shared-utils`
+  - `<rootDir>/packages/shared-hello-ui`
+  - `<rootDir>/packages/shared-theme-context`
+
+**Verified:**
+- `npx jest --listTests` - Shows all 3 test files discovered
+- `npx jest` - 46/46 tests pass (3 suites in 1.031s)
+- `yarn test` - All tests pass via Turborepo (12 tasks, 9 cached)
+
+### Task 8.5: Update CI workflow ✅ COMPLETE
+**Status:** No changes required
+
+The CI workflow already has the correct test configuration at lines 68-72:
+```yaml
+- name: Run unit tests
+  run: |
+    echo "::group::Running unit tests"
+    npx jest --coverage
+    echo "::endgroup::"
+```
+
+This command uses the root `jest.config.js` which now includes all three test packages (updated in Task 8.4).
+
+**Verified:**
+- `npx jest --coverage` - 46/46 tests pass with coverage:
+  - Statements: 100%
+  - Branches: 100%
+  - Functions: 94.73%
+  - Lines: 100%
+
+### Task 8.6: Update testing documentation ✅ COMPLETE
+**Files modified:**
+- `docs/universal-mfe-all-platforms-testing-guide.md` - Added unit test section with:
+  - Commands for running tests (root, individual packages, Turborepo)
+  - Test coverage information
+  - Troubleshooting for common issues
+
+---
+
+## Phase 8 Complete ✅
+
+All React Native Component Unit Testing tasks completed:
+- Task 8.1: Added testing dependencies (@testing-library/react-native, react-test-renderer)
+- Task 8.2: Configured Jest for shared-hello-ui with 16 tests
+- Task 8.3: Configured Jest for shared-theme-context with 24 tests
+- Task 8.4: Updated root Jest config to include all test packages
+- Task 8.5: Verified CI workflow (no changes needed)
+- Task 8.6: Updated testing documentation
+
+Total: 46 unit tests across 3 packages
 
 ---
 
@@ -1066,80 +1308,212 @@ All Event Bus tasks completed:
 
 Integration tests verify cross-package interactions and Module Federation remote loading without requiring full browser/device automation.
 
-### Task 9.1: Setup integration test infrastructure
-**Files to create:**
-- `packages/web-shell/src/__integration__/setup.ts` - Test environment setup
+### Task 9.1: Setup integration test infrastructure ✅ COMPLETE
+**Files created:**
+- `packages/web-shell/src/__integration__/setup.ts` - Test environment setup with window mocks (matchMedia, IntersectionObserver, ResizeObserver)
 - `packages/web-shell/jest.integration.config.js` - Separate Jest config for integration tests
+- `packages/web-shell/src/__integration__/mocks/react-native.ts` - Comprehensive React Native mock for JSDOM environment
+- `packages/web-shell/src/__integration__/providers.test.tsx` - Provider composition tests (6 tests)
 
-**Files to modify:**
-- `packages/web-shell/package.json` - add `test:integration` script
-- `package.json` (root) - add `test:integration` script
+**Files modified:**
+- `packages/web-shell/package.json` - added `test:integration` script
+- `package.json` (root) - added `test:integration` script
+- `turbo.json` - added `test:integration` pipeline task
 
-**Dependencies:**
-- `@testing-library/react` (16.1.0) - for web integration tests
-- `msw` (2.7.3) - Mock Service Worker for API mocking
+**Key implementation details:**
+- Created custom React Native mock instead of using react-native-web (module resolution issues)
+- Uses MemoryRouter for routing tests
+- EventBus hook tests skipped due to React module resolution in monorepo
+- 6 integration tests pass: ThemeProvider + I18nProvider composition, QueryProvider setup
 
-### Task 9.2: Create web integration tests
-**Files to create:**
-- `packages/web-shell/src/__integration__/providers.test.tsx` - Test ThemeProvider + QueryProvider composition
-- `packages/web-shell/src/__integration__/routing.test.tsx` - Test route transitions and data loading
-- `packages/web-shell/src/__integration__/theme-persistence.test.tsx` - Test theme + storage integration
+### Task 9.2: Create web integration tests ✅ COMPLETE
+**Files created:**
+- `packages/web-shell/src/__integration__/routing.test.tsx` - 9 tests for route transitions and state preservation
+- `packages/web-shell/src/__integration__/theme-persistence.test.tsx` - 12 tests for theme state management
 
-### Task 9.3: Create mobile integration tests
-**Files to create:**
-- `packages/mobile-host/src/__integration__/setup.ts`
-- `packages/mobile-host/jest.integration.config.js`
-- `packages/mobile-host/src/__integration__/providers.test.tsx`
-- `packages/mobile-host/src/__integration__/navigation.test.tsx`
+**Files modified:**
+- `packages/web-shell/jest.integration.config.js` - Added React module mappings to fix version conflicts
 
-**Files to modify:**
-- `packages/mobile-host/package.json` - add `test:integration` script
+**Key implementation details:**
+- Fixed React version conflict (root 19.1.0 vs web-shell 19.2.0) by mapping React modules in Jest config
+- Routing tests verify navigation between Home, Settings, and Remote pages
+- Theme persistence tests verify toggle, setTheme, and multiple consumer behavior
+- Total: 27 integration tests (6 providers + 9 routing + 12 theme)
 
-### Task 9.4: Create shared package integration tests
-**Files to create:**
-- `packages/shared-data-layer/src/__integration__/queryClient.test.ts` - Test QueryClient with mocked APIs
-- `packages/shared-auth-store/src/__integration__/persistence.test.ts` - Test Zustand + storage integration
+### Task 9.3: Create mobile integration tests ✅ COMPLETE
+**Files created:**
+- `packages/mobile-host/src/__integration__/setup.ts` - Comprehensive React Native mocks for jsdom environment
+- `packages/mobile-host/jest.integration.config.js` - Jest config with ts-jest and workspace mappings
+- `packages/mobile-host/src/__integration__/providers.test.tsx` - 6 tests for ThemeProvider + I18nProvider composition
+- `packages/mobile-host/src/__integration__/navigation.test.tsx` - 9 tests for routing and state preservation
 
-### Task 9.5: Update CI workflow
-**Files to modify:**
-- `.github/workflows/ci.yml` - add integration test step
-- `turbo.json` - add `test:integration` pipeline task
+**Files modified:**
+- `packages/mobile-host/package.json` - Added `test:integration` script and `react-router-dom` devDependency
 
-### Task 9.6: Update testing documentation
-**Files to modify:**
-- `docs/universal-mfe-all-platforms-testing-guide.md` - add integration test commands and troubleshooting
+**Key implementation details:**
+- Uses ts-jest instead of babel-jest (avoids @react-native/babel-preset dependency issues)
+- Uses @testing-library/react with mocked RN components (react-router-native ESM incompatible with ts-jest)
+- Uses react-router-dom for routing tests (same API as react-router-native)
+- Comprehensive React Native mock includes View, Text, Pressable, StyleSheet, Platform, Dimensions, Animated
+- Console warnings suppressed for expected DOM environment warnings
+
+Total: 15 mobile integration tests (6 providers + 9 navigation)
+
+### Task 9.4: Create shared package integration tests ✅ COMPLETE
+**Files created:**
+- `packages/shared-data-layer/jest.integration.config.js` - Jest config for integration tests
+- `packages/shared-data-layer/src/__integration__/setup.ts` - Test setup with jest-dom matchers
+- `packages/shared-data-layer/src/__integration__/queryClient.test.ts` - 20 tests for QueryClient configuration and singleton
+- `packages/shared-data-layer/src/__integration__/QueryProvider.test.tsx` - 11 tests for React provider and cache sharing
+
+**Files modified:**
+- `packages/shared-data-layer/package.json` - Added `test:integration` script
+- `packages/shared-data-layer/tsconfig.json` - Excluded integration tests from build
+
+**Note:** shared-auth-store only has pre-built dist files (no source), so no integration tests added.
+
+Total: 31 shared-data-layer integration tests
+- queryClient.test.ts: 20 tests for createQueryClient, getSharedQueryClient, resetSharedQueryClient, defaultQueryClientConfig
+- QueryProvider.test.tsx: 11 tests for provider rendering, shared/isolated clients, cache sharing, MFE scenarios
+
+### Task 9.5: Update CI workflow ✅ COMPLETE
+**Files modified:**
+- `.github/workflows/ci.yml` - Added integration test step after unit tests
+
+**Changes:**
+- Updated job name to "Lint, Typecheck, Test (Unit + Integration)"
+- Added "Run integration tests" step using `yarn turbo run test:integration`
+- turbo.json already had `test:integration` task configured (no changes needed)
+
+### Task 9.6: Update testing documentation ✅ COMPLETE
+**Files modified:**
+- `docs/universal-mfe-all-platforms-testing-guide.md` - Added Integration Tests section with:
+  - Commands for running tests (root, Turborepo, individual packages)
+  - Test coverage table (73 tests across 3 packages)
+  - Test structure overview
+  - Troubleshooting for common issues (React version conflicts, jest-dom, timeouts, cache)
+
+---
+
+## Phase 9 Complete ✅
+
+All Integration Testing tasks completed:
+- Task 9.1: Setup integration test infrastructure for web-shell
+- Task 9.2: Created web integration tests (27 tests)
+- Task 9.3: Created mobile integration tests (15 tests)
+- Task 9.4: Created shared-data-layer integration tests (31 tests)
+- Task 9.5: Updated CI workflow to run integration tests
+- Task 9.6: Updated testing documentation
+
+Total: 73 integration tests across 3 packages
 
 ---
 
 ## Phase 10: E2E Testing
 
-### Task 10.1: Setup Playwright for web
-**Files to create:**
-- `packages/web-shell/playwright.config.ts`
-- `packages/web-shell/e2e/smoke.spec.ts`
-- `packages/web-shell/e2e/remote-loading.spec.ts`
-- `packages/web-shell/e2e/routing.spec.ts`
-- `packages/web-shell/e2e/theming.spec.ts`
+### Task 10.1: Setup Playwright for web ✅ COMPLETE
+**Files created:**
+- `packages/web-shell/playwright.config.ts` - Multi-browser config (Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari)
+- `packages/web-shell/e2e/smoke.spec.ts` - Basic app launch and visibility checks
+- `packages/web-shell/e2e/remote-loading.spec.ts` - Module Federation remote loading tests
+- `packages/web-shell/e2e/routing.spec.ts` - SPA navigation tests
+- `packages/web-shell/e2e/theming.spec.ts` - Theme toggle functionality tests
 
-**Files to modify:**
-- `packages/web-shell/package.json` - add `@playwright/test`
+**Files modified:**
+- `packages/web-shell/package.json` - added `@playwright/test: 1.49.1`
+- `packages/web-shell/rspack.config.mjs` - added `REMOTE_HELLO_URL` env var support
+- `turbo.json` - added `test:e2e` task
+- `.gitignore` - added Playwright artifacts
 
-### Task 10.2: Setup Maestro for mobile
-**Files to create:**
-- `packages/mobile-host/.maestro/README.md`
-- `packages/mobile-host/.maestro/smoke.yaml`
-- `packages/mobile-host/.maestro/remote-loading.yaml`
-- `packages/mobile-host/.maestro/navigation.yaml`
-- `packages/mobile-host/.maestro/theming.yaml`
+**Bug fixes discovered through E2E testing:**
+- Fixed i18n: Nested `navigation`/`theme`/`language` inside `common` namespace
+- Fixed ThemeProvider: Added localStorage persistence for theme state (web only)
+- Added cross-tab theme sync via storage event listener
 
-### Task 10.3: Add E2E CI workflows
-**Files to create:**
-- `.github/workflows/e2e-web.yml`
-- `.github/workflows/e2e-mobile.yml` (optional - runs on tags only)
+**Test results:** 240 passed, 35 skipped (remote server tests), 0 failures
 
-### Task 10.4: Update testing documentation
-**Files to modify:**
-- `docs/universal-mfe-all-platforms-testing-guide.md` - add E2E test sections for Playwright and Maestro
+### Task 10.2: Setup Maestro for mobile ✅ COMPLETE
+**Files created:**
+- `packages/mobile-host/.maestro/README.md` - Documentation with installation and usage
+- `packages/mobile-host/.maestro/smoke.yaml` - Basic app launch and visibility checks
+- `packages/mobile-host/.maestro/navigation.yaml` - Page navigation tests
+- `packages/mobile-host/.maestro/theming.yaml` - Theme toggle functionality tests
+- `packages/mobile-host/.maestro/i18n.yaml` - Language switching tests (English/Spanish)
+- `packages/mobile-host/.maestro/remote-loading.yaml` - Module Federation remote loading tests
+
+**Files modified:**
+- `packages/mobile-host/package.json` - added `test:e2e:android` and `test:e2e:ios` scripts
+- `.gitignore` - added `maestro-debug/`
+
+**Bug fixes discovered through Maestro testing:**
+- Fixed ThemeProvider: Added `isBrowser` check to prevent crash on mobile (window.addEventListener doesn't exist in RN)
+- Fixed i18n: Added missing `homeDescription` translation key
+- Fixed i18n: Added missing `settings.theme` and `settings.language` translation keys
+
+**Test results:** 4/4 core tests passed on both Android and iOS
+
+### Task 10.3: Add E2E CI workflows ✅ COMPLETE
+**Files created:**
+- `.github/workflows/e2e-web.yml` - Playwright tests on push/PR to main/develop
+- `.github/workflows/e2e-mobile.yml` - Maestro tests (manual trigger + release tags)
+
+**e2e-web.yml features:**
+- Runs on push/PR to main/develop
+- Installs Playwright browsers (Chromium, Firefox, WebKit)
+- Builds web packages, runs tests with HTML reporter
+- Uploads playwright-report artifact (7 days retention)
+- Uploads test-results on failure for debugging
+
+**e2e-mobile.yml features:**
+- Manual trigger via workflow_dispatch with platform selector (android/ios/both)
+- Automatic trigger on release tags (v*)
+- Android: Uses android-emulator-runner action with API 34
+- iOS: Uses macOS-14 runner with Xcode 16.2
+- Excludes remote loading tests by default (requires remote server)
+- Uploads JUnit results and debug artifacts
+
+### Task 10.4: Update testing documentation ✅ COMPLETE
+**Files modified:**
+- `docs/universal-mfe-all-platforms-testing-guide.md` - Added comprehensive E2E testing sections
+
+**Documentation added:**
+- E2E Tests (Web) - Playwright section with:
+  - Prerequisites and installation
+  - Running tests (headless, UI mode, specific browsers)
+  - Test suites table
+  - Browser coverage (5 configurations)
+  - Test results summary
+  - Remote loading test instructions
+  - CI integration details
+
+- E2E Tests (Mobile) - Maestro section with:
+  - Prerequisites and installation
+  - Running tests (Android/iOS)
+  - Test flows table with tags
+  - App identifiers
+  - Test results summary
+  - Remote loading test instructions
+  - CI integration details
+  - Troubleshooting guide
+
+---
+
+## Phase 10 Summary ✅ COMPLETE
+
+All E2E testing infrastructure is now in place:
+
+| Task | Status | Key Deliverables |
+|------|--------|------------------|
+| 10.1 | ✅ | Playwright setup, 240 tests, bug fixes |
+| 10.2 | ✅ | Maestro setup, 5 flows, bug fixes |
+| 10.3 | ✅ | CI workflows for web and mobile |
+| 10.4 | ✅ | Testing documentation |
+
+**Bugs discovered and fixed through E2E testing:**
+1. i18n namespace structure (web + mobile)
+2. ThemeProvider localStorage persistence (web)
+3. ThemeProvider isBrowser check (mobile)
+4. Missing translation keys (homeDescription, settings.theme, settings.language)
 
 ---
 
@@ -1183,10 +1557,10 @@ Integration tests verify cross-package interactions and Module Federation remote
 |---------|---------|
 | turbo | TBD (latest stable) |
 | prettier | TBD (latest stable) |
-| @tanstack/react-query | 5.62.16 |
-| react-router | 7.1.1 |
-| react-router-dom | 7.1.1 |
-| react-router-native | 7.1.1 |
+| @tanstack/react-query | 5.90.16 |
+| react-router | 6.30.3 |
+| react-router-dom | 6.30.3 |
+| react-router-native | 6.30.3 |
 | @testing-library/react-native | 12.9.0 |
 | @testing-library/react | 16.1.0 |
 | react-test-renderer | 19.1.0 |

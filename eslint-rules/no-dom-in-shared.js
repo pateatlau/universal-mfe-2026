@@ -47,7 +47,12 @@ module.exports = {
     // localStorage for persistence
     const isI18nPackage = /packages\/shared-i18n\//.test(filename);
 
-    if (!isSharedPackage || isTestFile || isA11yPackage || isI18nPackage) {
+    // Allow DOM APIs in shared-theme-context package - it needs window for
+    // browser detection, localStorage for theme persistence, and matchMedia
+    // for system preference detection (prefers-color-scheme)
+    const isThemeContextPackage = /packages\/shared-theme-context\//.test(filename);
+
+    if (!isSharedPackage || isTestFile || isA11yPackage || isI18nPackage || isThemeContextPackage) {
       return {};
     }
 
@@ -104,6 +109,8 @@ module.exports = {
     ]);
 
     // Browser globals that are forbidden
+    // Note: fetch is NOT included because it's universally available on all
+    // target platforms (Web browsers, Node.js 18+, React Native 0.80+)
     const forbiddenGlobals = new Set([
       'window',
       'document',
@@ -115,7 +122,6 @@ module.exports = {
       'alert',
       'confirm',
       'prompt',
-      'fetch', // Should use a universal fetch abstraction
     ]);
 
     return {

@@ -1,0 +1,89 @@
+# Remote Loading Test - Module Federation remote loading
+# Verifies dynamic loading of HelloRemote module
+# REQUIRES: Remote server running (PLATFORM=android/ios yarn serve in mobile-remote-hello)
+
+appId: ${MAESTRO_APP_ID}
+name: Remote Loading Test
+tags:
+  - remote
+  - federation
+---
+
+# Launch fresh app
+- launchApp:
+    clearState: true
+
+# Wait for app to load
+- extendedWaitUntil:
+    visible: "Universal MFE - Mobile"
+    timeout: 10000
+
+# Navigate to Remote Module page
+- tapOn: "Remote Module"
+
+# Verify on Remote Module page
+- extendedWaitUntil:
+    visible: ".*Load Remote.*"
+    timeout: 5000
+
+# Tap load button to load remote module
+- tapOn: ".*Load Remote.*"
+
+# Wait for loading state
+- extendedWaitUntil:
+    visible: ".*Loading.*"
+    timeout: 3000
+
+# Wait for remote component to load (shows greeting)
+- extendedWaitUntil:
+    visible: ".*Hello.*Mobile User.*"
+    timeout: 15000
+
+# Verify remote component is displayed
+- assertVisible: ".*Hello.*"
+
+# === Test navigation preserves loaded state ===
+
+# Navigate to Home
+- tapOn:
+    text: "Home"
+    index: 0
+
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 5000
+
+# Navigate back to Remote Module
+- tapOn: "Remote Module"
+
+# Remote should still be loaded (no load button)
+- extendedWaitUntil:
+    visible: ".*Hello.*"
+    timeout: 5000
+
+# Load button should not be visible
+- assertNotVisible: ".*Load Remote.*"
+
+# === Test remote with different locale ===
+
+# Change language
+- tapOn: "Settings"
+
+- extendedWaitUntil:
+    visible: "Language"
+    timeout: 5000
+
+# Tap Spanish
+- tapOn: ".*Spanish.*"
+
+# Navigate back to Remote Module (now in Spanish)
+- tapOn:
+    text: "Inicio"
+    index: 0
+
+- tapOn: ".*dulo Remoto.*"
+
+# Wait for remote to be visible (uses locale prop)
+- extendedWaitUntil:
+    visible: ".*Hello.*"
+    timeout: 5000

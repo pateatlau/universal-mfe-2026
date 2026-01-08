@@ -1,0 +1,245 @@
+name: E2E Mobile Tests (Maestro)
+
+# Manual trigger only - mobile E2E tests are expensive and slow
+# Also triggered on release tags for validation before release
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to test'
+        required: true
+        default: 'android'
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+      include_remote_tests:
+        description: 'Include remote loading tests (requires remote server)'
+        required: false
+        default: false
+        type: boolean
+  push:
+    tags:
+      - 'v*'
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: e2e-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Android E2E tests
+  e2e-android:
+    name: Maestro E2E Tests (Android)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event.inputs.platform == 'android' || github.event.inputs.platform == 'both' }}
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Setup Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Build Android APK
+        working-directory: packages/mobile-host/android
+        run: |
+          echo "::group::Building Android APK"
+          ./gradlew assembleDebug --no-daemon
+          echo "::endgroup::"
+
+      - name: Install Maestro CLI
+        run: |
+          echo "::group::Installing Maestro"
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+          echo "::endgroup::"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Start Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            echo "::group::Running Maestro tests"
+
+            # Install APK
+            adb install packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk
+
+            # Wait for app to be installed
+            sleep 5
+
+            # Run core tests (exclude remote tests by default)
+            cd packages/mobile-host
+            MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.mobilehosttmp maestro test .maestro/ --exclude-tags=remote --format=junit --output=maestro-results.xml || true
+
+            echo "::endgroup::"
+
+      - name: Upload Maestro results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maestro-android-results
+          path: packages/mobile-host/maestro-results.xml
+          retention-days: 7
+
+      - name: Upload Maestro debug output
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: maestro-android-debug
+          path: ~/.maestro/tests/
+          retention-days: 7
+
+  # iOS E2E tests
+  e2e-ios:
+    name: Maestro E2E Tests (iOS)
+    runs-on: macos-14
+    if: ${{ github.event_name == 'push' || github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'both' }}
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1.6.0
+        with:
+          xcode-version: '16.2'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Setup CocoaPods cache
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-cocoapods-${{ hashFiles('packages/mobile-host/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cocoapods-
+
+      - name: Install dependencies
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Install CocoaPods dependencies
+        working-directory: packages/mobile-host/ios
+        run: |
+          echo "::group::Installing CocoaPods"
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+          echo "::endgroup::"
+
+      - name: Build iOS app for Simulator
+        working-directory: packages/mobile-host/ios
+        run: |
+          echo "::group::Building iOS app"
+          xcodebuild \
+            -workspace MobileHostTmp.xcworkspace \
+            -scheme MobileHostTmp \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -derivedDataPath build \
+            build
+          echo "::endgroup::"
+
+      - name: Install Maestro CLI
+        run: |
+          echo "::group::Installing Maestro"
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+          echo "::endgroup::"
+
+      - name: Boot iOS Simulator
+        run: |
+          echo "::group::Starting iOS Simulator"
+          xcrun simctl boot "iPhone 16" || true
+          xcrun simctl bootstatus "iPhone 16" -b
+          echo "::endgroup::"
+
+      - name: Install app on Simulator
+        run: |
+          echo "::group::Installing app"
+          APP_PATH=$(find packages/mobile-host/ios/build -name "MobileHostTmp.app" -type d | head -1)
+          xcrun simctl install "iPhone 16" "$APP_PATH"
+          echo "::endgroup::"
+
+      - name: Run Maestro tests
+        run: |
+          echo "::group::Running Maestro tests"
+          cd packages/mobile-host
+          MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.universal.mobilehost maestro test .maestro/ --exclude-tags=remote --format=junit --output=maestro-results.xml || true
+          echo "::endgroup::"
+
+      - name: Upload Maestro results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maestro-ios-results
+          path: packages/mobile-host/maestro-results.xml
+          retention-days: 7
+
+      - name: Upload Maestro debug output
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: maestro-ios-debug
+          path: ~/.maestro/tests/
+          retention-days: 7

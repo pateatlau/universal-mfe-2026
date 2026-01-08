@@ -1,0 +1,104 @@
+# i18n Test - Internationalization
+# Verifies language switching between English and Spanish
+
+appId: ${MAESTRO_APP_ID}
+name: i18n Test
+tags:
+  - i18n
+  - core
+---
+
+# Launch fresh app
+- launchApp:
+    clearState: true
+
+# Wait for app to load in English (default)
+- extendedWaitUntil:
+    visible: "Universal MFE - Mobile"
+    timeout: 10000
+
+# Verify English text
+- assertVisible: "Welcome"
+- assertVisible: "Home"
+- assertVisible: "Settings"
+
+# === Switch to Spanish via header toggle ===
+
+# Tap language toggle (shows current language)
+- tapOn: ".*English.*"
+
+# Wait for language change
+- extendedWaitUntil:
+    visible: "Bienvenido"
+    timeout: 5000
+
+# Verify Spanish text
+- assertVisible: "Bienvenido"
+
+# Verify navigation in Spanish
+- assertVisible: "Inicio"
+- assertVisible: ".*Configuraci.*"
+
+# === Switch back to English via Settings ===
+
+# Navigate to Settings (in Spanish)
+- tapOn: ".*Configuraci.*"
+
+- extendedWaitUntil:
+    visible: "Tema"
+    timeout: 5000
+
+# Tap English option
+- tapOn: "English"
+
+# Wait for language change
+- extendedWaitUntil:
+    visible: "Theme"
+    timeout: 5000
+
+# Verify English text
+- assertVisible: "Theme"
+- assertVisible: "Language"
+
+# Navigate to Home
+- tapOn:
+    text: "Home"
+    index: 0
+
+# Verify Home page in English
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 5000
+
+# === Test language persistence across navigation ===
+
+# Switch to Spanish
+- tapOn: ".*English.*"
+
+- extendedWaitUntil:
+    visible: "Bienvenido"
+    timeout: 5000
+
+# Navigate to Remote Module page
+- tapOn: ".*dulo Remoto.*"
+
+- extendedWaitUntil:
+    visible: ".*Cargar.*"
+    timeout: 5000
+
+# Navigate to Settings
+- tapOn: ".*Configuraci.*"
+
+- extendedWaitUntil:
+    visible: "Tema"
+    timeout: 5000
+
+# Navigate back to Home
+- tapOn:
+    text: "Inicio"
+    index: 0
+
+# Verify still in Spanish
+- extendedWaitUntil:
+    visible: "Bienvenido"
+    timeout: 5000

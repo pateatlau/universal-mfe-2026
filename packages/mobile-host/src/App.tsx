@@ -7,18 +7,18 @@
  * Hermes is required for execution.
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
   Platform,
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { ScriptManager, Federated } from '@callstack/repack/client';
+import { NativeRouter, Routes as RouterRoutes, Route, Link } from 'react-router-native';
+import { ScriptManager } from '@callstack/repack/client';
 import {
   ThemeProvider,
   useTheme,
@@ -35,14 +35,18 @@ import {
 import {
   EventBusProvider,
   useEventBus,
-  useEventListener,
   createEventLogger,
-  InteractionEventTypes,
   ThemeEventTypes,
   LocaleEventTypes,
   type AppEvents,
-  type ButtonPressedEvent,
 } from '@universal/shared-event-bus';
+import { QueryProvider } from '@universal/shared-data-layer';
+import { Routes } from '@universal/shared-router';
+
+// Page components
+import Home from './pages/Home';
+import Remote from './pages/Remote';
+import Settings from './pages/Settings';
 
 // Platform-specific remote host configuration
 // Android uses port 9004, iOS uses port 9005 to allow simultaneous testing
@@ -99,15 +103,7 @@ ScriptManager.shared.addResolver(async (scriptId, caller) => {
   throw new Error(`Unknown scriptId: ${scriptId}`);
 });
 
-interface AppState {
-  remoteComponent: React.ComponentType<any> | null;
-  loading: boolean;
-  error: string | null;
-  pressCount: number;
-}
-
-interface Styles {
-  container: ViewStyle;
+interface HeaderStyles {
   header: ViewStyle;
   headerRow: ViewStyle;
   controlsRow: ViewStyle;
@@ -117,26 +113,15 @@ interface Styles {
   themeToggleText: TextStyle;
   langToggle: ViewStyle;
   langToggleText: TextStyle;
-  content: ViewStyle;
-  loadButton: ViewStyle;
-  loadButtonText: TextStyle;
-  loading: ViewStyle;
-  loadingText: TextStyle;
-  error: ViewStyle;
-  errorText: TextStyle;
-  retryButton: ViewStyle;
-  retryButtonText: TextStyle;
-  remoteContainer: ViewStyle;
-  counter: ViewStyle;
-  counterText: TextStyle;
+  navRow: ViewStyle;
+  navLink: ViewStyle;
+  navLinkText: TextStyle;
+  navLinkActive: ViewStyle;
+  navLinkTextActive: TextStyle;
 }
 
-function createStyles(theme: Theme): Styles {
-  return StyleSheet.create<Styles>({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.surface.background,
-    },
+function createHeaderStyles(theme: Theme): HeaderStyles {
+  return StyleSheet.create<HeaderStyles>({
     header: {
       padding: theme.spacing.layout.screenPadding,
       paddingTop: 60,
@@ -168,6 +153,7 @@ function createStyles(theme: Theme): Styles {
       fontSize: theme.typography.fontSizes.sm,
       color: theme.colors.text.secondary,
       textAlign: 'center',
+      marginBottom: theme.spacing.element.gap,
     },
     themeToggle: {
       backgroundColor: theme.colors.surface.tertiary,
@@ -191,68 +177,40 @@ function createStyles(theme: Theme): Styles {
       color: theme.colors.text.primary,
       fontWeight: theme.typography.fontWeights.medium,
     },
-    content: {
-      flex: 1,
-      padding: theme.spacing.layout.screenPadding,
+    navRow: {
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: theme.spacing.element.gap,
     },
-    loadButton: {
-      backgroundColor: theme.colors.interactive.primary,
-      paddingHorizontal: theme.spacing.button.paddingHorizontal,
-      paddingVertical: theme.spacing.button.paddingVertical,
-      borderRadius: theme.spacing.button.borderRadius,
-      marginBottom: theme.spacing.layout.screenPadding,
+    navLink: {
+      paddingHorizontal: theme.spacing.component.padding,
+      paddingVertical: theme.spacing.element.gap,
     },
-    loadButtonText: {
-      color: theme.colors.text.inverse,
-      fontSize: theme.typography.fontSizes.base,
-      fontWeight: theme.typography.fontWeights.semibold,
-    },
-    loading: {
-      alignItems: 'center',
-      padding: theme.spacing.layout.screenPadding,
-    },
-    loadingText: {
-      marginTop: theme.spacing.component.gap,
-      fontSize: theme.typography.fontSizes.base,
-      color: theme.colors.text.tertiary,
-    },
-    error: {
-      alignItems: 'center',
-      padding: theme.spacing.layout.screenPadding,
-    },
-    errorText: {
+    navLinkText: {
       fontSize: theme.typography.fontSizes.sm,
-      color: theme.colors.status.error,
-      marginBottom: theme.spacing.component.gap,
-      textAlign: 'center',
+      color: theme.colors.text.secondary,
     },
-    retryButton: {
-      backgroundColor: theme.colors.status.error,
-      paddingHorizontal: theme.spacing.button.paddingHorizontalSmall,
-      paddingVertical: theme.spacing.button.paddingVerticalSmall,
-      borderRadius: theme.spacing.button.borderRadius,
+    navLinkActive: {
+      borderBottomWidth: 2,
+      borderBottomColor: theme.colors.interactive.primary,
     },
-    retryButtonText: {
-      color: theme.colors.text.inverse,
-      fontSize: theme.typography.fontSizes.sm,
-      fontWeight: theme.typography.fontWeights.semibold,
-    },
-    remoteContainer: {
-      width: '100%',
-      alignItems: 'center',
-    },
-    counter: {
-      marginTop: theme.spacing.layout.screenPadding,
-      padding: theme.spacing.component.padding,
-      backgroundColor: theme.colors.surface.tertiary,
-      borderRadius: theme.spacing.component.borderRadius,
-    },
-    counterText: {
-      fontSize: theme.typography.fontSizes.sm,
+    navLinkTextActive: {
       color: theme.colors.interactive.primary,
-      fontWeight: theme.typography.fontWeights.medium,
+      fontWeight: theme.typography.fontWeights.semibold,
+    },
+  });
+}
+
+interface LayoutStyles {
+  container: ViewStyle;
+}
+
+function createLayoutStyles(theme: Theme): LayoutStyles {
+  return StyleSheet.create<LayoutStyles>({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.surface.background,
     },
   });
 }
@@ -284,38 +242,16 @@ function EventLogger() {
 }
 
 /**
- * Inner app component that uses theme context.
+ * Header component with navigation and controls.
  */
-function AppContent() {
+function Header() {
   const { theme, isDark, toggleTheme, themeName } = useTheme();
   const { locale, setLocale } = useLocale();
   const { t } = useTranslation('common');
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = useMemo(() => createHeaderStyles(theme), [theme]);
   const bus = useEventBus<AppEvents>();
 
-  const [state, setState] = useState<AppState>({
-    remoteComponent: null,
-    loading: false,
-    error: null,
-    pressCount: 0,
-  });
-
-  // Listen for BUTTON_PRESSED events from remote MFEs
-  // This demonstrates event-based communication without prop drilling
-  useEventListener<ButtonPressedEvent>(
-    InteractionEventTypes.BUTTON_PRESSED,
-    (event) => {
-      // Update press count when remote button is pressed
-      setState((prev) => ({ ...prev, pressCount: prev.pressCount + 1 }));
-      console.log(
-        `[MobileHost] Received BUTTON_PRESSED from ${event.source}:`,
-        event.payload
-      );
-    }
-  );
-
   // Emit THEME_CHANGED event when theme changes
-  // This allows remote MFEs to sync their theme via event bus
   const handleThemeToggle = useCallback(() => {
     const previousTheme = themeName;
     toggleTheme();
@@ -332,7 +268,6 @@ function AppContent() {
   }, [bus, themeName, toggleTheme]);
 
   // Emit LOCALE_CHANGED event when locale changes
-  // This allows remote MFEs to sync their locale via event bus
   const handleLocaleChange = useCallback(
     (newLocale: string) => {
       const previousLocale = locale;
@@ -357,129 +292,88 @@ function AppContent() {
     handleLocaleChange(availableLocales[nextIndex]);
   }, [locale, handleLocaleChange]);
 
-  const loadRemote = async () => {
-    setState((prev) => ({ ...prev, loading: true, error: null }));
-
-    try {
-      // Prefetch the remote bundle (optional but recommended)
-      await ScriptManager.shared.prefetchScript('HelloRemote');
-
-      // Dynamically import the remote module using MFv2
-      const RemoteModule = await Federated.importModule(
-        'HelloRemote',
-        './HelloRemote',
-        'default'
-      );
-
-      // Extract the default export (HelloRemote component)
-      const HelloRemote = RemoteModule.default || RemoteModule;
-
-      setState((prev) => ({
-        ...prev,
-        remoteComponent: HelloRemote,
-        loading: false,
-      }));
-    } catch (error) {
-      console.error('Failed to load remote:', error);
-      setState((prev) => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }));
-    }
-  };
-
-  // Legacy callback - no longer needed since we use event bus
-  // Kept for demonstration of backward compatibility
-  // The remote still calls onPress, but host now listens via event bus instead
-  const handleRemotePress = () => {
-    // Note: Press count is now updated by the BUTTON_PRESSED event listener above
-    // This callback could be used for additional host-specific logic
-    console.log('[MobileHost] Legacy onPress callback triggered');
-  };
-
-  const HelloRemote = state.remoteComponent;
-
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>{t('appName')} - Mobile Host</Text>
-        </View>
-        <View style={styles.controlsRow}>
-          <Pressable style={styles.themeToggle} onPress={handleThemeToggle}>
-            <Text style={styles.themeToggleText}>
-              {isDark ? '☀️ Light' : '🌙 Dark'}
-            </Text>
-          </Pressable>
-          <Pressable style={styles.langToggle} onPress={cycleLocale}>
-            <Text style={styles.langToggleText}>
-              🌐 {getLocaleDisplayName(locale)}
-            </Text>
-          </Pressable>
-        </View>
-        <Text style={styles.subtitle}>
-          {t('subtitleMobile')}
-        </Text>
+    <View style={styles.header}>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>{t('appName')} - Mobile</Text>
       </View>
-
-      <View style={styles.content}>
-        {!HelloRemote && !state.loading && !state.error && (
-          <Pressable style={styles.loadButton} onPress={loadRemote}>
-            <Text style={styles.loadButtonText}>{t('loadRemote')}</Text>
-          </Pressable>
-        )}
-
-        {state.loading && (
-          <View style={styles.loading}>
-            <ActivityIndicator
-              size="large"
-              color={theme.colors.interactive.primary}
-            />
-            <Text style={styles.loadingText}>{t('loading')}</Text>
+      <View style={styles.controlsRow}>
+        <Pressable style={styles.themeToggle} onPress={handleThemeToggle}>
+          <Text style={styles.themeToggleText}>
+            {isDark ? '☀️ Light' : '🌙 Dark'}
+          </Text>
+        </Pressable>
+        <Pressable style={styles.langToggle} onPress={cycleLocale}>
+          <Text style={styles.langToggleText}>
+            🌐 {getLocaleDisplayName(locale)}
+          </Text>
+        </Pressable>
+      </View>
+      <Text style={styles.subtitle}>{t('subtitleMobile')}</Text>
+      <View style={styles.navRow}>
+        <Link to={`/${Routes.HOME}`} underlayColor="transparent">
+          <View style={styles.navLink}>
+            <Text style={styles.navLinkText}>{t('navigation.home')}</Text>
           </View>
-        )}
-
-        {state.error && (
-          <View style={styles.error}>
-            <Text style={styles.errorText}>{t('error')}: {state.error}</Text>
-            <Pressable style={styles.retryButton} onPress={loadRemote}>
-              <Text style={styles.retryButtonText}>{t('retry')}</Text>
-            </Pressable>
+        </Link>
+        <Link to={`/${Routes.REMOTE_HELLO}`} underlayColor="transparent">
+          <View style={styles.navLink}>
+            <Text style={styles.navLinkText}>{t('navigation.remoteHello')}</Text>
           </View>
-        )}
-
-        {HelloRemote && (
-          <View style={styles.remoteContainer}>
-            <HelloRemote name="Mobile User" onPress={handleRemotePress} locale={locale} />
+        </Link>
+        <Link to={`/${Routes.SETTINGS}`} underlayColor="transparent">
+          <View style={styles.navLink}>
+            <Text style={styles.navLinkText}>{t('navigation.settings')}</Text>
           </View>
-        )}
-
-        {state.pressCount > 0 && (
-          <View style={styles.counter}>
-            <Text style={styles.counterText}>
-              {t('pressCount', { count: state.pressCount })}
-            </Text>
-          </View>
-        )}
+        </Link>
       </View>
     </View>
   );
 }
 
 /**
- * Root React component that wraps the app with EventBusProvider, I18nProvider, and ThemeProvider.
+ * App layout with header and routes.
+ */
+function AppLayout() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createLayoutStyles(theme), [theme]);
+
+  return (
+    <View style={styles.container}>
+      <Header />
+      <RouterRoutes>
+        <Route path="/" element={<Home />} />
+        <Route path={`/${Routes.HOME}`} element={<Home />} />
+        <Route path={`/${Routes.REMOTE_HELLO}`} element={<Remote />} />
+        <Route path={`/${Routes.SETTINGS}`} element={<Settings />} />
+      </RouterRoutes>
+    </View>
+  );
+}
+
+/**
+ * Root React component that wraps the app with providers.
+ * Provider order (outermost to innermost):
+ * 1. NativeRouter - Client-side routing
+ * 2. QueryProvider - Data fetching (React Query)
+ * 3. EventBusProvider - Event bus for inter-MFE communication
+ * 4. I18nProvider - Internationalization
+ * 5. ThemeProvider - Theming
  */
 function App() {
   return (
-    <EventBusProvider options={{ debug: __DEV__, name: 'MobileHost' }}>
-      <I18nProvider translations={locales} initialLocale="en">
-        <ThemeProvider>
-          <EventLogger />
-          <AppContent />
-        </ThemeProvider>
-      </I18nProvider>
-    </EventBusProvider>
+    <NativeRouter>
+      <QueryProvider>
+        <EventBusProvider options={{ debug: __DEV__, name: 'MobileHost' }}>
+          <I18nProvider translations={locales} initialLocale="en">
+            <ThemeProvider>
+              <EventLogger />
+              <AppLayout />
+            </ThemeProvider>
+          </I18nProvider>
+        </EventBusProvider>
+      </QueryProvider>
+    </NativeRouter>
   );
 }
 

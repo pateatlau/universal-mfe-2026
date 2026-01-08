@@ -1,0 +1,98 @@
+# Theming Test - Dark/Light mode toggle
+# Verifies theme toggle functionality from header and settings page
+
+appId: ${MAESTRO_APP_ID}
+name: Theming Test
+tags:
+  - theming
+  - core
+---
+
+# Launch fresh app
+- launchApp:
+    clearState: true
+
+# Wait for app to load
+- extendedWaitUntil:
+    visible: "Universal MFE - Mobile"
+    timeout: 10000
+
+# === Test theme toggle from header ===
+
+# Verify starts in light mode (button shows Dark option)
+- assertVisible: ".*Dark.*"
+
+# Toggle to dark mode
+- tapOn: ".*Dark.*"
+
+# Verify now in dark mode (button shows Light option)
+- extendedWaitUntil:
+    visible: ".*Light.*"
+    timeout: 3000
+
+# Toggle back to light mode
+- tapOn: ".*Light.*"
+
+# Verify back in light mode
+- extendedWaitUntil:
+    visible: ".*Dark.*"
+    timeout: 3000
+
+# === Test theme toggle from Settings page ===
+
+# Navigate to Settings
+- tapOn: "Settings"
+
+- extendedWaitUntil:
+    visible: "Theme"
+    timeout: 5000
+
+# Verify theme options visible
+- assertVisible: ".*Light.*"
+- assertVisible: ".*Dark.*"
+
+# Tap Dark theme option (use index 1 for the settings section, not header)
+- tapOn:
+    text: ".*Dark.*"
+    index: 1
+
+# Wait for theme change
+- extendedWaitUntil:
+    timeout: 2000
+    visible: "Theme"
+
+# Navigate to Home and verify theme persists
+- tapOn:
+    text: "Home"
+    index: 0
+
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 5000
+
+# Verify header shows Light option (meaning we're in dark mode)
+- assertVisible: ".*Light.*"
+
+# Navigate back to Settings
+- tapOn: "Settings"
+
+- extendedWaitUntil:
+    visible: "Theme"
+    timeout: 5000
+
+# Tap Light theme option (use index 1 for the settings section)
+- tapOn:
+    text: ".*Light.*"
+    index: 1
+
+# Navigate to Home and verify theme persists
+- tapOn:
+    text: "Home"
+    index: 0
+
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 5000
+
+# Verify header shows Dark option (meaning we're in light mode)
+- assertVisible: ".*Dark.*"

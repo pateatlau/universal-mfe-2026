@@ -12,9 +12,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Basic checks: lint, typecheck, test, build shared
+  # Basic checks: lint, typecheck, unit tests, integration tests, build shared
   check:
-    name: Lint, Typecheck, Test
+    name: Lint, Typecheck, Test (Unit + Integration)
     runs-on: ubuntu-latest
 
     steps:
@@ -69,6 +69,12 @@ jobs:
         run: |
           echo "::group::Running unit tests"
           npx jest --coverage
+          echo "::endgroup::"
+
+      - name: Run integration tests
+        run: |
+          echo "::group::Running integration tests"
+          yarn turbo run test:integration
           echo "::endgroup::"
 
       - name: Security audit

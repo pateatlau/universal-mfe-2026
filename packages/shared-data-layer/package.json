@@ -1,0 +1,23 @@
+{
+  "name": "@universal/shared-data-layer",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test:integration": "jest --config jest.integration.config.js"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.90.16"
+  },
+  "peerDependencies": {
+    "react": "19.1.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/react": "19.2.7"
+  }
+}

@@ -1,0 +1,92 @@
+# Navigation Test - Page navigation flows
+# Verifies navigation between Home, Remote Module, and Settings pages
+
+appId: ${MAESTRO_APP_ID}
+name: Navigation Test
+tags:
+  - navigation
+  - core
+---
+
+# Launch fresh app
+- launchApp:
+    clearState: true
+
+# Wait for home page to load
+- extendedWaitUntil:
+    visible: "Universal MFE - Mobile"
+    timeout: 10000
+
+# === Navigate to Remote Module page ===
+- tapOn: "Remote Module"
+
+# Verify on Remote Module page - shows back link
+- extendedWaitUntil:
+    visible: ".*Home.*"
+    timeout: 5000
+
+# Verify load button is present
+- assertVisible: ".*Load Remote.*"
+
+# === Navigate back to Home ===
+- tapOn: ".*Home.*"
+
+# Verify back on home page
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 5000
+
+# === Navigate to Settings page ===
+- tapOn: "Settings"
+
+# Verify on Settings page
+- extendedWaitUntil:
+    visible: "Theme"
+    timeout: 5000
+
+# Verify settings sections are visible
+- assertVisible: "Theme"
+- assertVisible: "Language"
+
+# Verify theme options
+- assertVisible: ".*Light.*"
+- assertVisible: ".*Dark.*"
+
+# Verify language options
+- assertVisible: "English"
+
+# === Navigate back to Home from Settings ===
+- tapOn: ".*Home.*"
+
+# Verify back on home page
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 5000
+
+# === Use header navigation ===
+# Navigate to Settings via header
+- tapOn:
+    text: "Settings"
+    index: 0
+
+- extendedWaitUntil:
+    visible: "Theme"
+    timeout: 5000
+
+# Navigate to Remote Module via header
+- tapOn:
+    text: "Remote Module"
+    index: 0
+
+- extendedWaitUntil:
+    visible: ".*Load Remote.*"
+    timeout: 5000
+
+# Navigate to Home via header
+- tapOn:
+    text: "Home"
+    index: 0
+
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 5000
