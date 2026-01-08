@@ -25,12 +25,25 @@ A production-ready microfrontend architecture enabling code sharing across Web, 
 
 ```
 packages/
-├── web-shell/              # Web host (port 9001)
-├── web-remote-hello/       # Web remote (port 9003)
-├── mobile-host/            # Mobile host (Android: 8081, iOS: 8082)
-├── mobile-remote-hello/    # Mobile remote (MF: 9004/9005, Standalone: 8083/8084)
-├── shared-utils/           # TypeScript utilities
-└── shared-hello-ui/        # Universal React Native components
+├── Host Applications
+│   ├── web-shell/              # Web host (port 9001)
+│   └── mobile-host/            # Mobile host (Android: 8081, iOS: 8082)
+│
+├── Remote MFEs
+│   ├── web-remote-hello/       # Web remote (port 9003)
+│   └── mobile-remote-hello/    # Mobile remote (MF: 9004/9005, Standalone: 8083/8084)
+│
+└── Shared Libraries
+    ├── shared-utils/           # TypeScript utilities
+    ├── shared-hello-ui/        # Universal React Native components
+    ├── shared-auth-store/      # Zustand state management
+    ├── shared-design-tokens/   # Two-tier design token system
+    ├── shared-theme-context/   # Theme provider with persistence
+    ├── shared-a11y/            # WCAG 2.1 AA accessibility
+    ├── shared-i18n/            # Zero-dependency i18n
+    ├── shared-event-bus/       # Inter-MFE communication
+    ├── shared-data-layer/      # React Query v5 setup
+    └── shared-router/          # Host-owned routing
 ```
 
 **Key Innovation:** React Native primitives as the universal UI API - rendered via React Native Web on web and natively on mobile.
@@ -115,6 +128,23 @@ Host and standalone apps can run simultaneously on different emulators/simulator
 
 **Key scripts:** `build:standalone`, `start:bundler:android`, `start:bundler:ios`, `yarn android`, `yarn ios` (see `packages/mobile-remote-hello/package.json`). Config: `rspack.standalone.config.mjs`.
 
+## Enterprise Features
+
+| Feature | Package | Description |
+|---------|---------|-------------|
+| Build Orchestration | Turborepo | Intelligent caching, task orchestration |
+| Design Tokens | `shared-design-tokens` | Two-tier token system (primitive/semantic) |
+| Theming | `shared-theme-context` | Light/dark mode with persistence |
+| Accessibility | `shared-a11y` | WCAG 2.1 AA compliant utilities |
+| Internationalization | `shared-i18n` | Zero-dependency i18n with namespace isolation |
+| Event Bus | `shared-event-bus` | Type-safe inter-MFE communication |
+| Data Fetching | `shared-data-layer` | React Query with shared/isolated clients |
+| Routing | `shared-router` | Host-owned routing abstraction |
+| State Management | `shared-auth-store` | Zustand stores with persistence |
+| Unit Testing | Jest + Testing Library | React Native component testing |
+| Integration Testing | Jest | Provider composition, routing |
+| E2E Testing | Playwright + Maestro | Web and mobile automation |
+
 ## Tech Stack
 
 | Component | Version |
@@ -164,12 +194,26 @@ For production builds without Metro dependency, see [Phase 6 in CI/CD Implementa
 
 | Document | Description |
 |----------|-------------|
+| [Enterprise Enhancements](docs/ENTERPRISE-ENHANCEMENTS.md) | Overview of all enterprise features |
+| [Testing Guide](docs/universal-mfe-all-platforms-testing-guide.md) | Running apps and testing guide |
 | [CI/CD Implementation](docs/CI-CD-IMPLEMENTATION-PLAN.md) | CI/CD workflows and deployment guide |
 | [MF V2 Implementation](docs/universal-mfe-mf-v2-implementation.md) | Configuration reference and troubleshooting |
-| [Testing Guide](docs/universal-mfe-all-platforms-testing-guide.md) | Quick reference for all platforms |
 | [Architecture Overview](docs/universal-mfe-architecture-overview.md) | System design and patterns |
-| [POC-1 Roadmap](docs/universal-mfe-poc-1-requirements.md) | Future features (Auth, Payments, Navigation, Testing) |
 | [CLAUDE.md](CLAUDE.md) | Development guidelines and constraints |
+
+### Pattern Documentation
+
+| Document | Description |
+|----------|-------------|
+| [State Management](docs/PATTERNS-STATE-MANAGEMENT.md) | Zustand stores, storage abstraction |
+| [Data Fetching](docs/PATTERNS-DATA-FETCHING.md) | React Query patterns |
+| [Routing](docs/PATTERNS-ROUTING.md) | Host-owned routing model |
+| [Theming](docs/PATTERNS-THEMING.md) | Design tokens, theme system |
+| [Accessibility](docs/PATTERNS-ACCESSIBILITY.md) | WCAG 2.1 AA utilities |
+| [Internationalization](docs/PATTERNS-I18N.md) | i18n patterns |
+| [Event Bus](docs/PATTERNS-EVENT-BUS.md) | Inter-MFE communication |
+| [Testing](docs/PATTERNS-TESTING.md) | Testing patterns and pyramid |
+| [Anti-Patterns](docs/ANTI-PATTERNS.md) | Common mistakes to avoid |
 
 ## Key Constraints
 
