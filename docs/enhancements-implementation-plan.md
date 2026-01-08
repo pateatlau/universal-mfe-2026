@@ -1340,15 +1340,24 @@ Integration tests verify cross-package interactions and Module Federation remote
 - Theme persistence tests verify toggle, setTheme, and multiple consumer behavior
 - Total: 27 integration tests (6 providers + 9 routing + 12 theme)
 
-### Task 9.3: Create mobile integration tests
-**Files to create:**
-- `packages/mobile-host/src/__integration__/setup.ts`
-- `packages/mobile-host/jest.integration.config.js`
-- `packages/mobile-host/src/__integration__/providers.test.tsx`
-- `packages/mobile-host/src/__integration__/navigation.test.tsx`
+### Task 9.3: Create mobile integration tests ✅ COMPLETE
+**Files created:**
+- `packages/mobile-host/src/__integration__/setup.ts` - Comprehensive React Native mocks for jsdom environment
+- `packages/mobile-host/jest.integration.config.js` - Jest config with ts-jest and workspace mappings
+- `packages/mobile-host/src/__integration__/providers.test.tsx` - 6 tests for ThemeProvider + I18nProvider composition
+- `packages/mobile-host/src/__integration__/navigation.test.tsx` - 9 tests for routing and state preservation
 
-**Files to modify:**
-- `packages/mobile-host/package.json` - add `test:integration` script
+**Files modified:**
+- `packages/mobile-host/package.json` - Added `test:integration` script and `react-router-dom` devDependency
+
+**Key implementation details:**
+- Uses ts-jest instead of babel-jest (avoids @react-native/babel-preset dependency issues)
+- Uses @testing-library/react with mocked RN components (react-router-native ESM incompatible with ts-jest)
+- Uses react-router-dom for routing tests (same API as react-router-native)
+- Comprehensive React Native mock includes View, Text, Pressable, StyleSheet, Platform, Dimensions, Animated
+- Console warnings suppressed for expected DOM environment warnings
+
+**Total: 15 mobile integration tests (6 providers + 9 navigation)**
 
 ### Task 9.4: Create shared package integration tests
 **Files to create:**

@@ -22,7 +22,8 @@
     "ios:simulator": "react-native run-ios --simulator=\"iPhone 16\"",
     "build:android": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res",
     "build:ios": "react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle --assets-dest ios",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:integration": "jest --config jest.integration.config.js"
   },
   "dependencies": {
     "@callstack/repack": "5.2.0",
@@ -43,6 +44,7 @@
     "@react-native/babel-plugin-codegen": "0.80.2",
     "@rspack/cli": "1.6.5",
     "@types/react": "19.2.7",
+    "react-router-dom": "6.30.3",
     "typescript": "5.9.3"
   }
 }
