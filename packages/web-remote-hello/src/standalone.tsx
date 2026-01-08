@@ -27,6 +27,7 @@ import {
 import {
   I18nProvider,
   useLocale,
+  useTranslation,
   locales,
   availableLocales,
   getLocaleDisplayName,
@@ -141,6 +142,7 @@ function createStyles(theme: Theme): Styles {
 function StandaloneAppContent() {
   const { theme, isDark, toggleTheme, themeName } = useTheme();
   const { locale, setLocale } = useLocale();
+  const { t } = useTranslation('common');
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [pressCount, setPressCount] = useState(0);
 
@@ -165,7 +167,7 @@ function StandaloneAppContent() {
         <View style={styles.controlsRow}>
           <Pressable style={styles.themeToggle} onPress={toggleTheme}>
             <Text style={styles.themeToggleText}>
-              {isDark ? '☀️ Light' : '🌙 Dark'}
+              {isDark ? `☀️ ${t('theme.light')}` : `🌙 ${t('theme.dark')}`}
             </Text>
           </Pressable>
           <Pressable style={styles.langToggle} onPress={cycleLocale}>

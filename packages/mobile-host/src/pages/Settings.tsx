@@ -145,8 +145,8 @@ function Settings() {
   );
 
   const themeOptions = [
-    { value: 'light', label: '☀️ Light' },
-    { value: 'dark', label: '🌙 Dark' },
+    { value: 'light', label: `☀️ ${t('theme.light')}` },
+    { value: 'dark', label: `🌙 ${t('theme.dark')}` },
   ] as const;
 
   return (

@@ -535,6 +535,82 @@ jobs:
           path: packages/mobile-remote-hello/ios/standalone-ios-simulator-app.zip
           retention-days: 7
 
+  # E2E Web Tests (only on main branch, after web build)
+  e2e-web:
+    name: E2E Web Tests
+    runs-on: ubuntu-latest
+    needs: build-web
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Install Playwright browsers
+        working-directory: packages/web-shell
+        run: |
+          echo "::group::Installing Playwright browsers"
+          npx playwright install --with-deps chromium
+          echo "::endgroup::"
+
+      - name: Build web packages
+        run: |
+          echo "::group::Building web packages"
+          yarn build:web
+          echo "::endgroup::"
+
+      - name: Run Playwright tests
+        working-directory: packages/web-shell
+        run: |
+          echo "::group::Running Playwright E2E tests"
+          npx playwright test --reporter=html
+          echo "::endgroup::"
+        env:
+          CI: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: playwright-report
+          path: packages/web-shell/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: packages/web-shell/test-results/
+          retention-days: 7
+
   # PR Summary comment (only on pull requests)
   pr-summary:
     name: PR Summary
