@@ -7,9 +7,16 @@
  *   yarn workspace @universal/web-remote-hello dev
  *
  * Tests are designed to gracefully handle the case when remote is not available.
+ *
+ * Note: Tests use i18n-aware patterns to match both English and Spanish translations.
+ * - Light theme: "Light" (en), "Claro" (es)
+ * - Dark theme: "Dark" (en), "Oscuro" (es)
  */
 
 import { test, expect, Page } from '@playwright/test';
+
+// i18n-aware patterns for theme toggle text
+const DARK_THEME_PATTERN = /🌙 (Dark|Oscuro)/;
 
 // Helper to check if remote server is available
 async function isRemoteAvailable(page: Page): Promise<boolean> {
@@ -166,7 +173,7 @@ test.describe('Remote Loading', () => {
       await page.goto('/remote-hello');
 
       // Switch to dark mode first
-      await page.getByText('🌙 Dark').click();
+      await page.getByText(DARK_THEME_PATTERN).click();
       await page.waitForTimeout(100);
 
       // Load remote

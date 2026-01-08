@@ -535,12 +535,89 @@ jobs:
           path: packages/mobile-remote-hello/ios/standalone-ios-simulator-app.zip
           retention-days: 7
 
+  # E2E Web Tests (on main branch push or PR targeting main, after web build)
+  e2e-web:
+    name: E2E Web Tests
+    runs-on: ubuntu-latest
+    needs: build-web
+    # Run on: direct push to main, OR pull request targeting main
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Install Playwright browsers
+        working-directory: packages/web-shell
+        run: |
+          echo "::group::Installing Playwright browsers"
+          npx playwright install --with-deps chromium
+          echo "::endgroup::"
+
+      - name: Build web packages
+        run: |
+          echo "::group::Building web packages"
+          yarn build:web
+          echo "::endgroup::"
+
+      - name: Run Playwright tests
+        working-directory: packages/web-shell
+        run: |
+          echo "::group::Running Playwright E2E tests"
+          npx playwright test --reporter=html
+          echo "::endgroup::"
+        env:
+          CI: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: playwright-report
+          path: packages/web-shell/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: packages/web-shell/test-results/
+          retention-days: 7
+
   # PR Summary comment (only on pull requests)
   pr-summary:
     name: PR Summary
     runs-on: ubuntu-latest
     if: ${{ always() && github.event_name == 'pull_request' }}
-    needs: [check, build-web, build-android, build-ios, build-standalone-android, build-standalone-ios]
+    needs: [check, build-web, build-android, build-ios, build-standalone-android, build-standalone-ios, e2e-web]
 
     permissions:
       pull-requests: write
@@ -555,6 +632,7 @@ jobs:
           BUILD_IOS_RESULT: ${{ needs.build-ios.result }}
           BUILD_STANDALONE_ANDROID_RESULT: ${{ needs.build-standalone-android.result }}
           BUILD_STANDALONE_IOS_RESULT: ${{ needs.build-standalone-ios.result }}
+          E2E_WEB_RESULT: ${{ needs.e2e-web.result }}
         with:
           script: |
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
@@ -566,7 +644,8 @@ jobs:
               android: process.env.BUILD_ANDROID_RESULT,
               ios: process.env.BUILD_IOS_RESULT,
               standaloneAndroid: process.env.BUILD_STANDALONE_ANDROID_RESULT,
-              standaloneIos: process.env.BUILD_STANDALONE_IOS_RESULT
+              standaloneIos: process.env.BUILD_STANDALONE_IOS_RESULT,
+              e2eWeb: process.env.E2E_WEB_RESULT
             };
 
             // Helper to get status emoji
@@ -578,10 +657,11 @@ jobs:
               return '❓';
             };
 
-            // Check if all passed
-            const allPassed = Object.values(results).every(r => r === 'success');
-            const headerEmoji = allPassed ? '✅' : '❌';
-            const headerText = allPassed ? 'All checks passed successfully!' : 'Some checks failed or were skipped.';
+            // Check if all passed (E2E may be skipped for PRs not targeting main)
+            const allPassed = Object.values(results).every(r => r === 'success' || r === 'skipped');
+            const anyFailed = Object.values(results).some(r => r === 'failure');
+            const headerEmoji = anyFailed ? '❌' : '✅';
+            const headerText = anyFailed ? 'Some checks failed.' : 'All checks passed!';
 
             const body = `## CI Build Summary ${headerEmoji}
 
@@ -596,9 +676,10 @@ jobs:
             | 🍎 Build iOS (Host) | ${getStatus(results.ios)} ${results.ios} |
             | 📱 Build Standalone Android | ${getStatus(results.standaloneAndroid)} ${results.standaloneAndroid} |
             | 📲 Build Standalone iOS | ${getStatus(results.standaloneIos)} ${results.standaloneIos} |
+            | 🧪 E2E Web Tests | ${getStatus(results.e2eWeb)} ${results.e2eWeb}${results.e2eWeb === 'skipped' ? ' *(only runs on PRs to main)*' : ''} |
 
             ### Artifacts
-            ${allPassed ? `📦 [Download artifacts from workflow run](${runUrl}#artifacts)
+            ${!anyFailed ? `📦 [Download artifacts from workflow run](${runUrl}#artifacts)
 
             | Platform | Artifact |
             |----------|----------|
@@ -607,7 +688,8 @@ jobs:
             | Android (Host) | \`android-debug-apk\` |
             | iOS (Host) | \`ios-simulator-app\` |
             | Android (Standalone) | \`standalone-android-debug-apk\` |
-            | iOS (Standalone) | \`standalone-ios-simulator-app\` |` : `⚠️ Some builds failed - artifacts may be incomplete.
+            | iOS (Standalone) | \`standalone-ios-simulator-app\` |
+            | E2E Report | \`playwright-report\` ${results.e2eWeb === 'skipped' ? '*(skipped)*' : ''} |` : `⚠️ Some builds failed - artifacts may be incomplete.
 
             📦 [View workflow run](${runUrl})`}
 
