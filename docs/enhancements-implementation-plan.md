@@ -1188,10 +1188,38 @@ Using v6.30.0 to match web routing (v7 has Module Federation incompatibility).
 - `yarn test` - 6 tests pass (shared-utils)
 - `yarn typecheck` - All packages pass
 
-### Task 8.2: Configure Jest for shared-hello-ui
-**Files to create:**
-- `packages/shared-hello-ui/jest.config.js`
-- `packages/shared-hello-ui/src/__tests__/HelloUniversal.test.tsx`
+### Task 8.2: Configure Jest for shared-hello-ui ✅ COMPLETE
+**Files created:**
+- `packages/shared-hello-ui/jest.config.js` - Jest configuration with:
+  - JSDOM test environment
+  - Custom react-native mock mapping
+  - Workspace dependency mapping (@universal/shared-*)
+  - Coverage thresholds (50%)
+- `packages/shared-hello-ui/src/__mocks__/react-native.ts` - Comprehensive RN mock:
+  - View, Text, Pressable, Image, TextInput, ScrollView, etc.
+  - StyleSheet, Platform, Dimensions, Animated, etc.
+  - Proper accessibility attribute passthrough
+- `packages/shared-hello-ui/src/__tests__/HelloUniversal.test.tsx` - 16 unit tests:
+  - Rendering (4 tests)
+  - Button interaction (2 tests)
+  - Accessibility (4 tests)
+  - i18n integration (3 tests)
+  - Theme integration (3 tests)
+
+**Files modified:**
+- `packages/shared-hello-ui/package.json` - added `test` script
+- `packages/shared-hello-ui/tsconfig.json` - exclude `__tests__` and `__mocks__` from build
+- `package.json` (root) - added testing dependencies:
+  - `@testing-library/dom` (10.4.0)
+  - `@testing-library/react` (16.1.0)
+  - `react` (19.1.0) and `react-dom` (19.1.0) for root devDependencies
+  - `jest-environment-jsdom` (29.7.0)
+- `jest.setup.js` (root) - added `@testing-library/jest-dom` import and `accessible` prop warning filter
+
+**Verified:**
+- `yarn turbo run build --filter=@universal/shared-hello-ui` - Success
+- `yarn workspace @universal/shared-hello-ui test` - 16/16 tests pass
+- `yarn workspace @universal/shared-utils test` - 6/6 tests pass (regression check)
 
 ### Task 8.3: Configure Jest for shared-theme-context
 **Files to create:**

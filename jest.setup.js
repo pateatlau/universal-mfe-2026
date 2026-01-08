@@ -1,135 +1,12 @@
 /**
  * Jest setup file for React Native component testing
  *
- * This file mocks React Native modules that don't exist in the Jest
- * node environment to enable component unit testing.
+ * This file provides comprehensive mocks for React Native modules
+ * that don't exist in the Jest node environment.
  */
 
-// Mock React Native's built-in modules
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-
-  // Mock modules that require native code
-  RN.NativeModules = {
-    ...RN.NativeModules,
-    SettingsManager: {
-      settings: {},
-    },
-    StatusBarManager: {
-      HEIGHT: 44,
-      getHeight: jest.fn(),
-    },
-    DeviceInfo: {
-      getConstants: () => ({}),
-    },
-    PlatformConstants: {
-      getConstants: () => ({
-        isTesting: true,
-      }),
-    },
-    I18nManager: {
-      localeIdentifier: 'en_US',
-      allowRTL: jest.fn(),
-      forceRTL: jest.fn(),
-      swapLeftAndRightInRTL: jest.fn(),
-      isRTL: false,
-    },
-    UIManager: {
-      ...RN.UIManager,
-      getViewManagerConfig: jest.fn(() => ({})),
-      hasViewManagerConfig: jest.fn(() => false),
-    },
-  };
-
-  // Mock AccessibilityInfo for a11y testing
-  RN.AccessibilityInfo = {
-    isScreenReaderEnabled: jest.fn(() => Promise.resolve(false)),
-    isReduceMotionEnabled: jest.fn(() => Promise.resolve(false)),
-    isBoldTextEnabled: jest.fn(() => Promise.resolve(false)),
-    isGrayscaleEnabled: jest.fn(() => Promise.resolve(false)),
-    isInvertColorsEnabled: jest.fn(() => Promise.resolve(false)),
-    isReduceTransparencyEnabled: jest.fn(() => Promise.resolve(false)),
-    addEventListener: jest.fn(() => ({
-      remove: jest.fn(),
-    })),
-    removeEventListener: jest.fn(),
-    announceForAccessibility: jest.fn(),
-    setAccessibilityFocus: jest.fn(),
-  };
-
-  // Mock Animated to work without native driver
-  const AnimatedMock = {
-    ...RN.Animated,
-    timing: (value, config) => ({
-      start: (callback) => {
-        value.setValue(config.toValue);
-        callback?.({ finished: true });
-      },
-      stop: jest.fn(),
-    }),
-    spring: (value, config) => ({
-      start: (callback) => {
-        value.setValue(config.toValue);
-        callback?.({ finished: true });
-      },
-      stop: jest.fn(),
-    }),
-    decay: (value, config) => ({
-      start: (callback) => {
-        callback?.({ finished: true });
-      },
-      stop: jest.fn(),
-    }),
-    parallel: (animations) => ({
-      start: (callback) => {
-        animations.forEach((anim) => anim.start?.());
-        callback?.({ finished: true });
-      },
-      stop: jest.fn(),
-    }),
-    sequence: (animations) => ({
-      start: (callback) => {
-        animations.forEach((anim) => anim.start?.());
-        callback?.({ finished: true });
-      },
-      stop: jest.fn(),
-    }),
-    loop: (animation) => ({
-      start: jest.fn(),
-      stop: jest.fn(),
-    }),
-  };
-
-  return {
-    ...RN,
-    Animated: AnimatedMock,
-  };
-});
-
-// Mock NativeEventEmitter for modules that use it
-jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter', () => {
-  const { EventEmitter } = require('events');
-  return class MockNativeEventEmitter extends EventEmitter {
-    addListener(eventType, listener) {
-      super.addListener(eventType, listener);
-      return {
-        remove: () => this.removeListener(eventType, listener),
-      };
-    }
-    removeListeners() {}
-  };
-});
-
-// Mock DeviceEventEmitter
-jest.mock(
-  'react-native/Libraries/EventEmitter/RCTDeviceEventEmitter',
-  () => ({
-    addListener: jest.fn(() => ({ remove: jest.fn() })),
-    emit: jest.fn(),
-    removeListener: jest.fn(),
-    removeAllListeners: jest.fn(),
-  })
-);
+// Import jest-dom matchers for DOM assertions (toBeInTheDocument, etc.)
+require('@testing-library/jest-dom');
 
 // Global mocks for testing-library
 global.requestAnimationFrame = (callback) => setTimeout(callback, 0);
@@ -158,7 +35,9 @@ console.error = (...args) => {
   if (
     typeof message === 'string' &&
     (message.includes('Warning: An update to') ||
-      message.includes('act(...)'))
+      message.includes('act(...)') ||
+      // React Native accessible prop is not valid in DOM but works via our mock
+      message.includes('non-boolean attribute `accessible`'))
   ) {
     return;
   }
