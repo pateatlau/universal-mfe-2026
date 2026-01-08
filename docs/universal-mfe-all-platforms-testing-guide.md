@@ -80,6 +80,102 @@ packages/
 
 ---
 
+## Integration Tests
+
+Integration tests verify cross-package interactions, provider composition, and routing without full browser/device automation.
+
+### Running Integration Tests
+
+```bash
+# Run all integration tests from root (recommended)
+yarn test:integration
+
+# Run via Turborepo with caching
+yarn turbo run test:integration
+
+# Run for a specific package
+yarn workspace @universal/web-shell test:integration
+yarn workspace @universal/mobile-host test:integration
+yarn workspace @universal/shared-data-layer test:integration
+```
+
+### Integration Test Coverage
+
+| Package | Tests | Description |
+|---------|-------|-------------|
+| web-shell | 27 | Provider composition, routing, theme persistence |
+| mobile-host | 15 | Provider composition, navigation |
+| shared-data-layer | 31 | QueryClient config, QueryProvider, cache sharing |
+| **Total** | **73** | |
+
+### Test Structure
+
+```
+packages/
+├── web-shell/
+│   ├── jest.integration.config.js
+│   └── src/__integration__/
+│       ├── setup.ts                    # Window mocks for JSDOM
+│       ├── mocks/react-native.ts       # RN component mocks
+│       ├── providers.test.tsx          # Provider composition
+│       ├── routing.test.tsx            # Route transitions
+│       └── theme-persistence.test.tsx  # Theme state management
+├── mobile-host/
+│   ├── jest.integration.config.js
+│   └── src/__integration__/
+│       ├── setup.ts                    # RN mocks for JSDOM
+│       ├── providers.test.tsx          # Provider composition
+│       └── navigation.test.tsx         # Navigation state
+└── shared-data-layer/
+    ├── jest.integration.config.js
+    └── src/__integration__/
+        ├── setup.ts                    # Jest-dom setup
+        ├── queryClient.test.ts         # QueryClient factory & singleton
+        └── QueryProvider.test.tsx      # Provider & cache sharing
+```
+
+### Troubleshooting Integration Tests
+
+**Tests fail with "Cannot find module 'react-native'"**
+```bash
+# Integration tests use custom mocks, not react-native-web
+# Ensure jest.integration.config.js has moduleNameMapper for react-native
+```
+
+**Tests fail with React version conflicts**
+```bash
+# Web packages use React 19.2.0, mobile/shared use 19.1.0
+# The jest.integration.config.js maps React to workspace versions
+# Example in web-shell:
+moduleNameMapper: {
+  '^react$': '<rootDir>/node_modules/react',
+  '^react-dom$': '<rootDir>/node_modules/react-dom',
+}
+```
+
+**Tests fail with "toHaveTextContent is not a function"**
+```bash
+# Ensure setup.ts imports @testing-library/jest-dom
+# And jest.integration.config.js has setupFilesAfterEnv pointing to setup.ts
+```
+
+**Tests hang or timeout**
+```bash
+# Integration tests have 15s timeout (longer than unit tests)
+# If still timing out, check for unresolved promises or async issues
+# Run with --verbose to see which test is hanging:
+yarn workspace @universal/web-shell test:integration --verbose
+```
+
+**Cache-related tests fail intermittently**
+```bash
+# React Query cache tests need proper cleanup
+# Ensure beforeEach/afterEach call resetSharedQueryClient()
+# Use useLayoutEffect for synchronous cache updates in test components
+```
+
+---
+
 ## Web
 
 ### Run Web App
