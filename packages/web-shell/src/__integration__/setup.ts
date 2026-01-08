@@ -4,8 +4,8 @@
  * This file configures the test environment for integration tests that verify
  * cross-package interactions, provider composition, and routing behavior.
  *
- * Note: react-native is mocked via moduleNameMapper in jest.integration.config.js
- * pointing to ./mocks/react-native.ts
+ * Note: react-native is mapped to react-native-web via moduleNameMapper in
+ * jest.integration.config.js, so tests use the actual production implementation.
  */
 
 import '@testing-library/jest-dom';
@@ -65,3 +65,9 @@ console.error = (...args: unknown[]) => {
 
 // Global test timeout for integration tests (longer than unit tests)
 jest.setTimeout(10000);
+
+// Clear localStorage before each test to ensure clean state
+// This is important because ThemeProvider persists theme to localStorage
+beforeEach(() => {
+  localStorage.clear();
+});

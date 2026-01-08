@@ -43,3 +43,12 @@ console.error = (...args) => {
   }
   originalConsoleError(...args);
 };
+
+// Clear localStorage before each test to ensure clean state
+// This is important because ThemeProvider persists theme to localStorage
+// Only run in jsdom environment where localStorage exists
+if (typeof localStorage !== 'undefined') {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+}

@@ -29,8 +29,8 @@ module.exports = {
     '^react/jsx-dev-runtime$': '<rootDir>/node_modules/react/jsx-dev-runtime',
     '^react-dom$': '<rootDir>/node_modules/react-dom',
     '^react-dom/client$': '<rootDir>/node_modules/react-dom/client',
-    // Map react-native to our mock for jsdom environment
-    '^react-native$': '<rootDir>/src/__integration__/mocks/react-native.ts',
+    // Map react-native to react-native-web (same as production)
+    '^react-native$': '<rootDir>/node_modules/react-native-web',
     // Map workspace dependencies to source for better debugging
     '^@universal/shared-utils$': '<rootDir>/../shared-utils/src/index.ts',
     '^@universal/shared-design-tokens$': '<rootDir>/../shared-design-tokens/src/index.ts',

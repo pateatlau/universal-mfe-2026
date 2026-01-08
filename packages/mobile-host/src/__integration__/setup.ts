@@ -285,3 +285,9 @@ console.error = (...args: unknown[]) => {
 
 // Global test timeout for integration tests (longer than unit tests)
 jest.setTimeout(15000);
+
+// Clear localStorage before each test to ensure clean state
+// This is important because ThemeProvider persists theme to localStorage
+beforeEach(() => {
+  localStorage.clear();
+});
