@@ -490,7 +490,7 @@ describe('Routing', () => {
 
 ## Architecture Diagram
 
-```
+```text
 Web Shell (Host)                     Mobile Host (Host)
 ├─ BrowserRouter                     ├─ NativeRouter
 ├─ Routes: HOME, SETTINGS, etc.      ├─ Routes: HOME, SETTINGS, etc.

@@ -69,7 +69,7 @@ export function Button({ label, onPress }) {
 
 ## Package Architecture
 
-```
+```text
 packages/
 ├── Shared Libraries (Platform-Agnostic)
 │   ├── shared-utils/           # Pure TypeScript utilities

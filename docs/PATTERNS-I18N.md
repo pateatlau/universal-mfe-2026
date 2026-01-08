@@ -13,7 +13,7 @@ The platform implements a custom, zero-dependency i18n system in `@universal/sha
 
 ## Package Structure
 
-```
+```text
 packages/shared-i18n/src/
 ├── context/
 │   ├── I18nContext.tsx      # React context
@@ -518,7 +518,7 @@ Multiple MFEs might use the same translation keys, causing conflicts.
 
 Each MFE owns a dedicated namespace:
 
-```
+```text
 Host (web-shell)
 ├── common.*          ← Host owns
 ├── navigation.*      ← Host owns

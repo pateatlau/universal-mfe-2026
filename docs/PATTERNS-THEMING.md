@@ -16,7 +16,7 @@ This separation enables:
 
 ## Package Structure
 
-```
+```text
 packages/shared-design-tokens/src/
 ├── primitives/
 │   ├── colors.ts      # Color palette (blue, gray, green, yellow, red)

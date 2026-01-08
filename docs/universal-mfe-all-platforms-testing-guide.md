@@ -28,7 +28,7 @@ yarn workspace @universal/web-remote-hello dev
 yarn workspace @universal/web-shell dev
 ```
 
-Open http://localhost:9001 in your browser.
+Open <http://localhost:9001> in your browser.
 
 **Manual Testing:**
 - Navigate using the header links (Home, Remote Hello, Settings)
@@ -41,7 +41,7 @@ Open http://localhost:9001 in your browser.
 
 #### iOS Shell App (with Remote)
 
-**Step 1: Start an iOS Simulator**
+##### Step 1: Start an iOS Simulator
 
 ```bash
 # List available simulators
@@ -54,7 +54,7 @@ xcrun simctl boot "iPhone 16"
 open -a Simulator
 ```
 
-**Step 2: Build and serve the iOS remote**
+##### Step 2: Build and serve the iOS remote
 
 ```bash
 # Terminal 1: Build and serve iOS remote
@@ -64,7 +64,7 @@ yarn workspace @universal/mobile-remote-hello serve:ios
 
 Wait until you see "Server listening on port 9005".
 
-**Step 3: Start the iOS Metro bundler**
+##### Step 3: Start the iOS Metro bundler
 
 ```bash
 # Terminal 2: Start iOS Metro bundler
@@ -73,7 +73,7 @@ yarn workspace @universal/mobile-host start:bundler:ios
 
 Wait until you see "Welcome to Metro" and the bundler is ready.
 
-**Step 4: Build and run the iOS app**
+##### Step 4: Build and run the iOS app
 
 ```bash
 # Terminal 3: Build and install iOS app
@@ -91,14 +91,14 @@ The app will automatically install and launch in the iOS Simulator.
 
 For isolated development of the remote component without the shell app.
 
-**Step 1: Start an iOS Simulator** (if not already running)
+##### Step 1: Start an iOS Simulator (if not already running)
 
 ```bash
 xcrun simctl boot "iPhone 16"
 open -a Simulator
 ```
 
-**Step 2: Start the standalone bundler**
+##### Step 2: Start the standalone bundler
 
 ```bash
 # Terminal 1: Start standalone bundler for remote
@@ -107,7 +107,7 @@ yarn workspace @universal/mobile-remote-hello start:bundler:ios
 
 Wait until you see "Welcome to Metro" and the bundler is ready.
 
-**Step 3: Install CocoaPods** (first time only)
+##### Step 3: Install CocoaPods (first time only)
 
 ```bash
 # Install pods for the remote iOS project
@@ -116,7 +116,7 @@ pod install
 cd ../../..
 ```
 
-**Step 4: Build and run the standalone app**
+##### Step 4: Build and run the standalone app
 
 ```bash
 # Terminal 2: Build and install standalone remote app
@@ -141,7 +141,7 @@ xcrun simctl launch booted com.universal.mobileremote
 
 #### Android Shell App (with Remote)
 
-**Step 1: Start an Android Emulator**
+##### Step 1: Start an Android Emulator
 
 ```bash
 # List available emulators
@@ -155,7 +155,7 @@ adb wait-for-device
 adb devices  # Should show: emulator-5554  device
 ```
 
-**Step 2: Build and serve the Android remote**
+##### Step 2: Build and serve the Android remote
 
 ```bash
 # Terminal 1: Build and serve Android remote
@@ -165,7 +165,7 @@ yarn workspace @universal/mobile-remote-hello serve:android
 
 Wait until you see "Server listening on port 9004".
 
-**Step 3: Start the Android Metro bundler**
+##### Step 3: Start the Android Metro bundler
 
 ```bash
 # Terminal 2: Start Android Metro bundler
@@ -174,7 +174,7 @@ yarn workspace @universal/mobile-host start:bundler:android
 
 Wait until you see "Welcome to Metro" and the bundler is ready.
 
-**Step 4: Build and run the Android app**
+##### Step 4: Build and run the Android app
 
 ```bash
 # Terminal 3: Build and install Android app
@@ -192,7 +192,7 @@ The app will automatically install and launch in the Android emulator.
 
 For isolated development of the remote component without the shell app.
 
-**Step 1: Start an Android Emulator** (if not already running)
+##### Step 1: Start an Android Emulator (if not already running)
 
 ```bash
 emulator -avd Pixel_7_API_35 &
@@ -200,7 +200,7 @@ adb wait-for-device
 adb devices
 ```
 
-**Step 2: Start the standalone bundler**
+##### Step 2: Start the standalone bundler
 
 ```bash
 # Terminal 1: Start standalone bundler for remote
@@ -209,14 +209,14 @@ yarn workspace @universal/mobile-remote-hello start:bundler:android
 
 Wait until you see "Welcome to Metro" and the bundler is ready.
 
-**Step 3: Set up ADB reverse port**
+##### Step 3: Set up ADB reverse port
 
 ```bash
 # Forward the bundler port from emulator to host
 adb reverse tcp:8083 tcp:8083
 ```
 
-**Step 4: Build and run the standalone app**
+##### Step 4: Build and run the standalone app
 
 ```bash
 # Terminal 2: Build and install standalone remote app

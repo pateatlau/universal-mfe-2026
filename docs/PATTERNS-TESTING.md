@@ -4,7 +4,7 @@ This document describes the testing architecture and patterns across all levels 
 
 ## Testing Pyramid
 
-```
+```text
                     ┌─────────────┐
                     │    E2E      │  Playwright (Web), Maestro (Mobile)
                     │   Tests     │  User workflows, cross-platform
