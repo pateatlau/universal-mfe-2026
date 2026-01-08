@@ -756,7 +756,7 @@ packages/
 
 **New Dependencies:**
 
-- `react-router` v7
+- `react-router` v6.30.3 (v7 has Module Federation incompatibility)
 - `zustand`
 - `tailwindcss`
 - `nativewind`

@@ -1082,7 +1082,7 @@ All React Query / Data Fetching tasks completed:
 - `packages/shared-router/src/index.ts` - Exports
 
 **Dependencies:**
-- `react-router` (exact version: 7.11.0)
+- `react-router` (exact version: 6.30.3)
 
 **Route ID Constants (NOT URLs):**
 - `Routes.HOME`, `Routes.SETTINGS`, `Routes.PROFILE`, `Routes.REMOTE_HELLO`, `Routes.REMOTE_DETAIL`
@@ -1319,9 +1319,9 @@ Integration tests verify cross-package interactions and Module Federation remote
 | turbo | TBD (latest stable) |
 | prettier | TBD (latest stable) |
 | @tanstack/react-query | 5.62.16 |
-| react-router | 7.1.1 |
-| react-router-dom | 7.1.1 |
-| react-router-native | 7.1.1 |
+| react-router | 6.30.3 |
+| react-router-dom | 6.30.3 |
+| react-router-native | 6.30.3 |
 | @testing-library/react-native | 12.9.0 |
 | @testing-library/react | 16.1.0 |
 | react-test-renderer | 19.1.0 |

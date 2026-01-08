@@ -10,7 +10,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "react-router": "6.30.0"
+    "react-router": "6.30.3"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

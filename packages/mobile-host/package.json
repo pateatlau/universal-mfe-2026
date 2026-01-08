@@ -35,7 +35,7 @@
     "@universal/shared-theme-context": "*",
     "react": "19.1.0",
     "react-native": "0.80.0",
-    "react-router-native": "6.30.0"
+    "react-router-native": "6.30.3"
   },
   "devDependencies": {
     "@babel/plugin-syntax-typescript": "7.27.1",
