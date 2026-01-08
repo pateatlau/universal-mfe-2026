@@ -2,7 +2,7 @@ name: E2E Web Tests
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
 
 # Cancel in-progress runs for the same branch
 concurrency:
