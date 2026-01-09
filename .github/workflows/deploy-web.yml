@@ -108,12 +108,15 @@ jobs:
         env:
           REMOTE_HELLO_URL: ${{ needs.deploy-web-remote.outputs.deployment-url }}
 
+      - name: Copy vercel.json to dist for SPA routing
+        run: cp packages/web-shell/vercel.json packages/web-shell/dist/
+
       - name: Deploy to Vercel
         id: deploy
-        working-directory: packages/web-shell
+        working-directory: packages/web-shell/dist
         run: |
           echo "Running Vercel deploy..."
-          # Deploy from package root so vercel.json is read (outputDirectory: dist)
+          # Deploy pre-built static files from dist/ with vercel.json for SPA routing
           CLI_OUTPUT=$(vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
           echo "=== Full Vercel CLI output ==="
           echo "$CLI_OUTPUT"
