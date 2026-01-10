@@ -50,6 +50,19 @@ jobs:
         working-directory: packages/web-remote-hello
         run: yarn build
 
+      - name: Copy vercel.json to dist for SPA routing
+        run: |
+          if [ ! -f "packages/web-remote-hello/vercel.json" ]; then
+            echo "::error::vercel.json not found at packages/web-remote-hello/vercel.json"
+            exit 1
+          fi
+          if [ ! -d "packages/web-remote-hello/dist" ]; then
+            echo "::error::dist directory not found at packages/web-remote-hello/dist"
+            exit 1
+          fi
+          cp packages/web-remote-hello/vercel.json packages/web-remote-hello/dist/
+          echo "Copied vercel.json to dist/"
+
       - name: Deploy to Vercel
         id: deploy
         working-directory: packages/web-remote-hello/dist
@@ -109,7 +122,17 @@ jobs:
           REMOTE_HELLO_URL: ${{ needs.deploy-web-remote.outputs.deployment-url }}
 
       - name: Copy vercel.json to dist for SPA routing
-        run: cp packages/web-shell/vercel.json packages/web-shell/dist/
+        run: |
+          if [ ! -f "packages/web-shell/vercel.json" ]; then
+            echo "::error::vercel.json not found at packages/web-shell/vercel.json"
+            exit 1
+          fi
+          if [ ! -d "packages/web-shell/dist" ]; then
+            echo "::error::dist directory not found at packages/web-shell/dist"
+            exit 1
+          fi
+          cp packages/web-shell/vercel.json packages/web-shell/dist/
+          echo "Copied vercel.json to dist/"
 
       - name: Deploy to Vercel
         id: deploy
