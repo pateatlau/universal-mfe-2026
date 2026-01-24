@@ -8,12 +8,14 @@ import { availableLocales, isLocaleSupported } from '../locales';
  * Detects the user's preferred locale from various sources:
  * - React Native: Device settings via NativeModules
  * - Web: navigator.language/languages
- * - Fallback: DEFAULT_LOCALE ('en')
+ * - Fallback: DEFAULT_LOCALE ('en') with 'en-IN' formatting for India-first approach
  *
  * Note: This module uses environment detection to work on both
  * web and mobile without static imports from react-native.
  * Mobile locale detection requires the host app to configure
  * NativeModules access separately.
+ *
+ * Supported locales: ['en', 'hi'] (English and Hindi)
  */
 
 // Environment detection helpers
@@ -193,25 +195,25 @@ export function getPreferredLocales(): string[] {
  * Find the best matching supported locale from a list of preferred locales.
  *
  * Matching strategy:
- * 1. Exact match (e.g., 'en-US' matches 'en-US')
- * 2. Language match (e.g., 'en-US' matches 'en')
- * 3. Fallback to default locale
+ * 1. Exact match (e.g., 'en-IN' matches 'en')
+ * 2. Language match (e.g., 'hi-IN' matches 'hi')
+ * 3. Fallback to default locale ('en')
  *
  * @param preferredLocales - Array of preferred locales in order of preference
  * @returns The best matching supported locale code
  *
  * @example
  * ```ts
- * // Available: ['en', 'es', 'fr']
+ * // Available: ['en', 'hi']
  *
- * findBestLocale(['en-US', 'en'])
+ * findBestLocale(['en-IN', 'en'])
  * // 'en' (exact match for 'en')
  *
- * findBestLocale(['pt-BR', 'en'])
- * // 'en' (no Portuguese, falls back to 'en')
+ * findBestLocale(['hi-IN', 'en'])
+ * // 'hi' (language match for Hindi)
  *
- * findBestLocale(['zh-TW', 'zh-CN', 'en'])
- * // 'zh' (language match for Chinese)
+ * findBestLocale(['pt-BR', 'fr'])
+ * // 'en' (no match, falls back to English)
  * ```
  */
 export function findBestLocale(preferredLocales: string[]): LocaleCode {
@@ -242,14 +244,14 @@ export function findBestLocale(preferredLocales: string[]): LocaleCode {
  *
  * @example
  * ```ts
- * // On a device with locale set to 'es-MX'
- * // Available: ['en', 'es', 'fr']
+ * // On a device with locale set to 'hi-IN'
+ * // Available: ['en', 'hi']
  *
  * detectLocale()
- * // 'es' (Spanish is available, matches es-MX)
+ * // 'hi' (Hindi is available, matches hi-IN)
  *
  * // On a device with locale set to 'ja-JP'
- * // Available: ['en', 'es', 'fr']
+ * // Available: ['en', 'hi']
  *
  * detectLocale()
  * // 'en' (Japanese not available, falls back to English)

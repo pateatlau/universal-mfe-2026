@@ -99,14 +99,18 @@ export function useLocale(): UseLocaleResult {
 /**
  * Get the best matching locale from a list of preferred locales.
  *
+ * Returns 'en' (English) as fallback when no match is found.
+ * Supported locales: ['en', 'hi'] (English and Hindi)
+ *
  * @param preferredLocales - List of preferred locale codes (e.g., from navigator.languages)
- * @param fallback - Fallback locale if no match is found
+ * @param fallback - Fallback locale if no match is found (defaults to 'en')
  * @returns The best matching supported locale
  *
  * @example
  * ```ts
- * // On web
- * const locale = getBestMatchingLocale(navigator.languages);
+ * // On web with Indian browser settings
+ * const locale = getBestMatchingLocale(['hi-IN', 'en-IN']);
+ * // Returns 'hi' (Hindi)
  *
  * // On native
  * import { getLocales } from 'react-native-localize';
