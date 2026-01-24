@@ -422,7 +422,7 @@ For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 - `packages/mobile-host/rspack.config.mjs` - Mobile host Re.Pack + MF config
 - `packages/mobile-remote-hello/repack.remote.config.mjs` - Mobile remote Re.Pack + MF config
 - `tsconfig.json` - Root TypeScript config
-- `CLAUDE.md` - Claude Code guidance (synced with this file)
+- `CLAUDE.md` - Claude Code rules (synced with this file)
 
 **Documentation:**
 

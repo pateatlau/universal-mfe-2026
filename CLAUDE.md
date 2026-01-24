@@ -409,6 +409,7 @@ For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 
 **CRITICAL: Scope Discipline**
 
+- **DO NOT make any changes in the existing codebase other than the required changes for the task.**
 - Only modify files directly related to the task at hand
 - Do not refactor, clean up, or "improve" unrelated code
 - Do not delete or modify files/packages not involved in the current task
@@ -430,7 +431,7 @@ For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 - `packages/mobile-host/rspack.config.mjs` - Mobile host Re.Pack + MF config
 - `packages/mobile-remote-hello/repack.remote.config.mjs` - Mobile remote Re.Pack + MF config
 - `tsconfig.json` - Root TypeScript config
-- `.cursorrules` - Complete development rules and constraints
+- `.cursorrules` - Cursor rules (synced with this file)
 
 **Documentation:**
 
