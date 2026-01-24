@@ -128,25 +128,25 @@ describe('HelloUniversal', () => {
   });
 
   describe('i18n integration', () => {
-    it('renders Spanish greeting when locale is es', () => {
-      renderWithProviders({}, { locale: 'es' });
+    it('renders Hindi greeting when locale is hi', () => {
+      renderWithProviders({}, { locale: 'hi' });
 
-      // Spanish greeting from es.hello.greeting
-      expect(screen.getByText('¡Hola desde Remoto!')).toBeInTheDocument();
+      // Hindi greeting from hi.hello.greeting
+      expect(screen.getByText('रिमोट से नमस्ते!')).toBeInTheDocument();
     });
 
-    it('renders Spanish personalized greeting', () => {
-      renderWithProviders({ name: 'Carlos' }, { locale: 'es' });
+    it('renders Hindi personalized greeting', () => {
+      renderWithProviders({ name: 'राहुल' }, { locale: 'hi' });
 
-      expect(screen.getByText('¡Hola, Carlos!')).toBeInTheDocument();
+      expect(screen.getByText('नमस्ते, राहुल!')).toBeInTheDocument();
     });
 
-    it('renders Spanish button text', () => {
+    it('renders Hindi button text', () => {
       const onPress = jest.fn();
-      renderWithProviders({ onPress }, { locale: 'es' });
+      renderWithProviders({ onPress }, { locale: 'hi' });
 
-      // Spanish button from es.hello.buttonLabel
-      expect(screen.getByText('Hazme clic')).toBeInTheDocument();
+      // Hindi button from hi.hello.buttonLabel
+      expect(screen.getByText('मुझे क्लिक करें')).toBeInTheDocument();
     });
   });
 
