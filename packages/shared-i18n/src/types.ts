@@ -2,19 +2,26 @@
  * Supported locale codes.
  * Add new locales here as they are implemented.
  */
-export type LocaleCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar';
+export type LocaleCode = 'en' | 'hi' | 'fr' | 'de' | 'it' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar';
 
 /**
  * Default locale for the application.
+ * Uses 'en' with 'en-IN' formatting for Indian locale conventions.
  */
 export const DEFAULT_LOCALE: LocaleCode = 'en';
+
+/**
+ * Formatting locale for Indian number, date, and currency formatting.
+ * This is used with Intl APIs to get Indian formatting (lakhs/crores, INR, etc.)
+ */
+export const DEFAULT_FORMATTING_LOCALE = 'en-IN';
 
 /**
  * Supported locales with their display names.
  */
 export const SUPPORTED_LOCALES: Record<LocaleCode, string> = {
   en: 'English',
-  es: 'Español',
+  hi: 'हिन्दी',
   fr: 'Français',
   de: 'Deutsch',
   it: 'Italiano',
