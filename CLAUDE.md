@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**IMPORTANT:** This file is synced with `.cursorrules`. When updating project rules, conventions, or settings in either file, you MUST update both files to keep them in sync.
+
 ## Project Overview
 
 This is a **universal microfrontend platform** that enables a single React Native codebase to run on Web, iOS, and Android with dynamic runtime module loading via Module Federation v2. The key innovation is using React Native primitives as the universal UI API - rendered via React Native Web on web and natively on mobile.
