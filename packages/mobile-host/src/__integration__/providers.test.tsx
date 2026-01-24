@@ -114,9 +114,9 @@ describe('Mobile Provider Composition', () => {
       fireEvent.click(screen.getByTestId('set-hindi'));
 
       expect(screen.getByTestId('locale')).toHaveTextContent('hi');
-      // Hindi translation for appName is the same as English
+      // Hindi translation for appName
       expect(screen.getByTestId('translated')).toHaveTextContent(
-        'Universal MFE'
+        'यूनिवर्सल MFE'
       );
     });
 
@@ -202,7 +202,7 @@ describe('Mobile Provider Composition', () => {
       // Change locale
       fireEvent.click(screen.getByTestId('hindi'));
       expect(screen.getByTestId('locale')).toHaveTextContent('hi');
-      expect(screen.getByTestId('greeting')).toHaveTextContent('Universal MFE');
+      expect(screen.getByTestId('greeting')).toHaveTextContent('यूनिवर्सल MFE');
 
       // Theme persists after locale change
       expect(screen.getByTestId('theme')).toHaveTextContent('dark');

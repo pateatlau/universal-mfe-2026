@@ -104,8 +104,8 @@ describe('Provider Composition', () => {
       fireEvent.click(screen.getByTestId('set-hindi'));
 
       expect(screen.getByTestId('locale')).toHaveTextContent('hi');
-      // Hindi translation for appName is the same as English
-      expect(screen.getByTestId('translated')).toHaveTextContent('Universal MFE');
+      // Hindi translation for appName
+      expect(screen.getByTestId('translated')).toHaveTextContent('यूनिवर्सल MFE');
     });
 
     it('theme and locale can both change independently', () => {
@@ -191,8 +191,8 @@ describe('Provider Composition', () => {
       // Change locale
       fireEvent.click(screen.getByTestId('hindi'));
       expect(screen.getByTestId('locale')).toHaveTextContent('hi');
-      // Hindi translation for appName is the same as English
-      expect(screen.getByTestId('greeting')).toHaveTextContent('Universal MFE');
+      // Hindi translation for appName
+      expect(screen.getByTestId('greeting')).toHaveTextContent('यूनिवर्सल MFE');
 
       // Theme persists after locale change
       expect(screen.getByTestId('theme')).toHaveTextContent('dark');
