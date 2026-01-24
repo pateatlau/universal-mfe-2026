@@ -1,6 +1,6 @@
 # India-First Localization Implementation Plan
 
-**Status:** 🚧 In Progress (Phase 1, 2 & 3 Complete)
+**Status:** 🚧 In Progress (Phase 1-4 Complete)
 **Created:** 2026-01-24
 **Target:** Make the project India-first with Hindi as the second language (replacing Spanish)
 **Branch:** `feature/india-first-localization` (to be created from `develop`)
@@ -505,8 +505,8 @@ yarn build:mobile:android
 - [x] Task 3.3: Update mobile-host integration tests (already updated in Phase 1)
 
 ### Phase 4: E2E Tests
-- [ ] Task 4.1: Update Playwright tests
-- [ ] Task 4.2: Update Maestro tests
+- [x] Task 4.1: Update Playwright tests (smoke, theming, routing, remote-loading)
+- [x] Task 4.2: Update Maestro tests (i18n, remote-loading, README)
 
 ### Phase 5: Documentation
 - [ ] Task 5.1: Update PATTERNS-I18N.md
