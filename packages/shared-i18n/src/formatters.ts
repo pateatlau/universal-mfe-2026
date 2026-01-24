@@ -1,33 +1,39 @@
-import { LocaleCode } from './types';
+import { LocaleCode, DEFAULT_FORMATTING_LOCALE } from './types';
 import type { DateFormatOptions, NumberFormatOptions } from './types';
+
+/**
+ * Default currency for India-first localization.
+ */
+export const DEFAULT_CURRENCY = 'INR';
 
 /**
  * Format a date according to the specified locale and options.
  *
  * Uses Intl.DateTimeFormat for locale-aware formatting.
+ * Defaults to 'en-IN' (English - India) for Indian date formatting.
  *
  * @param date - The date to format
- * @param locale - The locale code
+ * @param locale - The locale code (defaults to 'en-IN' for Indian formatting)
  * @param options - Formatting options
  * @returns The formatted date string
  *
  * @example
  * ```ts
- * formatDate(new Date(), 'en', { dateStyle: 'long' })
- * // 'January 7, 2026'
+ * formatDate(new Date(), 'en-IN', { dateStyle: 'long' })
+ * // '7 January 2026'
  *
- * formatDate(new Date(), 'de', { dateStyle: 'short' })
- * // '07.01.26'
+ * formatDate(new Date(), 'hi-IN', { dateStyle: 'long' })
+ * // '7 जनवरी 2026'
  *
- * formatDate(new Date(), 'en', {
+ * formatDate(new Date(), 'en-IN', {
  *   custom: { weekday: 'long', month: 'short', day: 'numeric' }
  * })
- * // 'Tuesday, Jan 7'
+ * // 'Tuesday, 7 Jan'
  * ```
  */
 export function formatDate(
   date: Date | number,
-  locale: LocaleCode | string = 'en',
+  locale: LocaleCode | string = DEFAULT_FORMATTING_LOCALE,
   options: DateFormatOptions = {}
 ): string {
   const { dateStyle, timeStyle, custom } = options;
@@ -63,30 +69,31 @@ export function formatDate(
  * Format a number according to the specified locale and options.
  *
  * Uses Intl.NumberFormat for locale-aware formatting.
+ * Defaults to 'en-IN' for Indian number formatting (lakhs/crores grouping).
  *
  * @param value - The number to format
- * @param locale - The locale code
+ * @param locale - The locale code (defaults to 'en-IN' for Indian formatting)
  * @param options - Formatting options
  * @returns The formatted number string
  *
  * @example
  * ```ts
- * formatNumber(1234567.89, 'en')
- * // '1,234,567.89'
+ * formatNumber(1234567.89, 'en-IN')
+ * // '12,34,567.89' (Indian lakhs/crores grouping)
  *
- * formatNumber(1234567.89, 'de')
- * // '1.234.567,89'
+ * formatNumber(10000000, 'en-IN')
+ * // '1,00,00,000' (one crore)
  *
- * formatNumber(0.456, 'en', { style: 'percent' })
+ * formatNumber(0.456, 'en-IN', { style: 'percent' })
  * // '46%'
  *
- * formatNumber(1234, 'en', { notation: 'compact' })
+ * formatNumber(1234, 'en-IN', { notation: 'compact' })
  * // '1.2K'
  * ```
  */
 export function formatNumber(
   value: number,
-  locale: LocaleCode | string = 'en',
+  locale: LocaleCode | string = DEFAULT_FORMATTING_LOCALE,
   options: NumberFormatOptions = {}
 ): string {
   try {
@@ -115,32 +122,33 @@ export function formatNumber(
  * Format a value as currency according to the specified locale.
  *
  * Uses Intl.NumberFormat with currency style for locale-aware formatting.
+ * Defaults to INR (Indian Rupee) with 'en-IN' locale for Indian formatting.
  *
  * @param value - The monetary value to format
- * @param currency - The ISO 4217 currency code (e.g., 'USD', 'EUR', 'GBP')
- * @param locale - The locale code
+ * @param currency - The ISO 4217 currency code (defaults to 'INR')
+ * @param locale - The locale code (defaults to 'en-IN' for Indian formatting)
  * @param options - Additional formatting options
  * @returns The formatted currency string
  *
  * @example
  * ```ts
- * formatCurrency(1234.56, 'USD', 'en')
- * // '$1,234.56'
+ * formatCurrency(100000)
+ * // '₹1,00,000.00' (one lakh rupees)
  *
- * formatCurrency(1234.56, 'EUR', 'de')
- * // '1.234,56 €'
+ * formatCurrency(10000000, 'INR', 'en-IN')
+ * // '₹1,00,00,000.00' (one crore rupees)
  *
- * formatCurrency(1234.56, 'JPY', 'ja')
- * // '￥1,235'
+ * formatCurrency(1234.56, 'INR', 'hi-IN')
+ * // '₹1,234.56' (in Hindi locale)
  *
- * formatCurrency(1234.56, 'USD', 'en', { currencyDisplay: 'name' })
- * // '1,234.56 US dollars'
+ * formatCurrency(1234.56, 'INR', 'en-IN', { currencyDisplay: 'name' })
+ * // '1,234.56 Indian rupees'
  * ```
  */
 export function formatCurrency(
   value: number,
-  currency: string,
-  locale: LocaleCode | string = 'en',
+  currency: string = DEFAULT_CURRENCY,
+  locale: LocaleCode | string = DEFAULT_FORMATTING_LOCALE,
   options: Pick<NumberFormatOptions, 'currencyDisplay' | 'minimumFractionDigits' | 'maximumFractionDigits'> = {}
 ): string {
   try {
@@ -161,32 +169,33 @@ export function formatCurrency(
  * Format a relative time (e.g., "2 days ago", "in 3 hours").
  *
  * Uses Intl.RelativeTimeFormat for locale-aware formatting.
+ * Defaults to 'en-IN' (English - India) locale.
  *
  * @param value - The numeric value (can be negative for past times)
  * @param unit - The time unit
- * @param locale - The locale code
+ * @param locale - The locale code (defaults to 'en-IN')
  * @param style - The formatting style ('long', 'short', 'narrow')
  * @returns The formatted relative time string
  *
  * @example
  * ```ts
- * formatRelativeTime(-1, 'day', 'en')
+ * formatRelativeTime(-1, 'day', 'en-IN')
  * // '1 day ago'
  *
- * formatRelativeTime(3, 'hour', 'en')
- * // 'in 3 hours'
+ * formatRelativeTime(3, 'hour', 'hi-IN')
+ * // '3 घंटे में'
  *
- * formatRelativeTime(-2, 'week', 'de')
- * // 'vor 2 Wochen'
+ * formatRelativeTime(-2, 'week', 'en-IN')
+ * // '2 weeks ago'
  *
- * formatRelativeTime(1, 'month', 'en', 'short')
+ * formatRelativeTime(1, 'month', 'en-IN', 'short')
  * // 'in 1 mo.'
  * ```
  */
 export function formatRelativeTime(
   value: number,
   unit: Intl.RelativeTimeFormatUnit,
-  locale: LocaleCode | string = 'en',
+  locale: LocaleCode | string = DEFAULT_FORMATTING_LOCALE,
   style: 'long' | 'short' | 'narrow' = 'long'
 ): string {
   try {
@@ -210,28 +219,29 @@ export function formatRelativeTime(
  * Get the auto-detected relative time from a date.
  *
  * Automatically selects the appropriate unit based on the time difference.
+ * Defaults to 'en-IN' (English - India) locale.
  *
  * @param date - The date to format relative to now
- * @param locale - The locale code
+ * @param locale - The locale code (defaults to 'en-IN')
  * @param style - The formatting style
  * @returns The formatted relative time string
  *
  * @example
  * ```ts
  * // If now is Jan 7, 2026, 10:00 AM
- * formatRelativeTimeAuto(new Date('2026-01-07T08:00:00'), 'en')
+ * formatRelativeTimeAuto(new Date('2026-01-07T08:00:00'), 'en-IN')
  * // '2 hours ago'
  *
- * formatRelativeTimeAuto(new Date('2026-01-05'), 'en')
- * // '2 days ago'
+ * formatRelativeTimeAuto(new Date('2026-01-05'), 'hi-IN')
+ * // '2 दिन पहले'
  *
- * formatRelativeTimeAuto(new Date('2026-02-07'), 'en')
+ * formatRelativeTimeAuto(new Date('2026-02-07'), 'en-IN')
  * // 'in 1 month'
  * ```
  */
 export function formatRelativeTimeAuto(
   date: Date | number,
-  locale: LocaleCode | string = 'en',
+  locale: LocaleCode | string = DEFAULT_FORMATTING_LOCALE,
   style: 'long' | 'short' | 'narrow' = 'long'
 ): string {
   const now = Date.now();
@@ -271,31 +281,32 @@ export function formatRelativeTimeAuto(
  * Format a list of items according to the locale.
  *
  * Uses Intl.ListFormat for locale-aware list formatting.
+ * Defaults to 'en-IN' (English - India) locale.
  *
  * @param items - The list of items to format
- * @param locale - The locale code
+ * @param locale - The locale code (defaults to 'en-IN')
  * @param type - The list type ('conjunction', 'disjunction', 'unit')
  * @param style - The formatting style
  * @returns The formatted list string
  *
  * @example
  * ```ts
- * formatList(['Apple', 'Banana', 'Orange'], 'en')
- * // 'Apple, Banana, and Orange'
+ * formatList(['Apple', 'Banana', 'Orange'], 'en-IN')
+ * // 'Apple, Banana and Orange'
  *
- * formatList(['Apple', 'Banana', 'Orange'], 'en', 'disjunction')
- * // 'Apple, Banana, or Orange'
+ * formatList(['सेब', 'केला', 'संतरा'], 'hi-IN')
+ * // 'सेब, केला और संतरा'
  *
- * formatList(['Apple', 'Banana'], 'de')
- * // 'Apple und Banana'
+ * formatList(['Apple', 'Banana', 'Orange'], 'en-IN', 'disjunction')
+ * // 'Apple, Banana or Orange'
  *
- * formatList(['3 hours', '5 minutes'], 'en', 'unit', 'short')
+ * formatList(['3 hours', '5 minutes'], 'en-IN', 'unit', 'short')
  * // '3 hours, 5 minutes'
  * ```
  */
 export function formatList(
   items: string[],
-  locale: LocaleCode | string = 'en',
+  locale: LocaleCode | string = DEFAULT_FORMATTING_LOCALE,
   type: 'conjunction' | 'disjunction' | 'unit' = 'conjunction',
   style: 'long' | 'short' | 'narrow' = 'long'
 ): string {
@@ -325,27 +336,28 @@ export function formatList(
 
 /**
  * Format bytes into human-readable size.
+ * Defaults to 'en-IN' (English - India) locale.
  *
  * @param bytes - The number of bytes
- * @param locale - The locale code
+ * @param locale - The locale code (defaults to 'en-IN')
  * @param binary - Use binary (1024) vs decimal (1000) units
  * @returns The formatted size string
  *
  * @example
  * ```ts
- * formatBytes(1024, 'en')
+ * formatBytes(1024, 'en-IN')
  * // '1 KB'
  *
- * formatBytes(1048576, 'en', true)
+ * formatBytes(1048576, 'en-IN', true)
  * // '1 MiB'
  *
- * formatBytes(1500000, 'de')
- * // '1,5 MB'
+ * formatBytes(10000000, 'en-IN')
+ * // '10 MB' (uses Indian number formatting internally)
  * ```
  */
 export function formatBytes(
   bytes: number,
-  locale: LocaleCode | string = 'en',
+  locale: LocaleCode | string = DEFAULT_FORMATTING_LOCALE,
   binary: boolean = false
 ): string {
   const units = binary
