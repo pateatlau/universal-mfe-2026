@@ -1,6 +1,6 @@
 import type { LocaleCode, TranslationResources, Translations } from '../types';
 import { en } from './en';
-import { es } from './es';
+import { hi } from './hi';
 
 /**
  * Registry of all available translations.
@@ -14,7 +14,7 @@ import { es } from './es';
  */
 export const locales: TranslationResources = {
   en,
-  es,
+  hi,
 };
 
 /**
@@ -22,10 +22,11 @@ export const locales: TranslationResources = {
  *
  * Used for locale detection and validation.
  */
-export const availableLocales: LocaleCode[] = ['en', 'es'];
+export const availableLocales: LocaleCode[] = ['en', 'hi'];
 
 /**
  * Default locale used when no locale is specified or detected.
+ * Uses English with en-IN formatting for Indian locale conventions.
  */
 export const defaultLocale: LocaleCode = 'en';
 
@@ -36,7 +37,7 @@ export const defaultLocale: LocaleCode = 'en';
  */
 export const localeDisplayNames: Record<LocaleCode, string> = {
   en: 'English',
-  es: 'Español',
+  hi: 'हिन्दी',
   fr: 'Français',
   de: 'Deutsch',
   it: 'Italiano',
@@ -107,4 +108,4 @@ export function getTranslations(locale: LocaleCode | string): Translations {
 
 // Re-export individual locale files for direct imports
 export { en } from './en';
-export { es } from './es';
+export { hi } from './hi';
