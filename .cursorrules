@@ -1,12 +1,400 @@
 # Universal MFE Platform - Cursor Rules
 
-For complete project context, see: docs/cursor/MASTER_PROMPT.md
+This file provides guidance to Cursor when working with code in this repository.
+
+**IMPORTANT:** This file is synced with `CLAUDE.md`. When updating project rules, conventions, or settings in either file, you MUST update both files to keep them in sync.
 
 ## Project Overview
 
-Universal Microfrontend Platform enabling single React Native codebase for Web, iOS, and Android with dynamic remote loading via Module Federation.
+This is a **universal microfrontend platform** that enables a single React Native codebase to run on Web, iOS, and Android with dynamic runtime module loading via Module Federation v2. The key innovation is using React Native primitives as the universal UI API - rendered via React Native Web on web and natively on mobile.
 
-Key Innovation: React Native primitives as universal UI API, rendered via React Native Web on web and natively on mobile.
+## Critical Technology Constraints
+
+- **Yarn Classic v1.22.22 is REQUIRED** (not pnpm/npm) - React Native autolinking requires hoisted node_modules
+- **Hermes is REQUIRED for mobile** - ScriptManager requires Hermes for dynamic bundle execution
+- **Exact version matching is CRITICAL** - All core dependencies use exact versions (no `^` or `~`) to prevent runtime errors
+- **React Native Web alias required** - Web configurations must alias `"react-native"` to `"react-native-web"`
+
+## Locked Technology Versions
+
+All versions are exact (no `^` or `~`) to ensure reproducibility.
+
+### Runtime & Build Tools
+
+| Tool         | Version | Notes                                              |
+| ------------ | ------- | -------------------------------------------------- |
+| Node.js      | 24.11.0 | Locked via `.nvmrc`                                |
+| Yarn Classic | 1.22.22 | Locked via `packageManager` in root `package.json` |
+| Turborepo    | 2.7.3   | Monorepo task orchestration and caching            |
+| TypeScript   | 5.9.3   |                                                    |
+
+### Mobile Packages (React 19.1.0 required by RN 0.80.0)
+
+| Package                     | Version |
+| --------------------------- | ------- |
+| react                       | 19.1.0  |
+| react-native                | 0.80.0  |
+| @callstack/repack           | 5.2.0   |
+| @module-federation/enhanced | 0.21.6  |
+| @swc/helpers                | 0.5.17  |
+| @rspack/cli                 | 1.6.5   |
+
+### Web Packages
+
+| Package          | Version |
+| ---------------- | ------- |
+| react            | 19.2.0  |
+| react-dom        | 19.2.0  |
+| react-native-web | 0.21.2  |
+| @rspack/core     | 1.6.5   |
+| @rspack/cli      | 1.6.5   |
+
+### Native Tooling (for reference - install these versions)
+
+| Tool                | Version       | Notes                                  |
+| ------------------- | ------------- | -------------------------------------- |
+| Xcode               | 16.2          | macOS only                             |
+| Android Build Tools | 35.0.0        |                                        |
+| Android Compile SDK | 35            |                                        |
+| Android NDK         | 27.1.12297006 |                                        |
+| Gradle              | 8.14.1        | Locked via `gradle-wrapper.properties` |
+| Kotlin              | 2.1.20        |                                        |
+| CocoaPods           | 1.16.2        | macOS only                             |
+| Ruby                | 2.6.10+       | For CocoaPods                          |
+
+### Port Assignments
+
+| Service                 | Port |
+| ----------------------- | ---- |
+| Web Shell               | 9001 |
+| Web Remote              | 9003 |
+| Mobile Host (Android)   | 8081 |
+| Mobile Host (iOS)       | 8082 |
+| Mobile Remote (Android) | 9004 |
+| Mobile Remote (iOS)     | 9005 |
+
+## Security Considerations
+
+### Development Server Security (CVE-2025-11953)
+
+The `@react-native-community/cli@19.1.2` used by RN 0.80.0 has a known vulnerability (CVE-2025-11953) affecting the Metro dev server. This is a **development-time only** vulnerability and does not affect production builds.
+
+**Mitigations:**
+
+- The dev server only runs locally during development
+- For additional security, bind Metro to localhost: `react-native start --host 127.0.0.1`
+- Upgrade to `@react-native-community/cli@20.0.0+` when compatible with your RN version
+
+### Pods Directory
+
+The `ios/Pods/` directory is committed to ensure reproducible builds. This is intentional - it guarantees all developers use identical native dependencies without relying on CocoaPods CDN availability.
+
+## Yarn Workspace Hoisting & Symlinks
+
+### Why Symlinks Are Required
+
+Yarn Classic hoists shared dependencies to the root `node_modules/`. However, React Native's build systems (Gradle for Android, CocoaPods for iOS) expect dependencies in the package's local `node_modules/`. The `setup-symlinks.js` script creates symlinks to bridge this gap:
+
+```
+packages/mobile-host/node_modules/
+├── react-native -> ../../../node_modules/react-native
+├── @react-native -> ../../../node_modules/@react-native
+└── @callstack -> ../../../node_modules/@callstack
+```
+
+### Automatic Setup
+
+Symlinks are created automatically via `postinstall` in `packages/mobile-host/package.json`. If builds fail with "file not found" errors referencing `node_modules/react-native`, run:
+
+```bash
+cd packages/mobile-host
+node scripts/setup-symlinks.js
+```
+
+### Android Hoisted Paths
+
+The `android/app/build.gradle` explicitly configures paths to hoisted dependencies:
+
+```groovy
+react {
+    root = file("../../")
+    reactNativeDir = file("../../../../node_modules/react-native")
+    codegenDir = file("../../../../node_modules/@react-native/codegen")
+    cliFile = file("../../../../node_modules/react-native/cli.js")
+}
+```
+
+### Stale Cache Issues
+
+If Android builds fail with autolinking errors (wrong paths to dependencies), clear the caches:
+
+```bash
+yarn workspace @universal/mobile-host clean:android
+```
+
+This removes `android/build/`, `android/.gradle/`, and other generated files that may contain stale paths.
+
+## Monorepo Structure
+
+```
+packages/
+├── Host Applications
+│   ├── web-shell/                    # Web host (Rspack + MF v2, port 9001)
+│   └── mobile-host/                  # Mobile host (Re.Pack + MF v2, Android: 8081, iOS: 8082)
+│
+├── Remote MFEs
+│   ├── web-remote-hello/             # Web remote module (Rspack + MF v2, port 9003)
+│   └── mobile-remote-hello/          # Mobile remote (Re.Pack + MF v2, ports 9004/9005)
+│
+└── Shared Libraries (Platform-Agnostic)
+    ├── shared-utils/                 # Pure TypeScript utilities
+    ├── shared-hello-ui/              # Universal React Native UI components
+    ├── shared-auth-store/            # Shared authentication state (Zustand)
+    ├── shared-design-tokens/         # Two-tier design token system
+    ├── shared-theme-context/         # Theme provider with persistence
+    ├── shared-a11y/                  # WCAG 2.1 AA accessibility utilities
+    ├── shared-i18n/                  # Zero-dependency internationalization
+    ├── shared-event-bus/             # Type-safe inter-MFE communication
+    ├── shared-data-layer/            # React Query v5 setup
+    └── shared-router/                # Host-owned routing abstraction
+```
+
+## Turborepo
+
+The project uses [Turborepo](https://turbo.build/) for monorepo task orchestration and caching.
+
+### Key Commands
+
+```bash
+# Build all packages (with dependency ordering)
+yarn build
+
+# Build only shared packages
+yarn build:shared
+
+# Build only web packages
+yarn build:web
+
+# Type check all packages
+yarn typecheck
+
+# Run ESLint
+yarn lint
+
+# Run architecture enforcement checks
+yarn lint:architecture
+
+# Run tests
+yarn test
+
+# Clean all build outputs
+yarn clean
+```
+
+### Caching
+
+Turborepo caches task outputs locally in `.turbo/` directory. Subsequent runs of the same task with unchanged inputs will be instant ("FULL TURBO").
+
+**Cached tasks:** `build`, `typecheck`, `lint`, `format:check`, `test`
+**Non-cached tasks:** `format`, `dev`, `clean` (side effects)
+
+### Architecture Enforcement
+
+Custom ESLint rules automatically enforce architectural boundaries:
+
+| Rule | Purpose |
+|------|---------|
+| `architecture/no-cross-mfe-imports` | Prevents direct imports between remote MFE packages |
+| `architecture/no-dom-in-shared` | Prevents DOM elements and browser globals in shared packages |
+
+Run `yarn lint:architecture` to check for violations.
+
+### Configuration
+
+- `turbo.json` - Task definitions, caching rules, and dependencies
+- `eslint-rules/` - Custom architecture enforcement rules
+
+## Common Development Commands
+
+### Initial Setup (Required First)
+
+```bash
+# Install dependencies - hoists @react-native/gradle-plugin to root node_modules
+# This is required before Android Gradle builds will work
+yarn install
+
+# Build all shared libraries
+yarn build:shared
+
+# Or individually via Turborepo filter
+yarn build --filter=@universal/shared-utils
+yarn build --filter=@universal/shared-hello-ui
+```
+
+### Web Development
+
+```bash
+# Terminal 1: Web Remote
+cd packages/web-remote-hello
+yarn dev  # Port 9003
+
+# Terminal 2: Web Shell
+cd packages/web-shell
+yarn dev  # Port 9001
+
+# Browser: http://localhost:9001
+```
+
+### Mobile Development (Android)
+
+```bash
+# Terminal 1: Mobile Remote
+cd packages/mobile-remote-hello
+PLATFORM=android yarn build:remote
+PLATFORM=android yarn serve  # Port 9004
+
+# Terminal 2: Mobile Host
+cd packages/mobile-host
+yarn android  # Port 8081
+```
+
+### Mobile Development (iOS)
+
+```bash
+# Terminal 1: Mobile Remote
+cd packages/mobile-remote-hello
+PLATFORM=ios yarn build:remote
+PLATFORM=ios yarn serve  # Port 9005
+
+# Terminal 2: Mobile Host
+cd packages/mobile-host
+yarn ios  # Port 8082
+```
+
+**NOTE:** Android uses port 8081, iOS uses port 8082 - they can run simultaneously.
+
+## Architecture & Key Patterns
+
+### Module Federation Configuration
+
+**Web Host** (`packages/web-shell/rspack.config.mjs`):
+
+- Uses `@module-federation/enhanced/rspack`
+- Consumes remotes via browser runtime: `hello_remote@http://localhost:9003/remoteEntry.js`
+- All shared deps must be `singleton: true` and `eager: true`
+- React Native Web is aliased in resolve config
+
+**Mobile Host** (`packages/mobile-host/rspack.config.mjs`):
+
+- Uses `Repack.plugins.ModuleFederationPluginV2`
+- Remotes are NOT declared in config - loaded dynamically via ScriptManager
+- ScriptManager resolver pattern in `src/App.tsx` handles URL resolution
+- Platform-specific URLs: Android uses `10.0.2.2`, iOS uses `localhost`
+
+### ScriptManager Resolver Pattern (Mobile Only)
+
+Location: `packages/mobile-host/src/App.tsx`
+
+```typescript
+ScriptManager.shared.addResolver(async (scriptId, caller) => {
+  const REMOTE_HOST = Platform.OS === 'android' ? 'http://10.0.2.2:9004' : 'http://localhost:9005';
+
+  if (scriptId === 'HelloRemote') {
+    return { url: `${REMOTE_HOST}/HelloRemote.container.js.bundle` };
+  }
+
+  if (scriptId.startsWith('__federation_expose_')) {
+    return { url: `${REMOTE_HOST}/${scriptId}.bundle` };
+  }
+
+  throw new Error(`Unknown scriptId: ${scriptId}`);
+});
+
+// Import remote module
+const module = await Federated.importModule('HelloRemote', './HelloRemote', 'default');
+```
+
+### Universal Component Rules
+
+When creating universal components in `packages/shared-hello-ui/`:
+
+**MUST use:**
+
+- React Native primitives only: `View`, `Text`, `Pressable`, `Image`, `ScrollView`, etc.
+- `Platform.select()` for platform-specific logic if needed
+- `@universal/shared-utils` for business logic
+
+**FORBIDDEN:**
+
+- DOM elements: `<div>`, `<span>`, `<button>`, `<img>`
+- Browser APIs: `window`, `document`, `localStorage`
+- Native modules or platform-specific imports
+- React Native Web imports (RNW is only for web bundler config)
+
+### Shared Utilities Rules
+
+Location: `packages/shared-utils/src/`
+
+**Constraints:**
+
+- Pure TypeScript only
+- NO React Native imports
+- NO React Native Web imports
+- NO platform-specific code
+- NO bundler-specific code
+
+### Bundle Output Formats
+
+- **Web remotes:** `.js` files (standard JavaScript)
+- **Mobile remotes:** `.bundle` files (Hermes bytecode)
+  - Container: `HelloRemote.container.js.bundle`
+  - Expose chunks: `__federation_expose_*.bundle`
+
+### Network Configuration
+
+- **Android emulator:** Use `http://10.0.2.2:PORT` (not localhost)
+- **iOS simulator:** Use `http://localhost:PORT`
+- **Web:** Use `http://localhost:PORT`
+
+## Stub Files Pattern
+
+The codebase uses stub files to replace incompatible dependencies:
+
+**Web Stubs:**
+
+- `packages/web-remote-hello/src/stubs/AsyncStorage.js` - No-op for web builds
+- Applied via `NormalModuleReplacementPlugin` in Rspack config
+
+**Mobile Stubs:**
+
+- `packages/mobile-host/src/stubs/ReactDevToolsSettingsManager.js`
+- `packages/mobile-host/src/stubs/NativeReactDevToolsRuntimeSettingsModule.js`
+- Multiple `@swc/helpers` replacements in mobile-remote-hello config
+
+## Key Architectural Principles
+
+1. **Universal UI First** - Write UI components using React Native primitives only
+2. **Independent Deployments** - Each remote can be deployed independently without host redeployment
+3. **Platform Separation** - Web uses Rspack + browser runtime, Mobile uses Re.Pack + Hermes + ScriptManager
+4. **Shared Code Constraints** - Shared libraries must be platform-agnostic (pure TS or RN primitives)
+5. **Version Exactness** - Use exact versions for all core dependencies to ensure Module Federation compatibility
+6. **Host-Owned Routing** - Hosts define all routes; MFEs are URL-agnostic and request navigation via event bus
+7. **Loose Coupling** - MFEs communicate through typed events, never direct imports
+
+## Enterprise Feature Summary
+
+| Feature | Package | Pattern Doc |
+|---------|---------|-------------|
+| Design Tokens | `shared-design-tokens` | `PATTERNS-THEMING.md` |
+| Theming | `shared-theme-context` | `PATTERNS-THEMING.md` |
+| Accessibility | `shared-a11y` | `PATTERNS-ACCESSIBILITY.md` |
+| Internationalization | `shared-i18n` | `PATTERNS-I18N.md` |
+| Event Bus | `shared-event-bus` | `PATTERNS-EVENT-BUS.md` |
+| Data Fetching | `shared-data-layer` | `PATTERNS-DATA-FETCHING.md` |
+| Routing | `shared-router` | `PATTERNS-ROUTING.md` |
+| State Management | `shared-auth-store` | `PATTERNS-STATE-MANAGEMENT.md` |
+
+For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 
 ## Critical Development Rules
 
@@ -16,150 +404,114 @@ Key Innovation: React Native primitives as universal UI API, rendered via React 
 - Only modify files directly related to the task at hand
 - Do not refactor, clean up, or "improve" unrelated code
 - Do not delete or modify files/packages not involved in the current task
-- If you encounter errors, investigate the specific issue first before taking broad actions
+- If encountering errors, investigate the specific issue first before taking broad actions
 - When in doubt, ask for clarification rather than making assumptions
 
-## Critical Technology Constraints
+**CRITICAL: No Unilateral Decisions**
 
-- Yarn Classic v1.22.22 is REQUIRED (not pnpm/npm) - React Native autolinking requires hoisted node_modules
-- Hermes is REQUIRED for mobile - ScriptManager requires Hermes for dynamic bundle execution
-- Exact version matching is CRITICAL - All packages must use exact versions (no ^ or ~) to prevent runtime errors
-- React Native Web alias required - Web must alias "react-native" to "react-native-web"
+- Whenever you are in doubt or unsure, DO NOT assume anything
+- Inform the user about the situation and ask for advice on how to proceed
+- This applies especially to: version changes, architectural decisions, workarounds for compatibility issues, and any deviation from the original plan
 
-## Technology Stack (Locked Versions)
+## Important File Locations
 
-- Node.js: 24.11.x (LTS)
-- Yarn Classic: 1.22.22
-- TypeScript: 5.9.x
-- React: 19.2.0
-- React Native: 0.80.x
-- React Native Web: 0.21.2
-- Rspack: 1.6.x (web bundler)
-- Re.Pack: 5.2.x (mobile bundler, uses Rspack internally)
-- Module Federation: v2 (web) / v2 (mobile)
-- ScriptManager: via Re.Pack (mobile dynamic loader)
-- Hermes: Bundled with RN 0.80.x (required for mobile)
+**Configuration Files:**
 
-## Architecture
+- `packages/web-shell/rspack.config.mjs` - Web host MF config
+- `packages/web-remote-hello/rspack.config.mjs` - Web remote MF config
+- `packages/mobile-host/rspack.config.mjs` - Mobile host Re.Pack + MF config
+- `packages/mobile-remote-hello/repack.remote.config.mjs` - Mobile remote Re.Pack + MF config
+- `tsconfig.json` - Root TypeScript config
+- `CLAUDE.md` - Claude Code rules (synced with this file)
 
-Dual-host microfrontend architecture:
+**Documentation:**
 
-- Web Shell: Rspack + MF v2, React Native Web, Port 9001
-- Mobile Host: Re.Pack + MF v2, ScriptManager + Hermes, Port 8080
-- Web Remote: Rspack + MF v2, Port 9003
-- Mobile Remote: Re.Pack + MF v2, Port 9004
-- Shared Libraries: shared-utils (TypeScript), shared-hello-ui (React Native components)
+- `docs/ENTERPRISE-ENHANCEMENTS.md` - Overview of all enterprise features
+- `docs/universal-mfe-architecture-overview.md` - Complete system design
+- `docs/universal-mfe-all-platforms-testing-guide.md` - Running apps and testing guide
+- `docs/universal-mfe-mf-v2-implementation.md` - MF v2 implementation details
+- `docs/CI-CD-IMPLEMENTATION-PLAN.md` - CI/CD workflows and deployment
 
-## Universal Component Rules
+**Pattern Documentation:**
 
-When creating universal components:
-
-- Use React Native primitives ONLY (View, Text, Pressable, Image, etc.)
-- Place in packages/shared-hello-ui/ or similar shared package
-- Test on both web and mobile
-- Use Platform.select() for platform-specific logic if needed
-
-FORBIDDEN in shared components:
-
-- DOM elements (<div>, <span>, <button>)
-- Browser APIs (window, document, localStorage)
-- Native modules
-- Platform-specific imports
-
-## Code Organization
-
-- Universal components: packages/shared-hello-ui/
-- Shared utilities: packages/shared-utils/ (pure TypeScript, no platform APIs)
-- Web-specific code: packages/web-shell/, packages/web-remote-hello/
-- Mobile-specific code: packages/mobile-host/, packages/mobile-remote-hello/
-
-## Module Federation Configuration
-
-- Shared dependencies MUST be configured as singletons
-- Eager loading is REQUIRED for shared libraries
-- Web: MF v2 (migration completed)
-- Mobile: MF v2 (required by Re.Pack)
-- Both use @module-federation/enhanced@0.21.6
-
-## Bundle Formats
-
-- Web remotes: .js files (standard JavaScript)
-- Mobile remotes: .bundle files (Hermes bytecode)
-- Never mix formats
-
-## Network Configuration
-
-- Android emulator: Use 10.0.2.2 or LAN IP (not localhost)
-- iOS simulator: Use localhost directly
-- Web: Use localhost in development
-
-## Documentation Rules
-
-- New .md files should be created in docs/temp/ unless they are essential, permanent documentation
-- Main documentation in docs/
-- Cursor context in docs/cursor/
-
-## Development Workflow
-
-Web:
-
-- Terminal 1: cd packages/web-remote-hello && yarn dev (port 9003)
-- Terminal 2: cd packages/web-shell && yarn dev (port 9001)
-- Browser: http://localhost:9001
-
-Mobile Android:
-
-- Terminal 1: cd packages/mobile-remote-hello && yarn build:remote && yarn serve (port 9004)
-- Terminal 2: cd packages/mobile-host && yarn android (port 8080)
-
-Mobile iOS:
-
-- Terminal 1: cd packages/mobile-remote-hello && PLATFORM=ios yarn build:remote && yarn serve (port 9004)
-- Terminal 2: cd packages/mobile-host && yarn ios (port 8081)
-
-## Key Principles
-
-1. Version Compatibility is Critical - Exact version matching across all packages
-2. Universal Code First - Write UI using React Native primitives only
-3. Independent Deployment - Remotes deploy independently without host redeployment
-4. Runtime Dynamic Loading - Web uses browser import(), Mobile uses ScriptManager
+- `docs/PATTERNS-STATE-MANAGEMENT.md` - Zustand stores, storage abstraction
+- `docs/PATTERNS-DATA-FETCHING.md` - React Query patterns
+- `docs/PATTERNS-ROUTING.md` - Host-owned routing model
+- `docs/PATTERNS-THEMING.md` - Design tokens, theme system
+- `docs/PATTERNS-ACCESSIBILITY.md` - WCAG 2.1 AA utilities
+- `docs/PATTERNS-I18N.md` - Internationalization
+- `docs/PATTERNS-EVENT-BUS.md` - Inter-MFE communication
+- `docs/PATTERNS-TESTING.md` - Testing patterns and pyramid
+- `docs/ANTI-PATTERNS.md` - Common mistakes to avoid
 
 ## Common Pitfalls to Avoid
 
-1. Version mismatches - Never use version ranges (^ or ~) for core dependencies
-2. Platform-specific code in shared libraries - Don't use DOM APIs or native modules in shared code
-3. Bundle format confusion - Web outputs .js, mobile outputs .bundle
-4. Module Federation misconfiguration - Shared deps must be singletons with eager loading
-5. Network configuration errors - Android needs 10.0.2.2, iOS uses localhost
+1. **Version mismatches** - Never use version ranges (`^` or `~`) for core dependencies
+2. **Platform-specific code in shared libraries** - Don't use DOM APIs or native modules in shared code
+3. **Bundle format confusion** - Web outputs `.js`, mobile outputs `.bundle`
+4. **Module Federation misconfiguration** - Shared deps must be singletons with eager loading
+5. **Network configuration errors** - Android needs `10.0.2.2`, iOS uses `localhost`
+6. **Missing React Native Web alias** - Web configs must alias react-native to react-native-web
+7. **Port conflicts** - Android uses port 8081, iOS uses port 8082 - they can run simultaneously
+8. **Manual Pod edits** - Never manually edit files in `ios/Pods/` - run `pod install` to regenerate
+9. **Missing symlinks** - If builds fail with "file not found" for react-native, run `node scripts/setup-symlinks.js` in mobile-host
+10. **Stale autolinking cache** - If Android builds reference wrong paths, run `yarn clean:android` to clear cached autolinking data
 
-## Current Status
+## Quick Reference for Common Tasks
 
-Completed (POC-0):
+**Add a shared utility:**
 
-- Web shell with Rspack + MF v2
-- Web remote with dynamic loading (MF v2)
-- Mobile host with Re.Pack + MF v2
-- Mobile remote with ScriptManager
-- Universal components working on both platforms
-- iOS and Android implementations complete
-- Migration from MF v1.5 to v2 for web (completed)
+1. Edit `packages/shared-utils/src/index.ts`
+2. Run `yarn workspace @universal/shared-utils build`
 
-In Progress:
+**Add a universal UI component:**
 
-- Enhanced testing infrastructure
-- Production deployment pipeline
+1. Edit `packages/shared-hello-ui/src/`
+2. Export from `packages/shared-hello-ui/src/index.ts`
+3. Run `yarn workspace @universal/shared-hello-ui build`
+4. Test on both web and mobile platforms
 
-Recently Completed:
+**Modify web shell:**
 
-- Migration from MF v1.5 to v2 for web (completed)
-- Runtime plugins - Logging plugin implemented (completed)
+1. Edit `packages/web-shell/src/App.tsx`
+2. Changes hot-reload automatically in dev mode
 
-## When Implementing Features
+**Modify mobile host:**
 
-Always:
+1. Edit `packages/mobile-host/src/App.tsx`
+2. Changes hot-reload automatically in dev mode
 
-- Check version compatibility first
-- Test on both web and mobile for universal components
-- Use React Native primitives for shared UI
-- Keep shared code platform-agnostic
-- Reference docs/cursor/MASTER_PROMPT.md for full context
+**Add a new web remote:**
+
+1. Follow the pattern in `packages/web-remote-hello/`
+2. Update `rspack.config.mjs` with MF configuration
+3. Add stub files for incompatible dependencies
+4. Update web-shell's remotes config to consume it
+
+**Add a new mobile remote:**
+
+1. Follow the pattern in `packages/mobile-remote-hello/`
+2. Update `repack.remote.config.mjs` with MF configuration
+3. Add ScriptManager resolver entry in mobile-host's `App.tsx`
+4. Use platform-specific ports (9004 Android, 9005 iOS)
+
+**Update React Native version:**
+
+1. Update `react-native` version in all mobile package.json files
+2. Run `yarn install` to update node_modules
+3. Run `cd packages/mobile-host/ios && pod install` to regenerate Pods
+4. Never manually edit files in `ios/Pods/` directory
+
+## Enhancements Implementation Workflow
+
+When implementing Enhancements tasks (or any multi-step implementation plan), follow this strict workflow:
+
+1. **Implement the current task only**
+2. **Perform all applicable tests** - Run commands to verify the implementation works
+3. **Wait for manual verification** - The user will manually verify the changes
+4. **Debug if needed** - If issues are found, fix and re-test, including manual verification
+5. **Update implementation plan status** - Only after manual verification passes
+6. **Commit the changes** - Only after manual verification passes
+7. **Ask for confirmation** - Explicitly ask "Do you want me to proceed to the next task?" and WAIT for user response
+
+**CRITICAL:** Do NOT proceed to the next task until the user explicitly confirms. Speed is not the priority - correct, complete, testable, and verifiable implementations are the most important metrics.

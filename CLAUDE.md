@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**IMPORTANT:** This file is synced with `.cursorrules`. When updating project rules, conventions, or settings in either file, you MUST update both files to keep them in sync.
+
 ## Project Overview
 
 This is a **universal microfrontend platform** that enables a single React Native codebase to run on Web, iOS, and Android with dynamic runtime module loading via Module Federation v2. The key innovation is using React Native primitives as the universal UI API - rendered via React Native Web on web and natively on mobile.
@@ -407,6 +409,7 @@ For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 
 **CRITICAL: Scope Discipline**
 
+- **DO NOT make any changes in the existing codebase other than the required changes for the task.**
 - Only modify files directly related to the task at hand
 - Do not refactor, clean up, or "improve" unrelated code
 - Do not delete or modify files/packages not involved in the current task
@@ -428,7 +431,7 @@ For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 - `packages/mobile-host/rspack.config.mjs` - Mobile host Re.Pack + MF config
 - `packages/mobile-remote-hello/repack.remote.config.mjs` - Mobile remote Re.Pack + MF config
 - `tsconfig.json` - Root TypeScript config
-- `.cursorrules` - Complete development rules and constraints
+- `.cursorrules` - Cursor rules (synced with this file)
 
 **Documentation:**
 
