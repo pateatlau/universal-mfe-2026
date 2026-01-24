@@ -23,7 +23,7 @@ packages/shared-i18n/src/
 │   └── useLocale.ts         # Locale management hook
 ├── locales/
 │   ├── en.ts                # English translations
-│   ├── es.ts                # Spanish translations
+│   ├── hi.ts                # Hindi translations
 │   └── index.ts             # Locale exports
 ├── utils/
 │   ├── interpolation.ts     # Variable substitution
@@ -232,7 +232,7 @@ function LanguageSelector() {
   const {
     locale,           // Current locale code
     setLocale,        // Change locale
-    localeName,       // Display name ("English", "Español")
+    localeName,       // Display name ("English", "हिन्दी")
     supportedLocales, // Array of { code, name }
     isSupported,      // Check if locale is supported
     isRTL,            // Right-to-left detection
@@ -258,7 +258,7 @@ function LanguageSelector() {
 ```typescript
 function LocaleToggle() {
   const { locale, setLocale } = useLocale();
-  const availableLocales = ['en', 'es', 'fr'];
+  const availableLocales = ['en', 'hi'];
 
   const cycleLocale = () => {
     const currentIndex = availableLocales.indexOf(locale);
@@ -446,8 +446,8 @@ import { formatList } from '@universal/shared-i18n';
 formatList(['apple', 'banana', 'cherry'], 'en');
 // "apple, banana, and cherry"
 
-formatList(['apple', 'banana', 'cherry'], 'es');
-// "apple, banana y cherry"
+formatList(['apple', 'banana', 'cherry'], 'hi');
+// "apple, banana, और cherry"
 ```
 
 ## Platform Locale Detection
@@ -465,7 +465,7 @@ import {
 const deviceLocale = detectLocale();  // e.g., 'en'
 
 // Get all preferred locales (ordered)
-const preferred = getPreferredLocales();  // ['en-US', 'en', 'es']
+const preferred = getPreferredLocales();  // ['en-IN', 'en', 'hi']
 
 // Find best match from supported locales
 const match = getBestMatchingLocale(['en-US', 'en']);  // 'en'
@@ -496,10 +496,10 @@ configureLocaleStorage({
 });
 
 // Save preference
-await saveLocale('es');
+await saveLocale('hi');
 
 // Load preference
-const saved = await loadLocale();  // 'es' or null
+const saved = await loadLocale();  // 'hi' or null
 
 // Clear preference
 await clearLocale();
@@ -536,20 +536,20 @@ import { mergeTranslations } from '@universal/shared-i18n';
 // Host translations
 const hostTranslations = {
   en: { common: { appName: 'My App' } },
-  es: { common: { appName: 'Mi App' } },
+  hi: { common: { appName: 'मेरा ऐप' } },
 };
 
 // MFE translations
 const mfeTranslations = {
   en: { hello: { greeting: 'Hello!' } },
-  es: { hello: { greeting: '¡Hola!' } },
+  hi: { hello: { greeting: 'नमस्ते!' } },
 };
 
 // Merge for full app
 const allTranslations = mergeTranslations(hostTranslations, mfeTranslations);
 // {
 //   en: { common: {...}, hello: {...} },
-//   es: { common: {...}, hello: {...} }
+//   hi: { common: {...}, hello: {...} }
 // }
 ```
 
@@ -612,7 +612,7 @@ import { I18nProvider } from '@universal/shared-i18n';
 
 const testLocales = {
   en: { greeting: 'Hello' },
-  es: { greeting: 'Hola' },
+  hi: { greeting: 'नमस्ते' },
 };
 
 function renderWithI18n(ui, { locale = 'en' } = {}) {
@@ -629,9 +629,9 @@ describe('Greeting', () => {
     expect(screen.getByText('Hello')).toBeInTheDocument();
   });
 
-  it('should show Spanish greeting', () => {
-    renderWithI18n(<Greeting />, { locale: 'es' });
-    expect(screen.getByText('Hola')).toBeInTheDocument();
+  it('should show Hindi greeting', () => {
+    renderWithI18n(<Greeting />, { locale: 'hi' });
+    expect(screen.getByText('नमस्ते')).toBeInTheDocument();
   });
 });
 ```
