@@ -10,7 +10,7 @@
 ## Overview
 
 This document outlines the implementation plan to:
-1. Change the default locale from English (US) to Hindi (India)
+1. Change the default locale from English (US) to English (India) with `en-IN` formatting
 2. Replace Spanish (`es`) with Hindi (`hi`) as the second supported language
 3. Update all locale references, tests, and documentation
 
@@ -32,9 +32,9 @@ This document outlines the implementation plan to:
 
 ## Decision: Default Locale Strategy
 
-**Selected: Option B - English (India) First**
+### Selected: Option B - English (India) First
 
-- Default locale: `en-IN` (English - India)
+- Default locale: `en` with `en-IN` formatting (English - India)
 - Available locales: `['en', 'hi']` (English default, Hindi as second option)
 - All English locale settings use `en-IN` instead of `en-US`
 - Hindi is available as the second language option
@@ -165,10 +165,10 @@ export const hi: Translations = {
 
 **Changes:**
 - Import `hi` instead of `es`
-- Update `availableLocales` array
-- Update `defaultLocale` to `'hi'`
-- Update `localeDisplayNames`
-- Update `locales` object
+- Update `availableLocales` array from `['en', 'es']` to `['en', 'hi']`
+- Keep `defaultLocale` as `'en'` (English - India with `en-IN` formatting)
+- Update `localeDisplayNames` to include Hindi instead of Spanish
+- Update `locales` object to include `hi` instead of `es`
 
 **Before:**
 ```typescript
