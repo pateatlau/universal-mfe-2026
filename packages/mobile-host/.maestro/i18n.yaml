@@ -1,5 +1,5 @@
 # i18n Test - Internationalization
-# Verifies language switching between English and Spanish
+# Verifies language switching between English and Hindi
 
 appId: ${MAESTRO_APP_ID}
 name: i18n Test
@@ -22,30 +22,30 @@ tags:
 - assertVisible: "Home"
 - assertVisible: "Settings"
 
-# === Switch to Spanish via header toggle ===
+# === Switch to Hindi via header toggle ===
 
 # Tap language toggle (shows current language)
 - tapOn: ".*English.*"
 
 # Wait for language change
 - extendedWaitUntil:
-    visible: "Bienvenido"
+    visible: "स्वागत है"
     timeout: 5000
 
-# Verify Spanish text
-- assertVisible: "Bienvenido"
+# Verify Hindi text
+- assertVisible: "स्वागत है"
 
-# Verify navigation in Spanish
-- assertVisible: "Inicio"
-- assertVisible: ".*Configuraci.*"
+# Verify navigation in Hindi
+- assertVisible: "होम"
+- assertVisible: "सेटिंग्स"
 
 # === Switch back to English via Settings ===
 
-# Navigate to Settings (in Spanish)
-- tapOn: ".*Configuraci.*"
+# Navigate to Settings (in Hindi)
+- tapOn: "सेटिंग्स"
 
 - extendedWaitUntil:
-    visible: "Tema"
+    visible: "थीम"
     timeout: 5000
 
 # Tap English option
@@ -72,33 +72,33 @@ tags:
 
 # === Test language persistence across navigation ===
 
-# Switch to Spanish
+# Switch to Hindi
 - tapOn: ".*English.*"
 
 - extendedWaitUntil:
-    visible: "Bienvenido"
+    visible: "स्वागत है"
     timeout: 5000
 
 # Navigate to Remote Module page
-- tapOn: ".*dulo Remoto.*"
+- tapOn: "रिमोट मॉड्यूल"
 
 - extendedWaitUntil:
-    visible: ".*Cargar.*"
+    visible: ".*लोड करें.*"
     timeout: 5000
 
 # Navigate to Settings
-- tapOn: ".*Configuraci.*"
+- tapOn: "सेटिंग्स"
 
 - extendedWaitUntil:
-    visible: "Tema"
+    visible: "थीम"
     timeout: 5000
 
 # Navigate back to Home
 - tapOn:
-    text: "Inicio"
+    text: "होम"
     index: 0
 
-# Verify still in Spanish
+# Verify still in Hindi
 - extendedWaitUntil:
-    visible: "Bienvenido"
+    visible: "स्वागत है"
     timeout: 5000

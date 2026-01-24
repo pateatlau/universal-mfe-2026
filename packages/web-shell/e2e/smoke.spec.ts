@@ -4,17 +4,17 @@
  * Basic tests to verify the web shell loads correctly and core functionality works.
  * These tests do NOT require the remote module server to be running.
  *
- * Note: Tests use i18n-aware patterns to match both English and Spanish translations.
- * - Light theme: "Light" (en), "Claro" (es)
- * - Dark theme: "Dark" (en), "Oscuro" (es)
+ * Note: Tests use i18n-aware patterns to match both English and Hindi translations.
+ * - Light theme: "Light" (en), "लाइट" (hi)
+ * - Dark theme: "Dark" (en), "डार्क" (hi)
  */
 
 import { test, expect } from '@playwright/test';
 
 // i18n-aware patterns for theme toggle text
-const LIGHT_THEME_PATTERN = /☀️ (Light|Claro)/;
-const DARK_THEME_PATTERN = /🌙 (Dark|Oscuro)/;
-const THEME_TOGGLE_PATTERN = /☀️ (Light|Claro)|🌙 (Dark|Oscuro)/;
+const LIGHT_THEME_PATTERN = /☀️ (Light|लाइट)/;
+const DARK_THEME_PATTERN = /🌙 (Dark|डार्क)/;
+const THEME_TOGGLE_PATTERN = /☀️ (Light|लाइट)|🌙 (Dark|डार्क)/;
 
 test.describe('Smoke Tests', () => {
   test.describe('Application Boot', () => {

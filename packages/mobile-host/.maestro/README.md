@@ -71,7 +71,7 @@ MAESTRO_APP_ID=com.mobilehosttmp maestro test .maestro/smoke.yaml --debug-output
 | `smoke.yaml` | Basic app launch and visibility checks | smoke, core |
 | `navigation.yaml` | Navigation between pages | navigation, core |
 | `theming.yaml` | Theme toggle functionality | theming, core |
-| `i18n.yaml` | Language switching (English/Spanish) | i18n, core |
+| `i18n.yaml` | Language switching (English/Hindi) | i18n, core |
 | `remote-loading.yaml` | Remote module loading (requires remote server) | remote, federation |
 
 ## App Identifiers

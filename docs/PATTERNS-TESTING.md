@@ -158,16 +158,16 @@ describe('HelloUniversal', () => {
     expect(screen.getByLabelText(/greeting card/i)).toBeInTheDocument();
   });
 
-  it('should render in Spanish', () => {
+  it('should render in Hindi', () => {
     render(
-      <I18nProvider translations={locales} initialLocale="es">
+      <I18nProvider translations={locales} initialLocale="hi">
         <ThemeProvider>
-          <HelloUniversal name="Mundo" />
+          <HelloUniversal name="दुनिया" />
         </ThemeProvider>
       </I18nProvider>
     );
 
-    expect(screen.getByText(/Hola, Mundo/)).toBeInTheDocument();
+    expect(screen.getByText(/नमस्ते, दुनिया/)).toBeInTheDocument();
   });
 });
 ```
@@ -702,7 +702,7 @@ export function createTestWrapper(options: {
 }
 
 // Usage
-const wrapper = createTestWrapper({ locale: 'es', theme: 'dark' });
+const wrapper = createTestWrapper({ locale: 'hi', theme: 'dark' });
 const { result } = renderHook(() => useTheme(), { wrapper });
 ```
 

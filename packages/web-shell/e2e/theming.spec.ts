@@ -4,17 +4,17 @@
  * Tests for theme switching functionality, visual appearance, and theme persistence.
  * These tests do NOT require the remote module server to be running.
  *
- * Note: Tests use i18n-aware patterns to match both English and Spanish translations.
- * - Light theme: "Light" (en), "Claro" (es)
- * - Dark theme: "Dark" (en), "Oscuro" (es)
+ * Note: Tests use i18n-aware patterns to match both English and Hindi translations.
+ * - Light theme: "Light" (en), "लाइट" (hi)
+ * - Dark theme: "Dark" (en), "डार्क" (hi)
  */
 
 import { test, expect } from '@playwright/test';
 
 // i18n-aware patterns for theme toggle text
-const LIGHT_THEME_PATTERN = /☀️ (Light|Claro)/;
-const DARK_THEME_PATTERN = /🌙 (Dark|Oscuro)/;
-const ANY_THEME_PATTERN = /☀️ (Light|Claro)|🌙 (Dark|Oscuro)/;
+const LIGHT_THEME_PATTERN = /☀️ (Light|लाइट)/;
+const DARK_THEME_PATTERN = /🌙 (Dark|डार्क)/;
+const ANY_THEME_PATTERN = /☀️ (Light|लाइट)|🌙 (Dark|डार्क)/;
 
 test.describe('Theming', () => {
   test.describe('Theme Toggle', () => {
@@ -212,8 +212,8 @@ test.describe('Theming', () => {
       while (attempts < 15) {
         await page.keyboard.press('Tab');
         const focused = await page.evaluate(() => document.activeElement?.textContent);
-        // Check for any theme-related text (Light/Claro/Dark/Oscuro)
-        if (focused?.match(/Dark|Oscuro|Light|Claro/)) {
+        // Check for any theme-related text (Light/लाइट/Dark/डार्क)
+        if (focused?.match(/Dark|डार्क|Light|लाइट/)) {
           await page.keyboard.press('Enter');
           break;
         }
