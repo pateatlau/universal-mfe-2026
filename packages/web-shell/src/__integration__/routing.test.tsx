@@ -75,8 +75,8 @@ function SettingsPage() {
       <button data-testid="toggle-theme" onClick={toggleTheme}>
         Toggle Theme
       </button>
-      <button data-testid="set-spanish" onClick={() => setLocale('es')}>
-        Spanish
+      <button data-testid="set-hindi" onClick={() => setLocale('hi')}>
+        Hindi
       </button>
       <Link to={`/${Routes.HOME}`} data-testid="home-link">
         Back to Home
@@ -222,14 +222,14 @@ describe('Routing Integration', () => {
       expect(screen.getByTestId('current-locale')).toHaveTextContent('en');
 
       fireEvent.click(screen.getByTestId('set-spanish'));
-      expect(screen.getByTestId('current-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('current-locale')).toHaveTextContent('hi');
 
       // Navigate to remote page (via home-link from settings, then remote-link from home)
       fireEvent.click(screen.getByTestId('home-link'));
       fireEvent.click(screen.getByTestId('remote-link'));
 
       // Locale should persist
-      expect(screen.getByTestId('remote-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('remote-locale')).toHaveTextContent('hi');
     });
 
     it('preserves both theme and locale when navigating', () => {
@@ -246,7 +246,7 @@ describe('Routing Integration', () => {
       fireEvent.click(screen.getByTestId('set-spanish'));
 
       expect(screen.getByTestId('current-theme')).toHaveTextContent('dark');
-      expect(screen.getByTestId('current-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('current-locale')).toHaveTextContent('hi');
 
       // Navigate through multiple pages (via home-link from settings, then remote-link from home)
       fireEvent.click(screen.getByTestId('home-link'));
@@ -254,7 +254,7 @@ describe('Routing Integration', () => {
 
       // Both should persist
       expect(screen.getByTestId('remote-theme')).toHaveTextContent('dark');
-      expect(screen.getByTestId('remote-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('remote-locale')).toHaveTextContent('hi');
 
       // Navigate back to settings (via back-home from remote, then settings-link from home)
       fireEvent.click(screen.getByTestId('back-home'));
@@ -262,7 +262,7 @@ describe('Routing Integration', () => {
 
       // Still persisted
       expect(screen.getByTestId('current-theme')).toHaveTextContent('dark');
-      expect(screen.getByTestId('current-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('current-locale')).toHaveTextContent('hi');
     });
   });
 

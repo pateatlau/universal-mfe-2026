@@ -100,8 +100,8 @@ function SettingsScreen() {
       <Pressable testID="toggle-theme" onPress={toggleTheme}>
         <Text>Toggle Theme</Text>
       </Pressable>
-      <Pressable testID="set-spanish" onPress={() => setLocale('es')}>
-        <Text>Spanish</Text>
+      <Pressable testID="set-hindi" onPress={() => setLocale('hi')}>
+        <Text>Hindi</Text>
       </Pressable>
       <Link to={`/${Routes.HOME}`}>
         <Pressable testID="home-link">
@@ -258,14 +258,14 @@ describe('Mobile Navigation Integration', () => {
       expect(screen.getByTestId('current-locale')).toHaveTextContent('en');
 
       fireEvent.click(screen.getByTestId('set-spanish'));
-      expect(screen.getByTestId('current-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('current-locale')).toHaveTextContent('hi');
 
       // Navigate to remote screen (via home-link from settings, then remote-link from home)
       fireEvent.click(screen.getByTestId('home-link'));
       fireEvent.click(screen.getByTestId('remote-link'));
 
       // Locale should persist
-      expect(screen.getByTestId('remote-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('remote-locale')).toHaveTextContent('hi');
     });
 
     it('preserves both theme and locale when navigating', () => {
@@ -282,7 +282,7 @@ describe('Mobile Navigation Integration', () => {
       fireEvent.click(screen.getByTestId('set-spanish'));
 
       expect(screen.getByTestId('current-theme')).toHaveTextContent('dark');
-      expect(screen.getByTestId('current-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('current-locale')).toHaveTextContent('hi');
 
       // Navigate through multiple screens (via home-link from settings, then remote-link from home)
       fireEvent.click(screen.getByTestId('home-link'));
@@ -290,7 +290,7 @@ describe('Mobile Navigation Integration', () => {
 
       // Both should persist
       expect(screen.getByTestId('remote-theme')).toHaveTextContent('dark');
-      expect(screen.getByTestId('remote-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('remote-locale')).toHaveTextContent('hi');
 
       // Navigate back to settings (via back-home from remote, then settings-link from home)
       fireEvent.click(screen.getByTestId('back-home'));
@@ -298,7 +298,7 @@ describe('Mobile Navigation Integration', () => {
 
       // Still persisted
       expect(screen.getByTestId('current-theme')).toHaveTextContent('dark');
-      expect(screen.getByTestId('current-locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('current-locale')).toHaveTextContent('hi');
     });
   });
 

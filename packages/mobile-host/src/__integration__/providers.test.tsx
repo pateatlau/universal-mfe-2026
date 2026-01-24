@@ -58,8 +58,8 @@ describe('Mobile Provider Composition', () => {
           <Pressable testID="toggle-theme" onPress={toggleTheme}>
             <Text>Toggle Theme</Text>
           </Pressable>
-          <Pressable testID="set-spanish" onPress={() => setLocale('es')}>
-            <Text>Spanish</Text>
+          <Pressable testID="set-hindi" onPress={() => setLocale('hi')}>
+            <Text>Hindi</Text>
           </Pressable>
         </View>
       );
@@ -113,7 +113,7 @@ describe('Mobile Provider Composition', () => {
 
       fireEvent.click(screen.getByTestId('set-spanish'));
 
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
       // Spanish translation for appName is the same as English
       expect(screen.getByTestId('translated')).toHaveTextContent(
         'Universal MFE'
@@ -139,12 +139,12 @@ describe('Mobile Provider Composition', () => {
       // Change locale
       fireEvent.click(screen.getByTestId('set-spanish'));
       expect(screen.getByTestId('theme-name')).toHaveTextContent('dark');
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
 
       // Change theme again
       fireEvent.click(screen.getByTestId('toggle-theme'));
       expect(screen.getByTestId('theme-name')).toHaveTextContent('light');
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
     });
   });
 
@@ -176,8 +176,8 @@ describe('Mobile Provider Composition', () => {
           <Pressable testID="toggle" onPress={toggleTheme}>
             <Text>Toggle</Text>
           </Pressable>
-          <Pressable testID="spanish" onPress={() => setLocale('es')}>
-            <Text>ES</Text>
+          <Pressable testID="hindi" onPress={() => setLocale('hi')}>
+            <Text>HI</Text>
           </Pressable>
         </View>
       );
@@ -201,7 +201,7 @@ describe('Mobile Provider Composition', () => {
 
       // Change locale
       fireEvent.click(screen.getByTestId('spanish'));
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
       expect(screen.getByTestId('greeting')).toHaveTextContent('Universal MFE');
 
       // Theme persists after locale change
