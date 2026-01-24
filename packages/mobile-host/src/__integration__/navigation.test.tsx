@@ -257,7 +257,7 @@ describe('Mobile Navigation Integration', () => {
       fireEvent.click(screen.getByTestId('settings-link'));
       expect(screen.getByTestId('current-locale')).toHaveTextContent('en');
 
-      fireEvent.click(screen.getByTestId('set-spanish'));
+      fireEvent.click(screen.getByTestId('set-hindi'));
       expect(screen.getByTestId('current-locale')).toHaveTextContent('hi');
 
       // Navigate to remote screen (via home-link from settings, then remote-link from home)
@@ -279,7 +279,7 @@ describe('Mobile Navigation Integration', () => {
       fireEvent.click(screen.getByTestId('settings-link'));
 
       fireEvent.click(screen.getByTestId('toggle-theme'));
-      fireEvent.click(screen.getByTestId('set-spanish'));
+      fireEvent.click(screen.getByTestId('set-hindi'));
 
       expect(screen.getByTestId('current-theme')).toHaveTextContent('dark');
       expect(screen.getByTestId('current-locale')).toHaveTextContent('hi');
