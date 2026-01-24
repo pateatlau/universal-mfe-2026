@@ -3,11 +3,17 @@
  *
  * Internationalization (i18n) package for the Universal Microfrontend Platform.
  *
+ * India-first localization with English (en) as default and Hindi (hi) as
+ * the second supported language. Uses 'en-IN' formatting locale for Indian
+ * number, date, and currency conventions (lakhs/crores, INR, etc.).
+ *
  * Features:
  * - React context-based translation management
  * - Namespace isolation for MFE translations
  * - Pluralization support via Intl.PluralRules
  * - Date, number, currency, and relative time formatting
+ * - Indian number formatting (lakhs/crores) via 'en-IN' locale
+ * - INR (₹) as default currency
  * - RTL language detection
  * - Type-safe translation functions
  *
@@ -32,12 +38,12 @@
  *       },
  *     },
  *   },
- *   es: {
+ *   hi: {
  *     common: {
- *       greeting: '¡Hola, {{name}}!',
+ *       greeting: 'नमस्ते, {{name}}!',
  *       items: {
- *         one: '{{count}} artículo',
- *         other: '{{count}} artículos',
+ *         one: '{{count}} आइटम',
+ *         other: '{{count}} आइटम',
  *       },
  *     },
  *   },
@@ -61,8 +67,8 @@
  *     <View style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
  *       <Text>{t('greeting', { params: { name: 'World' } })}</Text>
  *       <Text>{t('items', { count: 5 })}</Text>
- *       <Text>{formatDate(new Date(), locale)}</Text>
- *       <Text>{formatCurrency(99.99, 'USD', locale)}</Text>
+ *       <Text>{formatDate(new Date(), 'en-IN')}</Text>
+ *       <Text>{formatCurrency(99999)}</Text>
  *     </View>
  *   );
  * }
@@ -85,7 +91,7 @@ export type {
   I18nProviderProps,
 } from './types';
 
-export { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './types';
+export { DEFAULT_LOCALE, DEFAULT_FORMATTING_LOCALE, SUPPORTED_LOCALES } from './types';
 
 // Provider and context
 export {
@@ -113,6 +119,7 @@ export {
 
 // Formatters
 export {
+  DEFAULT_CURRENCY,
   formatDate,
   formatNumber,
   formatCurrency,
@@ -134,7 +141,7 @@ export {
   isLocaleSupported,
   getTranslations,
   en,
-  es,
+  hi,
 } from './locales';
 
 // Utilities

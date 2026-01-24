@@ -52,8 +52,8 @@ describe('Provider Composition', () => {
           <button data-testid="toggle-theme" onClick={toggleTheme}>
             Toggle Theme
           </button>
-          <button data-testid="set-spanish" onClick={() => setLocale('es')}>
-            Spanish
+          <button data-testid="set-hindi" onClick={() => setLocale('hi')}>
+            Hindi
           </button>
         </div>
       );
@@ -101,11 +101,11 @@ describe('Provider Composition', () => {
       expect(screen.getByTestId('locale')).toHaveTextContent('en');
       expect(screen.getByTestId('translated')).toHaveTextContent('Universal MFE');
 
-      fireEvent.click(screen.getByTestId('set-spanish'));
+      fireEvent.click(screen.getByTestId('set-hindi'));
 
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
-      // Spanish translation for appName is the same as English
-      expect(screen.getByTestId('translated')).toHaveTextContent('Universal MFE');
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
+      // Hindi translation for appName
+      expect(screen.getByTestId('translated')).toHaveTextContent('यूनिवर्सल MFE');
     });
 
     it('theme and locale can both change independently', () => {
@@ -125,14 +125,14 @@ describe('Provider Composition', () => {
       expect(screen.getByTestId('locale')).toHaveTextContent('en');
 
       // Change locale
-      fireEvent.click(screen.getByTestId('set-spanish'));
+      fireEvent.click(screen.getByTestId('set-hindi'));
       expect(screen.getByTestId('theme-name')).toHaveTextContent('dark');
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
 
       // Change theme again
       fireEvent.click(screen.getByTestId('toggle-theme'));
       expect(screen.getByTestId('theme-name')).toHaveTextContent('light');
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
     });
   });
 
@@ -165,8 +165,8 @@ describe('Provider Composition', () => {
           <button data-testid="toggle" onClick={toggleTheme}>
             Toggle
           </button>
-          <button data-testid="spanish" onClick={() => setLocale('es')}>
-            ES
+          <button data-testid="hindi" onClick={() => setLocale('hi')}>
+            HI
           </button>
         </div>
       );
@@ -189,10 +189,10 @@ describe('Provider Composition', () => {
       expect(screen.getByTestId('theme')).toHaveTextContent('dark');
 
       // Change locale
-      fireEvent.click(screen.getByTestId('spanish'));
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
-      // Spanish translation for appName is the same as English
-      expect(screen.getByTestId('greeting')).toHaveTextContent('Universal MFE');
+      fireEvent.click(screen.getByTestId('hindi'));
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
+      // Hindi translation for appName
+      expect(screen.getByTestId('greeting')).toHaveTextContent('यूनिवर्सल MFE');
 
       // Theme persists after locale change
       expect(screen.getByTestId('theme')).toHaveTextContent('dark');

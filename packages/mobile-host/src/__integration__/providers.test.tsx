@@ -58,8 +58,8 @@ describe('Mobile Provider Composition', () => {
           <Pressable testID="toggle-theme" onPress={toggleTheme}>
             <Text>Toggle Theme</Text>
           </Pressable>
-          <Pressable testID="set-spanish" onPress={() => setLocale('es')}>
-            <Text>Spanish</Text>
+          <Pressable testID="set-hindi" onPress={() => setLocale('hi')}>
+            <Text>Hindi</Text>
           </Pressable>
         </View>
       );
@@ -111,12 +111,12 @@ describe('Mobile Provider Composition', () => {
         'Universal MFE'
       );
 
-      fireEvent.click(screen.getByTestId('set-spanish'));
+      fireEvent.click(screen.getByTestId('set-hindi'));
 
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
-      // Spanish translation for appName is the same as English
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
+      // Hindi translation for appName
       expect(screen.getByTestId('translated')).toHaveTextContent(
-        'Universal MFE'
+        'यूनिवर्सल MFE'
       );
     });
 
@@ -137,14 +137,14 @@ describe('Mobile Provider Composition', () => {
       expect(screen.getByTestId('locale')).toHaveTextContent('en');
 
       // Change locale
-      fireEvent.click(screen.getByTestId('set-spanish'));
+      fireEvent.click(screen.getByTestId('set-hindi'));
       expect(screen.getByTestId('theme-name')).toHaveTextContent('dark');
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
 
       // Change theme again
       fireEvent.click(screen.getByTestId('toggle-theme'));
       expect(screen.getByTestId('theme-name')).toHaveTextContent('light');
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
     });
   });
 
@@ -176,8 +176,8 @@ describe('Mobile Provider Composition', () => {
           <Pressable testID="toggle" onPress={toggleTheme}>
             <Text>Toggle</Text>
           </Pressable>
-          <Pressable testID="spanish" onPress={() => setLocale('es')}>
-            <Text>ES</Text>
+          <Pressable testID="hindi" onPress={() => setLocale('hi')}>
+            <Text>HI</Text>
           </Pressable>
         </View>
       );
@@ -200,9 +200,9 @@ describe('Mobile Provider Composition', () => {
       expect(screen.getByTestId('theme')).toHaveTextContent('dark');
 
       // Change locale
-      fireEvent.click(screen.getByTestId('spanish'));
-      expect(screen.getByTestId('locale')).toHaveTextContent('es');
-      expect(screen.getByTestId('greeting')).toHaveTextContent('Universal MFE');
+      fireEvent.click(screen.getByTestId('hindi'));
+      expect(screen.getByTestId('locale')).toHaveTextContent('hi');
+      expect(screen.getByTestId('greeting')).toHaveTextContent('यूनिवर्सल MFE');
 
       // Theme persists after locale change
       expect(screen.getByTestId('theme')).toHaveTextContent('dark');
