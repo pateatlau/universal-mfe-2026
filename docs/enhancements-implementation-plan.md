@@ -516,7 +516,7 @@ Implement internationalization with a lightweight, universal approach that works
   - `language.*` - Language selector labels
   - `hello.*` - HelloRemote MFE namespace
   - `datetime.*` - Date/time labels with pluralization
-- `packages/shared-i18n/src/locales/es.ts` - Spanish translations (complete mirror of English)
+- `packages/shared-i18n/src/locales/hi.ts` - Hindi translations (complete mirror of English)
 - `packages/shared-i18n/src/locales/index.ts` - Locale registry with:
   - `locales` - TranslationResources for all locales
   - `availableLocales` - List of supported locale codes
@@ -1438,7 +1438,7 @@ Total: 73 integration tests across 3 packages
 - `packages/mobile-host/.maestro/smoke.yaml` - Basic app launch and visibility checks
 - `packages/mobile-host/.maestro/navigation.yaml` - Page navigation tests
 - `packages/mobile-host/.maestro/theming.yaml` - Theme toggle functionality tests
-- `packages/mobile-host/.maestro/i18n.yaml` - Language switching tests (English/Spanish)
+- `packages/mobile-host/.maestro/i18n.yaml` - Language switching tests (English/Hindi)
 - `packages/mobile-host/.maestro/remote-loading.yaml` - Module Federation remote loading tests
 
 **Files modified:**
