@@ -16,7 +16,8 @@
 import { test, expect, Page } from '@playwright/test';
 
 // i18n-aware patterns for theme toggle text
-const DARK_THEME_PATTERN = /🌙 (Dark|डार्क)/;
+// Toggle shows CURRENT state: ☀️ Light when in light mode, 🌙 Dark when in dark mode
+const LIGHT_THEME_PATTERN = /☀️ (Light|लाइट)/;
 
 // Helper to check if remote server is available
 async function isRemoteAvailable(page: Page): Promise<boolean> {
@@ -172,8 +173,8 @@ test.describe('Remote Loading', () => {
     test('should sync theme to remote component', async ({ page }) => {
       await page.goto('/remote-hello');
 
-      // Switch to dark mode first
-      await page.getByText(DARK_THEME_PATTERN).click();
+      // Switch to dark mode first (click light toggle to switch to dark)
+      await page.getByText(LIGHT_THEME_PATTERN).click();
       await page.waitForTimeout(100);
 
       // Load remote
