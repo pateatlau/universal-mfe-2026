@@ -96,6 +96,12 @@ jobs:
       - name: Build mobile remote for Android (MF bundles)
         run: yarn build:mobile:android
 
+      # Generate codegen for Re.Pack native module (New Architecture requirement)
+      # This must happen before Gradle build attempts to compile native code
+      - name: Generate React Native codegen for mobile-host
+        working-directory: packages/mobile-host/android
+        run: ./gradlew generateCodegenArtifactsFromSchema --no-daemon
+
       # Build the APK - Gradle will use Re.Pack to bundle the JS automatically
       - name: Build Host Android APK (Release)
         working-directory: packages/mobile-host/android
@@ -115,6 +121,11 @@ jobs:
       # =============================================================
       # STANDALONE APP BUILD
       # =============================================================
+
+      # Generate codegen for Re.Pack native module (New Architecture requirement)
+      - name: Generate React Native codegen for mobile-remote-hello
+        working-directory: packages/mobile-remote-hello/android
+        run: ./gradlew generateCodegenArtifactsFromSchema --no-daemon
 
       # Build the standalone APK - Gradle will use Re.Pack to bundle the JS automatically
       - name: Build Standalone Android APK (Release)
