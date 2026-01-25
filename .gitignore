@@ -60,6 +60,10 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Android release keystore (sensitive - never commit!)
+*.keystore
+!**/debug.keystore
+
 # Yarn
 .yarn/cache
 .yarn/unplugged
