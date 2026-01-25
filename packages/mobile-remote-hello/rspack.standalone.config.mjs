@@ -59,7 +59,9 @@ export default {
     },
   },
 
-  devtool: false,
+  // Source maps are required for Hermes compilation in release builds.
+  // The Gradle plugin runs compose-source-maps.js which expects the packager to generate source maps.
+  devtool: 'source-map',
 
   resolve: {
     ...Repack.getResolveOptions({
