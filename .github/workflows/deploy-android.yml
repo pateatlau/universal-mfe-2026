@@ -96,27 +96,11 @@ jobs:
       - name: Build mobile remote for Android (MF bundles)
         run: yarn build:mobile:android
 
-      # Debug: Check environment before Gradle build
-      - name: Debug - Check mobile-host environment
-        working-directory: packages/mobile-host
-        run: |
-          echo "=== Current directory ==="
-          pwd
-          echo "=== Node version ==="
-          node --version
-          echo "=== Yarn version ==="
-          yarn --version
-          echo "=== Check rspack.config.mjs ==="
-          ls -la rspack.config.mjs
-          echo "=== Check react-native.config.js ==="
-          ls -la react-native.config.js
-          echo "=== Check shared packages dist ==="
-          ls -la ../shared-utils/dist/ || echo "shared-utils/dist not found"
-          ls -la ../shared-hello-ui/dist/ || echo "shared-hello-ui/dist not found"
-          echo "=== Check node_modules symlinks ==="
-          ls -la node_modules/react-native || echo "react-native symlink not found"
-          echo "=== PATH ==="
-          echo $PATH
+      # Generate codegen for Re.Pack native module (New Architecture requirement)
+      # This must happen before Gradle build attempts to compile native code
+      - name: Generate React Native codegen for mobile-host
+        working-directory: packages/mobile-host/android
+        run: ./gradlew generateCodegenArtifactsFromSchema --no-daemon
 
       # Build the APK - Gradle will use Re.Pack to bundle the JS automatically
       - name: Build Host Android APK (Release)
@@ -137,6 +121,11 @@ jobs:
       # =============================================================
       # STANDALONE APP BUILD
       # =============================================================
+
+      # Generate codegen for Re.Pack native module (New Architecture requirement)
+      - name: Generate React Native codegen for mobile-remote-hello
+        working-directory: packages/mobile-remote-hello/android
+        run: ./gradlew generateCodegenArtifactsFromSchema --no-daemon
 
       # Build the standalone APK - Gradle will use Re.Pack to bundle the JS automatically
       - name: Build Standalone Android APK (Release)
