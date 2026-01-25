@@ -92,6 +92,16 @@ jobs:
       - name: Build mobile remote for Android (MF bundles)
         run: yarn build:mobile:android
 
+      # Generate codegen for native dependencies (New Architecture requirement)
+      # Building debug first generates the codegen artifacts for native libraries
+      # like @callstack/repack which have TurboModules. This is required before
+      # the release build's CMake configuration can find the codegen directories.
+      - name: Generate codegen (debug build)
+        working-directory: packages/mobile-host/android
+        run: |
+          ./gradlew assembleDebug --no-daemon
+          echo "Debug build completed - codegen artifacts generated"
+
       - name: Build Host Android APK (Release)
         working-directory: packages/mobile-host/android
         env:
@@ -110,6 +120,13 @@ jobs:
       # Build Standalone App (Release)
       - name: Build standalone bundle for Android
         run: PLATFORM=android yarn workspace @universal/mobile-remote-hello build:standalone
+
+      # Generate codegen for standalone app (same issue as host app)
+      - name: Generate codegen for standalone (debug build)
+        working-directory: packages/mobile-remote-hello/android
+        run: |
+          ./gradlew assembleDebug --no-daemon
+          echo "Debug build completed - codegen artifacts generated"
 
       - name: Build Standalone Android APK (Release)
         working-directory: packages/mobile-remote-hello/android
