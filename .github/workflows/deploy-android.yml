@@ -17,6 +17,11 @@ jobs:
   deploy-android:
     name: Build and Release Android APKs
     runs-on: ubuntu-latest
+    env:
+      # Set env vars for conditional Firebase steps (secrets can't be used directly in if conditions)
+      HAS_FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' }}
+      HAS_FIREBASE_HOST_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID_HOST != '' }}
+      HAS_FIREBASE_REMOTE_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID_REMOTE != '' }}
 
     steps:
       - name: Checkout repository
@@ -131,13 +136,13 @@ jobs:
 
       # Firebase App Distribution (optional - continues if Firebase secrets not configured)
       - name: Authenticate to Google Cloud
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' }}
+        if: env.HAS_FIREBASE_SA == 'true'
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
 
       - name: Upload Host APK to Firebase App Distribution
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' && secrets.FIREBASE_APP_ID_ANDROID_HOST != '' }}
+        if: env.HAS_FIREBASE_SA == 'true' && env.HAS_FIREBASE_HOST_ID == 'true'
         continue-on-error: true
         run: |
           firebase appdistribution:distribute \
@@ -147,7 +152,7 @@ jobs:
             --release-notes "Release ${{ steps.tag.outputs.tag }} - Host App | Commit: ${{ github.sha }} | Branch: ${{ github.ref_name }}"
 
       - name: Upload Standalone APK to Firebase App Distribution
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' && secrets.FIREBASE_APP_ID_ANDROID_REMOTE != '' }}
+        if: env.HAS_FIREBASE_SA == 'true' && env.HAS_FIREBASE_REMOTE_ID == 'true'
         continue-on-error: true
         run: |
           firebase appdistribution:distribute \
