@@ -60,6 +60,17 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Android release keystore (sensitive - never commit!)
+*.keystore
+!**/debug.keystore
+
+# Firebase configuration (contains project IDs - keep private)
+google-services.json
+GoogleService-Info.plist
+
+# Firebase service account keys (NEVER commit - contains private keys!)
+*-firebase-adminsdk-*.json
+
 # Yarn
 .yarn/cache
 .yarn/unplugged
