@@ -50,7 +50,10 @@ export default {
       return middlewares;
     },
   },
-  devtool: false, // Disable source maps to avoid copy errors in dev mode
+  // Source maps are required for Hermes compilation in release builds.
+  // The Gradle plugin runs compose-source-maps.js which expects the packager to generate source maps.
+  // Using 'source-map' for full source map support (required for release builds).
+  devtool: 'source-map',
   resolve: {
     extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
     // Use Re.Pack's RN resolver so 'react-native' & friends map correctly
