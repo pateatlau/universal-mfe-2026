@@ -437,40 +437,173 @@ Standalone mode allows mobile-remote-hello to run as an independent "Super App" 
 
 ## Phase 6: Production Mobile Builds (Future)
 
-These tasks are required for fully standalone mobile apps that work without a dev server.
+These tasks are required for fully standalone mobile apps that work without a dev server (Metro bundler). Release builds embed the JavaScript bundle directly in the app binary.
+
+### Debug vs Release Builds
+
+| Aspect | Debug Build (Current) | Release Build (Phase 6) |
+|--------|----------------------|-------------------------|
+| **JS Bundle** | Loaded from Metro dev server | Embedded in app binary |
+| **Metro Required** | Yes (must be running) | No (fully standalone) |
+| **Performance** | Slower (development mode) | Optimized, minified |
+| **Debugging** | Enabled (React DevTools, etc.) | Disabled |
+| **Signing** | Debug keystore / Dev cert | Release keystore / Distribution cert |
+| **Distribution** | Developer testing only | Can distribute to testers/users |
+| **Developer Account** | Not required | Android: No, iOS: Yes ($99/year) |
 
 ### Task 6.1: Android Release Build
-- [ ] Create release signing keystore
-- [ ] Configure `android/app/build.gradle` for release signing
-- [ ] Update workflow to use `assembleRelease` instead of `assembleDebug`
-- [ ] Configure ProGuard/R8 minification (optional)
-- [ ] Test standalone APK on physical device
+- [ ] Create release signing keystore (free, self-signed)
+  ```bash
+  keytool -genkeypair -v -storetype PKCS12 \
+    -keystore my-release-key.keystore \
+    -alias my-key-alias \
+    -keyalg RSA -keysize 2048 -validity 10000
+  ```
+- [ ] Configure `android/app/build.gradle` for release signing:
+  ```groovy
+  android {
+    signingConfigs {
+      release {
+        storeFile file(System.getenv("KEYSTORE_FILE") ?: "debug.keystore")
+        storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
+        keyAlias System.getenv("KEY_ALIAS") ?: ""
+        keyPassword System.getenv("KEY_PASSWORD") ?: ""
+      }
+    }
+    buildTypes {
+      release {
+        signingConfig signingConfigs.release
+        minifyEnabled true
+        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      }
+    }
+  }
+  ```
+- [ ] Add GitHub Secrets for signing:
+  - `ANDROID_KEYSTORE_BASE64` - Base64-encoded keystore file
+  - `ANDROID_KEYSTORE_PASSWORD` - Keystore password
+  - `ANDROID_KEY_ALIAS` - Key alias
+  - `ANDROID_KEY_PASSWORD` - Key password
+- [ ] Update `deploy-android.yml` workflow:
+  ```yaml
+  - name: Decode keystore
+    run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
+    
+  - name: Build release APK
+    env:
+      KEYSTORE_FILE: release.keystore
+      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    run: ./gradlew assembleRelease
+  ```
+- [ ] Configure ProGuard/R8 minification
+- [ ] Test release APK on physical device
 
-### Task 6.2: Android Play Store Deployment (Optional)
-- [ ] Create Google Play Developer account ($25 one-time)
-- [ ] Generate Play Store service account for CI/CD
-- [ ] Configure Fastlane or gradle-play-publisher for automated uploads
-- [ ] Setup internal/beta/production tracks
+**Cost:** $0 (Android release builds require no developer account)
+
+### Task 6.2: Android Distribution Options
+| Method | Cost | Pros | Cons |
+|--------|------|------|------|
+| **Direct APK** | $0 | Simple, no accounts | Manual install, no auto-updates |
+| **Firebase App Distribution** | $0 | CI/CD integration, tester management | Requires Firebase project |
+| **Diawi** | $0 (limited) | Very easy | Links expire, limits on free tier |
+| **Google Play Internal Testing** | $25 one-time | Uses Play Store, auto-updates | Requires Play Console account |
+
+**Recommended for testing:** Firebase App Distribution (free, integrates with GitHub Actions)
 
 ### Task 6.3: iOS Release Build
-- [ ] Create Apple Developer account ($99/year)
-- [ ] Generate distribution certificate and provisioning profiles
-- [ ] Configure Xcode project for release signing
-- [ ] Update workflow to build for device (not simulator)
-- [ ] Archive and export IPA
+- [ ] Create Apple Developer account ($99/year) - **Required**
+- [ ] Generate distribution certificate:
+  - Keychain Access → Certificate Assistant → Request Certificate from CA
+  - Apple Developer Portal → Certificates → Create Distribution Certificate
+- [ ] Create provisioning profile:
+  - **Ad Hoc:** For testing on specific devices (up to 100 UDIDs)
+  - **App Store:** For TestFlight and App Store
+- [ ] Configure Xcode project for release signing:
+  - Set Bundle Identifier
+  - Configure signing team and provisioning profile
+- [ ] Export signing credentials for CI:
+  - Export certificate as .p12 file with password
+  - Download provisioning profile (.mobileprovision)
+- [ ] Add GitHub Secrets for signing:
+  - `IOS_CERTIFICATE_BASE64` - Base64-encoded .p12 file
+  - `IOS_CERTIFICATE_PASSWORD` - Certificate password
+  - `IOS_PROVISIONING_PROFILE_BASE64` - Base64-encoded provisioning profile
+  - `APPLE_TEAM_ID` - Apple Developer Team ID
+- [ ] Update `deploy-ios.yml` workflow:
+  ```yaml
+  - name: Install signing certificate
+    run: |
+      echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > cert.p12
+      security create-keychain -p "" build.keychain
+      security import cert.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+      security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+      
+  - name: Install provisioning profile
+    run: |
+      mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+      echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+      
+  - name: Build release archive
+    run: |
+      xcodebuild -workspace MobileHostTmp.xcworkspace \
+        -scheme MobileHostTmp \
+        -configuration Release \
+        -archivePath build/MobileHostTmp.xcarchive \
+        archive
+        
+  - name: Export IPA
+    run: |
+      xcodebuild -exportArchive \
+        -archivePath build/MobileHostTmp.xcarchive \
+        -exportPath build/ipa \
+        -exportOptionsPlist ExportOptions.plist
+  ```
+- [ ] Create `ExportOptions.plist` for export configuration
+- [ ] Test IPA on physical device
 
-### Task 6.4: iOS TestFlight/App Store Deployment (Optional)
-- [ ] Configure App Store Connect API key for CI/CD
-- [ ] Setup Fastlane for automated uploads
-- [ ] Configure TestFlight for beta testing
-- [ ] Setup App Store submission workflow
+**Cost:** $99/year (Apple Developer Program required)
 
-### Cost Impact of Phase 6
-| Item | Cost |
-|------|------|
-| Apple Developer Account | $99/year |
-| Google Play Developer Account | $25 one-time |
-| GitHub Actions (macOS minutes for iOS) | May exceed free tier |
+### Task 6.4: iOS Distribution Options
+| Method | Cost | Pros | Cons |
+|--------|------|------|------|
+| **TestFlight** | $99/year (included) | Up to 10,000 testers, OTA install | Requires App Store review for external testers |
+| **Ad Hoc** | $99/year (included) | Direct install, no review | Limited to 100 devices/year, requires UDIDs |
+| **Firebase App Distribution** | $99/year (for cert) | Free service, CI integration | Still requires Apple cert, UDID registration |
+| **Enterprise** | $299/year | Unlimited devices, no UDID | Strict eligibility, audit requirements |
+
+**Recommended for testing:** TestFlight (internal testers don't require review)
+
+### Task 6.5: Firebase App Distribution Setup (Optional)
+- [ ] Create Firebase project
+- [ ] Enable App Distribution in Firebase Console
+- [ ] Generate Firebase service account key for CI
+- [ ] Add `FIREBASE_SERVICE_ACCOUNT` to GitHub Secrets
+- [ ] Add Firebase CLI to workflows:
+  ```yaml
+  - name: Install Firebase CLI
+    run: npm install -g firebase-tools
+    
+  - name: Upload to Firebase App Distribution
+    run: |
+      firebase appdistribution:distribute app-release.apk \
+        --app ${{ secrets.FIREBASE_APP_ID_ANDROID }} \
+        --groups "testers" \
+        --release-notes "Build ${{ github.run_number }}"
+  ```
+
+### Cost Summary for Phase 6
+
+| Item | Cost | Required For |
+|------|------|--------------|
+| Android Release Keystore | $0 (self-signed) | Android release builds |
+| Apple Developer Account | $99/year | iOS release builds (required) |
+| Google Play Console | $25 one-time | Play Store distribution only |
+| Firebase App Distribution | $0 | OTA distribution (optional) |
+| **Minimum for Android** | **$0** | Release APK for testing |
+| **Minimum for iOS** | **$99/year** | Release IPA for testing |
+| **Full distribution** | **$124 first year** | Both platforms, Play Store |
 
 ---
 
@@ -569,4 +702,9 @@ These tasks are required for fully standalone mobile apps that work without a de
 - Task 5.6: Update PR summary comment ✅
 - Task 5.7: Update documentation ✅
 
-**Phase 6: FUTURE** - Production mobile builds (requires signing setup and developer accounts)
+**Phase 6: FUTURE** - Production mobile builds
+- Task 6.1: Android release build (keystore signing) - $0
+- Task 6.2: Android distribution options (APK, Firebase, Play Store)
+- Task 6.3: iOS release build (requires Apple Developer $99/year)
+- Task 6.4: iOS distribution options (TestFlight, Ad Hoc, Firebase)
+- Task 6.5: Firebase App Distribution setup (optional, free)
