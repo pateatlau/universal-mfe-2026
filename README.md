@@ -136,7 +136,7 @@ Host and standalone apps can run simultaneously on different emulators/simulator
 | Design Tokens | `shared-design-tokens` | Two-tier token system (primitive/semantic) |
 | Theming | `shared-theme-context` | Light/dark mode with persistence |
 | Accessibility | `shared-a11y` | WCAG 2.1 AA compliant utilities |
-| Internationalization | `shared-i18n` | Zero-dependency i18n with namespace isolation |
+| Internationalization | `shared-i18n` | India-first i18n (English/Hindi) with namespace isolation |
 | Event Bus | `shared-event-bus` | Type-safe inter-MFE communication |
 | Data Fetching | `shared-data-layer` | React Query with shared/isolated clients |
 | Routing | `shared-router` | Host-owned routing abstraction |
@@ -144,6 +144,19 @@ Host and standalone apps can run simultaneously on different emulators/simulator
 | Unit Testing | Jest + Testing Library | React Native component testing |
 | Integration Testing | Jest | Provider composition, routing |
 | E2E Testing | Playwright + Maestro | Web and mobile automation |
+
+### Localization (India-First)
+
+The platform uses an India-first localization strategy:
+
+| Aspect | Configuration |
+|--------|---------------|
+| Default Locale | English (`en`) with `en-IN` formatting |
+| Second Language | Hindi (`hi`) |
+| Currency | INR (₹) with Indian grouping (lakhs/crores) |
+| Number Format | Indian system (1,00,000 instead of 100,000) |
+
+Language toggle switches between English and Hindi across all platforms.
 
 ## Tech Stack
 
@@ -200,6 +213,7 @@ For production builds without Metro dependency, see [Phase 6 in CI/CD Implementa
 | [MF V2 Implementation](docs/universal-mfe-mf-v2-implementation.md) | Configuration reference and troubleshooting |
 | [Architecture Overview](docs/universal-mfe-architecture-overview.md) | System design and patterns |
 | [CLAUDE.md](CLAUDE.md) | Development guidelines and constraints |
+| [India-First Localization](docs/INDIA-FIRST-LOCALIZATION-PLAN.md) | Hindi localization implementation plan |
 
 ### Pattern Documentation
 
