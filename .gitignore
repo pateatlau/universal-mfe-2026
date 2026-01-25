@@ -64,6 +64,10 @@ yarn-error.log*
 *.keystore
 !**/debug.keystore
 
+# Firebase configuration (contains project IDs - keep private)
+google-services.json
+GoogleService-Info.plist
+
 # Yarn
 .yarn/cache
 .yarn/unplugged
