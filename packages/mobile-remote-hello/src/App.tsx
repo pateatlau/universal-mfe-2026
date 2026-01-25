@@ -165,7 +165,7 @@ function AppContent() {
         <View style={styles.controlsRow}>
           <Pressable style={styles.themeToggle} onPress={toggleTheme}>
             <Text style={styles.themeToggleText}>
-              {isDark ? `☀️ ${t('theme.light')}` : `🌙 ${t('theme.dark')}`}
+              {isDark ? `🌙 ${t('theme.dark')}` : `☀️ ${t('theme.light')}`}
             </Text>
           </Pressable>
           <Pressable style={styles.langToggle} onPress={cycleLocale}>

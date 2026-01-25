@@ -571,7 +571,7 @@ yarn workspace @universal/mobile-host exec maestro test .maestro/smoke.yaml
 | Smoke | `smoke.yaml` | App launch, header, navigation links | smoke, core |
 | Navigation | `navigation.yaml` | Page transitions, header nav | navigation, core |
 | Theming | `theming.yaml` | Theme toggle from header and settings | theming, core |
-| i18n | `i18n.yaml` | Language switching (EN/ES) | i18n, core |
+| i18n | `i18n.yaml` | Language switching (EN/HI) | i18n, core |
 | Remote Loading | `remote-loading.yaml` | Module Federation loading | remote, federation |
 
 ### App Identifiers

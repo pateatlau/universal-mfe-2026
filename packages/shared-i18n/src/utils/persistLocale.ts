@@ -97,8 +97,8 @@ export function configureLocaleStorage(customStorage: LocaleStorage): void {
  *
  * @example
  * ```ts
- * await saveLocale('es');
- * // Locale 'es' is now persisted
+ * await saveLocale('hi');
+ * // Locale 'hi' (Hindi) is now persisted
  * ```
  */
 export async function saveLocale(locale: LocaleCode): Promise<void> {

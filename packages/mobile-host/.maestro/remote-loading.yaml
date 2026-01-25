@@ -73,15 +73,15 @@ tags:
     visible: "Language"
     timeout: 5000
 
-# Tap Spanish
-- tapOn: ".*Spanish.*"
+# Tap Hindi
+- tapOn: ".*Hindi.*"
 
-# Navigate back to Remote Module (now in Spanish)
+# Navigate back to Remote Module (now in Hindi)
 - tapOn:
-    text: "Inicio"
+    text: "होम"
     index: 0
 
-- tapOn: ".*dulo Remoto.*"
+- tapOn: "रिमोट मॉड्यूल"
 
 # Wait for remote to be visible (uses locale prop)
 - extendedWaitUntil:

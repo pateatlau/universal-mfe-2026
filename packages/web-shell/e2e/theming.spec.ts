@@ -4,51 +4,56 @@
  * Tests for theme switching functionality, visual appearance, and theme persistence.
  * These tests do NOT require the remote module server to be running.
  *
- * Note: Tests use i18n-aware patterns to match both English and Spanish translations.
- * - Light theme: "Light" (en), "Claro" (es)
- * - Dark theme: "Dark" (en), "Oscuro" (es)
+ * Note: Tests use i18n-aware patterns to match both English and Hindi translations.
+ * - Light theme: "Light" (en), "लाइट" (hi)
+ * - Dark theme: "Dark" (en), "डार्क" (hi)
+ *
+ * IMPORTANT: The theme toggle shows the CURRENT theme state, not the target state.
+ * - When in light mode: toggle shows "☀️ Light"
+ * - When in dark mode: toggle shows "🌙 Dark"
  */
 
 import { test, expect } from '@playwright/test';
 
 // i18n-aware patterns for theme toggle text
-const LIGHT_THEME_PATTERN = /☀️ (Light|Claro)/;
-const DARK_THEME_PATTERN = /🌙 (Dark|Oscuro)/;
-const ANY_THEME_PATTERN = /☀️ (Light|Claro)|🌙 (Dark|Oscuro)/;
+// Toggle shows CURRENT state: ☀️ Light when in light mode, 🌙 Dark when in dark mode
+const LIGHT_THEME_PATTERN = /☀️ (Light|लाइट)/;
+const DARK_THEME_PATTERN = /🌙 (Dark|डार्क)/;
+const ANY_THEME_PATTERN = /☀️ (Light|लाइट)|🌙 (Dark|डार्क)/;
 
 test.describe('Theming', () => {
   test.describe('Theme Toggle', () => {
     test('should start in light mode by default', async ({ page }) => {
       await page.goto('/');
 
-      // Dark mode toggle should be visible (meaning we're in light mode)
-      await expect(page.getByText(DARK_THEME_PATTERN)).toBeVisible();
+      // Light mode toggle should be visible (showing current state: light)
+      await expect(page.getByText(LIGHT_THEME_PATTERN)).toBeVisible();
     });
 
     test('should switch to dark mode when clicking toggle', async ({ page }) => {
       await page.goto('/');
 
-      // Click dark mode toggle
-      await page.getByText(DARK_THEME_PATTERN).click();
+      // Click light mode toggle (current state) to switch to dark
+      await page.getByText(LIGHT_THEME_PATTERN).click();
       await page.waitForTimeout(100);
 
-      // Light mode toggle should now be visible (meaning we're in dark mode)
-      await expect(page.getByText(LIGHT_THEME_PATTERN)).toBeVisible();
+      // Dark mode toggle should now be visible (showing current state: dark)
+      await expect(page.getByText(DARK_THEME_PATTERN)).toBeVisible();
     });
 
     test('should switch back to light mode', async ({ page }) => {
       await page.goto('/');
 
       // Switch to dark
-      await page.getByText(DARK_THEME_PATTERN).click();
-      await page.waitForTimeout(100);
-
-      // Switch back to light
       await page.getByText(LIGHT_THEME_PATTERN).click();
       await page.waitForTimeout(100);
 
-      // Dark mode toggle should be visible again
-      await expect(page.getByText(DARK_THEME_PATTERN)).toBeVisible();
+      // Switch back to light
+      await page.getByText(DARK_THEME_PATTERN).click();
+      await page.waitForTimeout(100);
+
+      // Light mode toggle should be visible again (showing current state: light)
+      await expect(page.getByText(LIGHT_THEME_PATTERN)).toBeVisible();
     });
 
     test('should toggle multiple times without issues', async ({ page }) => {
@@ -81,13 +86,13 @@ test.describe('Theming', () => {
     test('should switch to dark theme from settings page', async ({ page }) => {
       await page.goto('/settings');
 
-      // Click dark theme option (may need to click the second one if header also has toggle)
+      // Click dark theme option in settings (use last() to get settings button, not header)
       const darkOptions = page.getByText(DARK_THEME_PATTERN);
       await darkOptions.last().click();
       await page.waitForTimeout(100);
 
-      // Header toggle should show light (meaning we're in dark mode)
-      await expect(page.getByText(LIGHT_THEME_PATTERN).first()).toBeVisible();
+      // Header toggle should now show dark (current state is dark)
+      await expect(page.getByText(DARK_THEME_PATTERN).first()).toBeVisible();
     });
 
     test('should switch to light theme from settings page', async ({ page }) => {
@@ -101,8 +106,8 @@ test.describe('Theming', () => {
       await page.getByText(LIGHT_THEME_PATTERN).last().click();
       await page.waitForTimeout(100);
 
-      // Header toggle should show dark (meaning we're in light mode)
-      await expect(page.getByText(DARK_THEME_PATTERN).first()).toBeVisible();
+      // Header toggle should show light (current state is light)
+      await expect(page.getByText(LIGHT_THEME_PATTERN).first()).toBeVisible();
     });
   });
 
@@ -127,19 +132,19 @@ test.describe('Theming', () => {
     test('should apply dark theme to all pages via SPA navigation', async ({ page }) => {
       await page.goto('/');
 
-      // Switch to dark mode
-      await page.getByText(DARK_THEME_PATTERN).click();
+      // Switch to dark mode (click light toggle to switch)
+      await page.getByText(LIGHT_THEME_PATTERN).click();
       await page.waitForTimeout(100);
 
-      // Verify dark mode on home - header shows Light toggle when in dark mode
-      await expect(page.getByText(LIGHT_THEME_PATTERN)).toBeVisible();
+      // Verify dark mode on home - header shows Dark toggle (current state)
+      await expect(page.getByText(DARK_THEME_PATTERN)).toBeVisible();
 
       // Navigate to settings via SPA link (should preserve React state)
       await page.getByRole('link').filter({ hasText: /Settings|⚙️/ }).first().click();
       await expect(page).toHaveURL(/.*settings/);
 
-      // Should still be in dark mode - header toggle should show Light
-      await expect(page.getByText(LIGHT_THEME_PATTERN).first()).toBeVisible();
+      // Should still be in dark mode - header toggle should show Dark
+      await expect(page.getByText(DARK_THEME_PATTERN).first()).toBeVisible();
 
       // Navigate to remote page via back link
       await page.getByText('← Home').click();
@@ -147,7 +152,7 @@ test.describe('Theming', () => {
       await expect(page).toHaveURL(/.*remote-hello/);
 
       // Should still be in dark mode
-      await expect(page.getByText(LIGHT_THEME_PATTERN).first()).toBeVisible();
+      await expect(page.getByText(DARK_THEME_PATTERN).first()).toBeVisible();
     });
   });
 
@@ -156,30 +161,30 @@ test.describe('Theming', () => {
       await page.goto('/');
 
       // Switch to dark mode
-      await page.getByText(DARK_THEME_PATTERN).click();
+      await page.getByText(LIGHT_THEME_PATTERN).click();
       await page.waitForTimeout(100);
 
       // Navigate to multiple pages via SPA links
       await page.getByRole('link').filter({ hasText: /Settings|⚙️/ }).first().click();
       await expect(page).toHaveURL(/.*settings/);
-      await expect(page.getByText(LIGHT_THEME_PATTERN).first()).toBeVisible();
+      await expect(page.getByText(DARK_THEME_PATTERN).first()).toBeVisible();
 
       // Navigate to remote page
       await page.getByText('← Home').click();
       await page.getByRole('link').filter({ hasText: /Remote Module|🧩/ }).click();
       await expect(page).toHaveURL(/.*remote-hello/);
-      await expect(page.getByText(LIGHT_THEME_PATTERN).first()).toBeVisible();
+      await expect(page.getByText(DARK_THEME_PATTERN).first()).toBeVisible();
 
       // Navigate back home
       await page.getByText('← Home').click();
-      await expect(page.getByText(LIGHT_THEME_PATTERN)).toBeVisible();
+      await expect(page.getByText(DARK_THEME_PATTERN)).toBeVisible();
     });
 
     test('should maintain theme after using browser back/forward', async ({ page }) => {
       await page.goto('/');
 
       // Switch to dark mode
-      await page.getByText(DARK_THEME_PATTERN).click();
+      await page.getByText(LIGHT_THEME_PATTERN).click();
       await page.waitForTimeout(100);
 
       // Navigate to settings via SPA link
@@ -189,14 +194,14 @@ test.describe('Theming', () => {
       // Go back
       await page.goBack();
 
-      // Theme should still be dark
-      await expect(page.getByText(LIGHT_THEME_PATTERN)).toBeVisible();
+      // Theme should still be dark (toggle shows Dark)
+      await expect(page.getByText(DARK_THEME_PATTERN)).toBeVisible();
 
       // Go forward
       await page.goForward();
 
       // Theme should still be dark
-      await expect(page.getByText(LIGHT_THEME_PATTERN).first()).toBeVisible();
+      await expect(page.getByText(DARK_THEME_PATTERN).first()).toBeVisible();
     });
   });
 
@@ -212,8 +217,8 @@ test.describe('Theming', () => {
       while (attempts < 15) {
         await page.keyboard.press('Tab');
         const focused = await page.evaluate(() => document.activeElement?.textContent);
-        // Check for any theme-related text (Light/Claro/Dark/Oscuro)
-        if (focused?.match(/Dark|Oscuro|Light|Claro/)) {
+        // Check for any theme-related text (Light/लाइट/Dark/डार्क)
+        if (focused?.match(/Dark|डार्क|Light|लाइट/)) {
           await page.keyboard.press('Enter');
           break;
         }
