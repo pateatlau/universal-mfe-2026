@@ -102,6 +102,35 @@ jobs:
         id: tag
         run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      # Firebase App Distribution
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Upload Host APK to Firebase App Distribution
+        run: |
+          npm install -g firebase-tools
+          firebase appdistribution:distribute \
+            packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk \
+            --app ${{ secrets.FIREBASE_APP_ID_ANDROID_HOST }} \
+            --groups "internal-testers" \
+            --release-notes "Release ${{ steps.tag.outputs.tag }} - Host App
+
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref_name }}"
+
+      - name: Upload Standalone APK to Firebase App Distribution
+        run: |
+          firebase appdistribution:distribute \
+            packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk \
+            --app ${{ secrets.FIREBASE_APP_ID_ANDROID_REMOTE }} \
+            --groups "internal-testers" \
+            --release-notes "Release ${{ steps.tag.outputs.tag }} - Standalone Remote App
+
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref_name }}"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -153,6 +182,12 @@ jobs:
             ### 📋 System Requirements
             - Android 7.0 (API 24) or higher
             - ARM64 or x86_64 device
+
+            ---
+
+            ### 🔥 Firebase App Distribution
+
+            Testers in the `internal-testers` group will receive an email notification with download links.
 
             ---
 

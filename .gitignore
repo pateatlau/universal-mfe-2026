@@ -68,6 +68,9 @@ yarn-error.log*
 google-services.json
 GoogleService-Info.plist
 
+# Firebase service account keys (NEVER commit - contains private keys!)
+*-firebase-adminsdk-*.json
+
 # Yarn
 .yarn/cache
 .yarn/unplugged
