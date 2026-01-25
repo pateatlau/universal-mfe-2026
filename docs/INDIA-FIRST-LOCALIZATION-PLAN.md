@@ -454,14 +454,14 @@ yarn lint
 
 ### Task 6.2: Manual Verification
 **Checklist:**
-- [ ] Web shell displays Hindi by default
-- [ ] Language toggle switches between Hindi and English
-- [ ] All Hindi translations display correctly (no missing keys)
-- [ ] Mobile host displays Hindi by default
-- [ ] Theme labels are translated correctly
-- [ ] Navigation labels are translated correctly
-- [ ] Remote module loads with Hindi translations
-- [ ] Currency/date formatting uses Indian formats
+- [x] Web shell displays English by default (with `en-IN` formatting)
+- [x] Language toggle switches between English and Hindi
+- [x] All Hindi translations display correctly (no missing keys)
+- [x] Mobile host displays English by default (with `en-IN` formatting)
+- [x] Theme labels are translated correctly (Light/Dark ↔ लाइट/डार्क)
+- [x] Navigation labels are translated correctly (Home/Settings ↔ होम/सेटिंग्स)
+- [x] Remote module loads with Hindi translations when Hindi is selected
+- [x] Currency/date formatting uses Indian formats (₹, lakhs/crores)
 
 ### Task 6.3: Build Verification
 **Commands:**
