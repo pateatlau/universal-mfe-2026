@@ -189,8 +189,7 @@ function StandaloneAppContent() {
         {pressCount > 0 && (
           <View style={styles.counter}>
             <Text style={styles.counterText}>
-              Remote button pressed {pressCount} time
-              {pressCount !== 1 ? 's' : ''}
+              {t('pressCount', { count: pressCount })}
             </Text>
           </View>
         )}
