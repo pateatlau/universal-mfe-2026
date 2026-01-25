@@ -2,6 +2,12 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Apply Google Services plugin only if google-services.json exists
+// This file is gitignored and only available locally or via CI secrets
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -98,13 +104,24 @@ android {
             // Set these in GitHub Secrets: ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
             // The keystore file is decoded from ANDROID_KEYSTORE_BASE64 in the workflow
             def keystoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
-            if (keystoreFile != null && file(keystoreFile).exists()) {
+            def keystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            def keyAliasValue = System.getenv("ANDROID_KEY_ALIAS")
+            def keyPasswordValue = System.getenv("ANDROID_KEY_PASSWORD")
+
+            // Use release signing only if ALL credentials are present
+            def hasAllCredentials = keystoreFile != null &&
+                                    file(keystoreFile).exists() &&
+                                    keystorePassword != null && !keystorePassword.isEmpty() &&
+                                    keyAliasValue != null && !keyAliasValue.isEmpty() &&
+                                    keyPasswordValue != null && !keyPasswordValue.isEmpty()
+
+            if (hasAllCredentials) {
                 storeFile file(keystoreFile)
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
-                keyAlias System.getenv("ANDROID_KEY_ALIAS") ?: ""
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD") ?: ""
+                storePassword keystorePassword
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
             } else {
-                // Fallback to debug signing for local development
+                // Fallback to debug signing for local development or CI debug builds
                 storeFile file('debug.keystore')
                 storePassword 'android'
                 keyAlias 'androiddebugkey'

@@ -1,6 +1,6 @@
 # CI/CD Implementation Plan
 
-**Status:** Phase 6.1 Complete - Android Release Builds Added
+**Status:** Phase 6.5 Complete - Firebase App Distribution Added
 **Last Updated:** 2026-01-25
 **Target:** POC with minimal costs / free tier options
 
@@ -551,19 +551,19 @@ These tasks are required for fully standalone mobile apps that work without a de
 
 **Recommended for testing:** TestFlight (internal testers don't require review)
 
-### Task 6.5: Firebase App Distribution Setup
+### Task 6.5: Firebase App Distribution Setup ✅ COMPLETE
 
 Firebase App Distribution provides OTA (over-the-air) distribution for testers, with tester management, release notes, and CI/CD integration. This setup also lays the groundwork for Firebase Authentication (Phase 7).
 
-#### Prerequisites (Manual Steps)
+#### Prerequisites (Manual Steps) ✅
 
-**Step 1: Create Firebase Project**
+**Step 1: Create Firebase Project** ✅
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Click "Create a project" → Enter name: `universal-mfe`
 3. Enable/disable Google Analytics as preferred
 4. Click "Create project"
 
-**Step 2: Add Android Apps to Firebase**
+**Step 2: Add Android Apps to Firebase** ✅
 1. In Firebase Console, click "Add app" → Android icon
 2. For Host App:
    - Package name: `com.mobilehosttmp`
@@ -575,14 +575,14 @@ Firebase App Distribution provides OTA (over-the-air) distribution for testers, 
    - Click "Register app"
 4. Download `google-services.json` for each app (needed for Auth later)
 
-**Step 3: Enable App Distribution**
+**Step 3: Enable App Distribution** ✅
 1. In Firebase Console sidebar: Release & Monitor → App Distribution
 2. Click "Get Started"
 3. Create tester groups:
    - `internal-testers` - Core team
    - `beta-testers` - External beta users
 
-**Step 4: Create Service Account for CI/CD**
+**Step 4: Create Service Account for CI/CD** ✅
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Select your Firebase project
 3. IAM & Admin → Service Accounts → "Create Service Account"
@@ -591,56 +591,33 @@ Firebase App Distribution provides OTA (over-the-air) distribution for testers, 
 4. Click on the service account → Keys → Add Key → Create new key → JSON
 5. Download and save the JSON key file securely
 
-**Step 5: Add GitHub Secrets**
-```
+**Step 5: Add GitHub Secrets** ✅
+```text
 FIREBASE_SERVICE_ACCOUNT_JSON    - Full contents of the service account JSON file
 FIREBASE_APP_ID_ANDROID_HOST     - App ID from Firebase Console → Project Settings → Your apps (e.g., 1:123456789:android:abc123)
 FIREBASE_APP_ID_ANDROID_REMOTE   - App ID for standalone app (if distributing)
 ```
 
-#### Implementation Tasks
+#### Implementation Tasks ✅
 
-- [ ] Complete manual prerequisites above
-- [ ] Add `google-services.json` to mobile apps:
+- [x] Complete manual prerequisites above
+- [x] Add `google-services.json` to mobile apps (gitignored):
   - `packages/mobile-host/android/app/google-services.json`
   - `packages/mobile-remote-hello/android/app/google-services.json`
-- [ ] Add Firebase dependencies to `android/app/build.gradle`:
+- [x] Add Firebase dependencies to `android/app/build.gradle`:
   ```groovy
   apply plugin: 'com.google.gms.google-services'
   ```
-- [ ] Add Google Services plugin to `android/build.gradle`:
+- [x] Add Google Services plugin to `android/build.gradle`:
   ```groovy
   buildscript {
     dependencies {
-      classpath 'com.google.gms:google-services:4.4.0'
+      classpath 'com.google.gms:google-services:4.4.2'
     }
   }
   ```
-- [ ] Update `deploy-android.yml` workflow:
-  ```yaml
-  - name: Authenticate to Google Cloud
-    uses: google-github-actions/auth@v2
-    with:
-      credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-
-  - name: Upload Host APK to Firebase App Distribution
-    run: |
-      npm install -g firebase-tools
-      firebase appdistribution:distribute \
-        packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk \
-        --app ${{ secrets.FIREBASE_APP_ID_ANDROID_HOST }} \
-        --groups "internal-testers" \
-        --release-notes "Release ${{ steps.tag.outputs.tag }} - Host App"
-
-  - name: Upload Standalone APK to Firebase App Distribution
-    run: |
-      firebase appdistribution:distribute \
-        packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk \
-        --app ${{ secrets.FIREBASE_APP_ID_ANDROID_REMOTE }} \
-        --groups "internal-testers" \
-        --release-notes "Release ${{ steps.tag.outputs.tag }} - Standalone Remote"
-  ```
-- [ ] Test distribution by pushing a tag and verifying testers receive email notification
+- [x] Update `deploy-android.yml` workflow with Firebase App Distribution upload steps
+- [ ] Test distribution by pushing a tag and verifying testers receive email notification (pending merge)
 
 **Cost:** $0 (Firebase App Distribution is free)
 
@@ -898,12 +875,12 @@ Firebase Authentication will provide secure user authentication with support for
 - Task 5.6: Update PR summary comment ✅
 - Task 5.7: Update documentation ✅
 
-**Phase 6: IN PROGRESS** - Production mobile builds
+**Phase 6: MOSTLY COMPLETE** - Production mobile builds
 - Task 6.1: Android release build (keystore signing) ✅ COMPLETE - $0
 - Task 6.2: Android distribution options (APK, Firebase, Play Store) - documented
 - Task 6.3: iOS release build (requires Apple Developer $99/year) - future
 - Task 6.4: iOS distribution options (TestFlight, Ad Hoc, Firebase) - documented
-- Task 6.5: Firebase App Distribution setup - detailed plan added, pending implementation
+- Task 6.5: Firebase App Distribution setup ✅ COMPLETE - $0
 
 **Phase 7: FUTURE** - Firebase Authentication
 - Task 7.1: Firebase Auth Setup (Android) - Email/password + Google Sign-In
