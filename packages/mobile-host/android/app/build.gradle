@@ -99,11 +99,22 @@ android {
             // Set these in GitHub Secrets: ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
             // The keystore file is decoded from ANDROID_KEYSTORE_BASE64 in the workflow
             def keystoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
-            if (keystoreFile != null && file(keystoreFile).exists()) {
+            def keystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            def keyAliasValue = System.getenv("ANDROID_KEY_ALIAS")
+            def keyPasswordValue = System.getenv("ANDROID_KEY_PASSWORD")
+
+            // Use release signing only if ALL credentials are present
+            def hasAllCredentials = keystoreFile != null &&
+                                    file(keystoreFile).exists() &&
+                                    keystorePassword != null && !keystorePassword.isEmpty() &&
+                                    keyAliasValue != null && !keyAliasValue.isEmpty() &&
+                                    keyPasswordValue != null && !keyPasswordValue.isEmpty()
+
+            if (hasAllCredentials) {
                 storeFile file(keystoreFile)
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
-                keyAlias System.getenv("ANDROID_KEY_ALIAS") ?: ""
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD") ?: ""
+                storePassword keystorePassword
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
             } else {
                 // Fallback to debug signing for local development
                 storeFile file('debug.keystore')
