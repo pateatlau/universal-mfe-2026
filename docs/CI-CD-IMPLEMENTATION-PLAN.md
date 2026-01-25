@@ -551,23 +551,243 @@ These tasks are required for fully standalone mobile apps that work without a de
 
 **Recommended for testing:** TestFlight (internal testers don't require review)
 
-### Task 6.5: Firebase App Distribution Setup (Optional)
-- [ ] Create Firebase project
-- [ ] Enable App Distribution in Firebase Console
-- [ ] Generate Firebase service account key for CI
-- [ ] Add `FIREBASE_SERVICE_ACCOUNT` to GitHub Secrets
-- [ ] Add Firebase CLI to workflows:
-  ```yaml
-  - name: Install Firebase CLI
-    run: npm install -g firebase-tools
-    
-  - name: Upload to Firebase App Distribution
-    run: |
-      firebase appdistribution:distribute app-release.apk \
-        --app ${{ secrets.FIREBASE_APP_ID_ANDROID }} \
-        --groups "testers" \
-        --release-notes "Build ${{ github.run_number }}"
+### Task 6.5: Firebase App Distribution Setup
+
+Firebase App Distribution provides OTA (over-the-air) distribution for testers, with tester management, release notes, and CI/CD integration. This setup also lays the groundwork for Firebase Authentication (Phase 7).
+
+#### Prerequisites (Manual Steps)
+
+**Step 1: Create Firebase Project**
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Click "Create a project" → Enter name: `universal-mfe`
+3. Enable/disable Google Analytics as preferred
+4. Click "Create project"
+
+**Step 2: Add Android Apps to Firebase**
+1. In Firebase Console, click "Add app" → Android icon
+2. For Host App:
+   - Package name: `com.mobilehosttmp`
+   - App nickname: `Universal MFE Host`
+   - Click "Register app"
+3. For Standalone App (optional):
+   - Package name: `com.mobileremotehello`
+   - App nickname: `Universal MFE Remote Standalone`
+   - Click "Register app"
+4. Download `google-services.json` for each app (needed for Auth later)
+
+**Step 3: Enable App Distribution**
+1. In Firebase Console sidebar: Release & Monitor → App Distribution
+2. Click "Get Started"
+3. Create tester groups:
+   - `internal-testers` - Core team
+   - `beta-testers` - External beta users
+
+**Step 4: Create Service Account for CI/CD**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your Firebase project
+3. IAM & Admin → Service Accounts → "Create Service Account"
+   - Name: `github-actions-firebase`
+   - Role: `Firebase App Distribution Admin`
+4. Click on the service account → Keys → Add Key → Create new key → JSON
+5. Download and save the JSON key file securely
+
+**Step 5: Add GitHub Secrets**
+```
+FIREBASE_SERVICE_ACCOUNT_JSON    - Full contents of the service account JSON file
+FIREBASE_APP_ID_ANDROID_HOST     - App ID from Firebase Console → Project Settings → Your apps (e.g., 1:123456789:android:abc123)
+FIREBASE_APP_ID_ANDROID_REMOTE   - App ID for standalone app (if distributing)
+```
+
+#### Implementation Tasks
+
+- [ ] Complete manual prerequisites above
+- [ ] Add `google-services.json` to mobile apps:
+  - `packages/mobile-host/android/app/google-services.json`
+  - `packages/mobile-remote-hello/android/app/google-services.json`
+- [ ] Add Firebase dependencies to `android/app/build.gradle`:
+  ```groovy
+  apply plugin: 'com.google.gms.google-services'
   ```
+- [ ] Add Google Services plugin to `android/build.gradle`:
+  ```groovy
+  buildscript {
+    dependencies {
+      classpath 'com.google.gms:google-services:4.4.0'
+    }
+  }
+  ```
+- [ ] Update `deploy-android.yml` workflow:
+  ```yaml
+  - name: Authenticate to Google Cloud
+    uses: google-github-actions/auth@v2
+    with:
+      credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
+  - name: Upload Host APK to Firebase App Distribution
+    run: |
+      npm install -g firebase-tools
+      firebase appdistribution:distribute \
+        packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk \
+        --app ${{ secrets.FIREBASE_APP_ID_ANDROID_HOST }} \
+        --groups "internal-testers" \
+        --release-notes "Release ${{ steps.tag.outputs.tag }} - Host App"
+
+  - name: Upload Standalone APK to Firebase App Distribution
+    run: |
+      firebase appdistribution:distribute \
+        packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk \
+        --app ${{ secrets.FIREBASE_APP_ID_ANDROID_REMOTE }} \
+        --groups "internal-testers" \
+        --release-notes "Release ${{ steps.tag.outputs.tag }} - Standalone Remote"
+  ```
+- [ ] Test distribution by pushing a tag and verifying testers receive email notification
+
+**Cost:** $0 (Firebase App Distribution is free)
+
+---
+
+## Phase 7: Firebase Authentication (Future)
+
+Firebase Authentication will provide secure user authentication with support for email/password and social login providers. This builds on the Firebase project created in Task 6.5.
+
+### Overview
+
+| Provider | Setup Complexity | Notes |
+|----------|-----------------|-------|
+| Email/Password | Easy | Built-in, no external setup |
+| Google Sign-In | Easy | Just enable in Firebase console |
+| Apple Sign-In | Medium | Requires Apple Developer account ($99/year) |
+| Facebook | Medium | Requires Facebook Developer app |
+| GitHub | Easy | Requires GitHub OAuth app |
+| Phone (SMS) | Easy | Pay-per-use for SMS |
+
+### Task 7.1: Firebase Auth Setup (Android)
+- [ ] Enable authentication providers in Firebase Console:
+  - Authentication → Sign-in method → Enable desired providers
+- [ ] Add Firebase Auth dependencies:
+  ```bash
+  yarn workspace @universal/mobile-host add @react-native-firebase/app @react-native-firebase/auth
+  yarn workspace @universal/mobile-remote-hello add @react-native-firebase/app @react-native-firebase/auth
+  ```
+- [ ] For Google Sign-In, add additional dependency:
+  ```bash
+  yarn workspace @universal/mobile-host add @react-native-google-signin/google-signin
+  ```
+- [ ] Configure SHA-1 fingerprint in Firebase Console (required for Google Sign-In):
+  ```bash
+  cd packages/mobile-host/android
+  ./gradlew signingReport
+  ```
+- [ ] Update Android configuration for Firebase
+
+### Task 7.2: Firebase Auth Setup (iOS)
+- [ ] Add Firebase Auth pods (automatic via react-native-firebase)
+- [ ] Download and add `GoogleService-Info.plist` to iOS project
+- [ ] Configure URL schemes for social login providers
+- [ ] For Apple Sign-In, configure in Apple Developer Portal
+
+### Task 7.3: Integrate with shared-auth-store
+- [ ] Update `packages/shared-auth-store` to use Firebase Auth:
+  ```typescript
+  // src/authStore.ts
+  import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
+  
+  interface AuthState {
+    user: FirebaseAuthTypes.User | null;
+    isLoading: boolean;
+    isAuthenticated: boolean;
+    
+    // Actions
+    initAuth: () => () => void;  // Returns unsubscribe function
+    signInWithEmail: (email: string, password: string) => Promise<void>;
+    signInWithGoogle: () => Promise<void>;
+    signUp: (email: string, password: string) => Promise<void>;
+    signOut: () => Promise<void>;
+    resetPassword: (email: string) => Promise<void>;
+  }
+  
+  export const useAuthStore = create<AuthState>((set) => ({
+    user: null,
+    isLoading: true,
+    isAuthenticated: false,
+    
+    initAuth: () => {
+      const unsubscribe = auth().onAuthStateChanged((user) => {
+        set({ 
+          user, 
+          isLoading: false,
+          isAuthenticated: !!user 
+        });
+      });
+      return unsubscribe;
+    },
+    
+    signInWithEmail: async (email, password) => {
+      await auth().signInWithEmailAndPassword(email, password);
+    },
+    
+    signInWithGoogle: async () => {
+      // Implement Google Sign-In flow
+    },
+    
+    signUp: async (email, password) => {
+      await auth().createUserWithEmailAndPassword(email, password);
+    },
+    
+    signOut: async () => {
+      await auth().signOut();
+    },
+    
+    resetPassword: async (email) => {
+      await auth().sendPasswordResetEmail(email);
+    },
+  }));
+  ```
+
+### Task 7.4: Create Auth UI Components
+- [ ] Create universal login/signup screens in `shared-hello-ui`:
+  - `LoginScreen.tsx` - Email/password + social login buttons
+  - `SignUpScreen.tsx` - Registration form
+  - `ForgotPasswordScreen.tsx` - Password reset
+- [ ] Use React Native primitives for cross-platform compatibility
+- [ ] Integrate with `shared-theme-context` for theming
+- [ ] Integrate with `shared-i18n` for translations (Hindi/English)
+
+### Task 7.5: Protected Routes
+- [ ] Update `shared-router` to support protected routes:
+  ```typescript
+  interface Route {
+    path: string;
+    component: React.ComponentType;
+    protected?: boolean;  // Requires authentication
+    roles?: string[];     // Optional role-based access
+  }
+  ```
+- [ ] Add authentication guard in hosts
+- [ ] Redirect unauthenticated users to login
+
+### Task 7.6: Web Authentication
+- [ ] Add Firebase web SDK for web-shell and web-remote-hello:
+  ```bash
+  yarn workspace @universal/web-shell add firebase
+  yarn workspace @universal/web-remote-hello add firebase
+  ```
+- [ ] Create platform abstraction for auth (mobile uses @react-native-firebase, web uses firebase SDK)
+- [ ] Ensure auth state syncs across MFEs via event bus
+
+### Cost Summary for Phase 7
+
+| Item | Cost | Notes |
+|------|------|-------|
+| Firebase Auth (Spark Plan) | $0 | Up to 50K MAU free |
+| Google Sign-In | $0 | Included with Firebase |
+| Apple Sign-In | $99/year | Requires Apple Developer account |
+| Facebook Login | $0 | Requires Facebook Developer app |
+| Phone Auth (SMS) | ~$0.01/verification | Pay-per-use after free tier |
+| **Minimum** | **$0** | Email + Google Sign-In |
+| **With Apple Sign-In** | **$99/year** | Required for iOS App Store apps |
+
+**Note:** Apple requires apps that offer social login to also offer "Sign in with Apple" if distributed via App Store.
 
 ### Cost Summary for Phase 6
 
@@ -683,4 +903,12 @@ These tasks are required for fully standalone mobile apps that work without a de
 - Task 6.2: Android distribution options (APK, Firebase, Play Store) - documented
 - Task 6.3: iOS release build (requires Apple Developer $99/year) - future
 - Task 6.4: iOS distribution options (TestFlight, Ad Hoc, Firebase) - documented
-- Task 6.5: Firebase App Distribution setup (optional, free) - future
+- Task 6.5: Firebase App Distribution setup - detailed plan added, pending implementation
+
+**Phase 7: FUTURE** - Firebase Authentication
+- Task 7.1: Firebase Auth Setup (Android) - Email/password + Google Sign-In
+- Task 7.2: Firebase Auth Setup (iOS) - with Apple Sign-In
+- Task 7.3: Integrate with shared-auth-store (Zustand)
+- Task 7.4: Create Auth UI Components (universal, themed, i18n)
+- Task 7.5: Protected Routes in shared-router
+- Task 7.6: Web Authentication (Firebase web SDK)
