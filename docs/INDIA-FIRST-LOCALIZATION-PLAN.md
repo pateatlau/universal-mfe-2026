@@ -516,8 +516,10 @@ yarn build:mobile:android
 
 ### Phase 6: Verification
 - [x] Task 6.1: Run all tests (88 unit/integration tests pass, Playwright E2E pass, Maestro iOS pass)
-- [x] Task 6.2: Manual verification (CI passed, merged to main, deployed to Vercel)
+- [x] Task 6.2: Manual verification (CI passed; all verification checklist items complete)
 - [x] Task 6.3: Build verification (all packages build successfully)
+
+**Post-merge:** Deployed to Vercel after merging to main.
 
 ---
 
