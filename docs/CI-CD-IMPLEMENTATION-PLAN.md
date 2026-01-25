@@ -1,7 +1,7 @@
 # CI/CD Implementation Plan
 
-**Status:** Phase 5 Complete - Standalone Mode CI/CD Added
-**Last Updated:** 2026-01-06
+**Status:** Phase 6.1 Complete - Android Release Builds Added
+**Last Updated:** 2026-01-25
 **Target:** POC with minimal costs / free tier options
 
 ---
@@ -437,40 +437,369 @@ Standalone mode allows mobile-remote-hello to run as an independent "Super App" 
 
 ## Phase 6: Production Mobile Builds (Future)
 
-These tasks are required for fully standalone mobile apps that work without a dev server.
+These tasks are required for fully standalone mobile apps that work without a dev server (Metro bundler). Release builds embed the JavaScript bundle directly in the app binary.
 
-### Task 6.1: Android Release Build
-- [ ] Create release signing keystore
-- [ ] Configure `android/app/build.gradle` for release signing
-- [ ] Update workflow to use `assembleRelease` instead of `assembleDebug`
-- [ ] Configure ProGuard/R8 minification (optional)
-- [ ] Test standalone APK on physical device
+### Debug vs Release Builds
 
-### Task 6.2: Android Play Store Deployment (Optional)
-- [ ] Create Google Play Developer account ($25 one-time)
-- [ ] Generate Play Store service account for CI/CD
-- [ ] Configure Fastlane or gradle-play-publisher for automated uploads
-- [ ] Setup internal/beta/production tracks
+| Aspect | Debug Build (Current) | Release Build (Phase 6) |
+|--------|----------------------|-------------------------|
+| **JS Bundle** | Loaded from Metro dev server | Embedded in app binary |
+| **Metro Required** | Yes (must be running) | No (fully standalone) |
+| **Performance** | Slower (development mode) | Optimized, minified |
+| **Debugging** | Enabled (React DevTools, etc.) | Disabled |
+| **Signing** | Debug keystore / Dev cert | Release keystore / Distribution cert |
+| **Distribution** | Developer testing only | Can distribute to testers/users |
+| **Developer Account** | Not required | Android: No, iOS: Yes ($99/year) |
+
+### Task 6.1: Android Release Build ✅ COMPLETE
+- [x] Create release signing keystore (free, self-signed)
+  ```bash
+  keytool -genkeypair -v -storetype PKCS12 \
+    -keystore my-release-key.keystore \
+    -alias my-key-alias \
+    -keyalg RSA -keysize 2048 -validity 10000
+  ```
+- [x] Configure `android/app/build.gradle` for release signing:
+  - Updated both `packages/mobile-host/android/app/build.gradle` and `packages/mobile-remote-hello/android/app/build.gradle`
+  - Uses environment variables: `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
+  - Falls back to debug signing for local development when env vars not set
+- [x] Add GitHub Secrets for signing:
+  - `ANDROID_KEYSTORE_BASE64` - Base64-encoded keystore file
+  - `ANDROID_KEYSTORE_PASSWORD` - Keystore password
+  - `ANDROID_KEY_ALIAS` - Key alias
+  - `ANDROID_KEY_PASSWORD` - Key password
+- [x] Update `deploy-android.yml` workflow:
+  - Decodes keystore from `ANDROID_KEYSTORE_BASE64` secret
+  - Builds `assembleRelease` instead of `assembleDebug`
+  - Outputs `mobile-host-release.apk` and `mobile-remote-standalone-release.apk`
+  - Cleans up keystore file after build for security
+- [x] ProGuard/R8 minification configured (controlled by `enableProguardInReleaseBuilds` flag)
+- [ ] Test release APK on physical device (pending first tag push)
+
+**Cost:** $0 (Android release builds require no developer account)
+
+### Task 6.2: Android Distribution Options
+| Method | Cost | Pros | Cons |
+|--------|------|------|------|
+| **Direct APK** | $0 | Simple, no accounts | Manual install, no auto-updates |
+| **Firebase App Distribution** | $0 | CI/CD integration, tester management | Requires Firebase project |
+| **Diawi** | $0 (limited) | Very easy | Links expire, limits on free tier |
+| **Google Play Internal Testing** | $25 one-time | Uses Play Store, auto-updates | Requires Play Console account |
+
+**Recommended for testing:** Firebase App Distribution (free, integrates with GitHub Actions)
 
 ### Task 6.3: iOS Release Build
-- [ ] Create Apple Developer account ($99/year)
-- [ ] Generate distribution certificate and provisioning profiles
-- [ ] Configure Xcode project for release signing
-- [ ] Update workflow to build for device (not simulator)
-- [ ] Archive and export IPA
+- [ ] Create Apple Developer account ($99/year) - **Required**
+- [ ] Generate distribution certificate:
+  - Keychain Access → Certificate Assistant → Request Certificate from CA
+  - Apple Developer Portal → Certificates → Create Distribution Certificate
+- [ ] Create provisioning profile:
+  - **Ad Hoc:** For testing on specific devices (up to 100 UDIDs)
+  - **App Store:** For TestFlight and App Store
+- [ ] Configure Xcode project for release signing:
+  - Set Bundle Identifier
+  - Configure signing team and provisioning profile
+- [ ] Export signing credentials for CI:
+  - Export certificate as .p12 file with password
+  - Download provisioning profile (.mobileprovision)
+- [ ] Add GitHub Secrets for signing:
+  - `IOS_CERTIFICATE_BASE64` - Base64-encoded .p12 file
+  - `IOS_CERTIFICATE_PASSWORD` - Certificate password
+  - `IOS_PROVISIONING_PROFILE_BASE64` - Base64-encoded provisioning profile
+  - `APPLE_TEAM_ID` - Apple Developer Team ID
+- [ ] Update `deploy-ios.yml` workflow:
+  ```yaml
+  - name: Install signing certificate
+    run: |
+      echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > cert.p12
+      security create-keychain -p "" build.keychain
+      security import cert.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+      security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+      
+  - name: Install provisioning profile
+    run: |
+      mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+      echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+      
+  - name: Build release archive
+    run: |
+      xcodebuild -workspace MobileHostTmp.xcworkspace \
+        -scheme MobileHostTmp \
+        -configuration Release \
+        -archivePath build/MobileHostTmp.xcarchive \
+        archive
+        
+  - name: Export IPA
+    run: |
+      xcodebuild -exportArchive \
+        -archivePath build/MobileHostTmp.xcarchive \
+        -exportPath build/ipa \
+        -exportOptionsPlist ExportOptions.plist
+  ```
+- [ ] Create `ExportOptions.plist` for export configuration
+- [ ] Test IPA on physical device
 
-### Task 6.4: iOS TestFlight/App Store Deployment (Optional)
-- [ ] Configure App Store Connect API key for CI/CD
-- [ ] Setup Fastlane for automated uploads
-- [ ] Configure TestFlight for beta testing
-- [ ] Setup App Store submission workflow
+**Cost:** $99/year (Apple Developer Program required)
 
-### Cost Impact of Phase 6
-| Item | Cost |
-|------|------|
-| Apple Developer Account | $99/year |
-| Google Play Developer Account | $25 one-time |
-| GitHub Actions (macOS minutes for iOS) | May exceed free tier |
+### Task 6.4: iOS Distribution Options
+| Method | Cost | Pros | Cons |
+|--------|------|------|------|
+| **TestFlight** | $99/year (included) | Up to 10,000 testers, OTA install | Requires App Store review for external testers |
+| **Ad Hoc** | $99/year (included) | Direct install, no review | Limited to 100 devices/year, requires UDIDs |
+| **Firebase App Distribution** | $99/year (for cert) | Free service, CI integration | Still requires Apple cert, UDID registration |
+| **Enterprise** | $299/year | Unlimited devices, no UDID | Strict eligibility, audit requirements |
+
+**Recommended for testing:** TestFlight (internal testers don't require review)
+
+### Task 6.5: Firebase App Distribution Setup
+
+Firebase App Distribution provides OTA (over-the-air) distribution for testers, with tester management, release notes, and CI/CD integration. This setup also lays the groundwork for Firebase Authentication (Phase 7).
+
+#### Prerequisites (Manual Steps)
+
+**Step 1: Create Firebase Project**
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Click "Create a project" → Enter name: `universal-mfe`
+3. Enable/disable Google Analytics as preferred
+4. Click "Create project"
+
+**Step 2: Add Android Apps to Firebase**
+1. In Firebase Console, click "Add app" → Android icon
+2. For Host App:
+   - Package name: `com.mobilehosttmp`
+   - App nickname: `Universal MFE Host`
+   - Click "Register app"
+3. For Standalone App (optional):
+   - Package name: `com.mobileremotehello`
+   - App nickname: `Universal MFE Remote Standalone`
+   - Click "Register app"
+4. Download `google-services.json` for each app (needed for Auth later)
+
+**Step 3: Enable App Distribution**
+1. In Firebase Console sidebar: Release & Monitor → App Distribution
+2. Click "Get Started"
+3. Create tester groups:
+   - `internal-testers` - Core team
+   - `beta-testers` - External beta users
+
+**Step 4: Create Service Account for CI/CD**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your Firebase project
+3. IAM & Admin → Service Accounts → "Create Service Account"
+   - Name: `github-actions-firebase`
+   - Role: `Firebase App Distribution Admin`
+4. Click on the service account → Keys → Add Key → Create new key → JSON
+5. Download and save the JSON key file securely
+
+**Step 5: Add GitHub Secrets**
+```
+FIREBASE_SERVICE_ACCOUNT_JSON    - Full contents of the service account JSON file
+FIREBASE_APP_ID_ANDROID_HOST     - App ID from Firebase Console → Project Settings → Your apps (e.g., 1:123456789:android:abc123)
+FIREBASE_APP_ID_ANDROID_REMOTE   - App ID for standalone app (if distributing)
+```
+
+#### Implementation Tasks
+
+- [ ] Complete manual prerequisites above
+- [ ] Add `google-services.json` to mobile apps:
+  - `packages/mobile-host/android/app/google-services.json`
+  - `packages/mobile-remote-hello/android/app/google-services.json`
+- [ ] Add Firebase dependencies to `android/app/build.gradle`:
+  ```groovy
+  apply plugin: 'com.google.gms.google-services'
+  ```
+- [ ] Add Google Services plugin to `android/build.gradle`:
+  ```groovy
+  buildscript {
+    dependencies {
+      classpath 'com.google.gms:google-services:4.4.0'
+    }
+  }
+  ```
+- [ ] Update `deploy-android.yml` workflow:
+  ```yaml
+  - name: Authenticate to Google Cloud
+    uses: google-github-actions/auth@v2
+    with:
+      credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
+  - name: Upload Host APK to Firebase App Distribution
+    run: |
+      npm install -g firebase-tools
+      firebase appdistribution:distribute \
+        packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk \
+        --app ${{ secrets.FIREBASE_APP_ID_ANDROID_HOST }} \
+        --groups "internal-testers" \
+        --release-notes "Release ${{ steps.tag.outputs.tag }} - Host App"
+
+  - name: Upload Standalone APK to Firebase App Distribution
+    run: |
+      firebase appdistribution:distribute \
+        packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk \
+        --app ${{ secrets.FIREBASE_APP_ID_ANDROID_REMOTE }} \
+        --groups "internal-testers" \
+        --release-notes "Release ${{ steps.tag.outputs.tag }} - Standalone Remote"
+  ```
+- [ ] Test distribution by pushing a tag and verifying testers receive email notification
+
+**Cost:** $0 (Firebase App Distribution is free)
+
+---
+
+## Phase 7: Firebase Authentication (Future)
+
+Firebase Authentication will provide secure user authentication with support for email/password and social login providers. This builds on the Firebase project created in Task 6.5.
+
+### Overview
+
+| Provider | Setup Complexity | Notes |
+|----------|-----------------|-------|
+| Email/Password | Easy | Built-in, no external setup |
+| Google Sign-In | Easy | Just enable in Firebase console |
+| Apple Sign-In | Medium | Requires Apple Developer account ($99/year) |
+| Facebook | Medium | Requires Facebook Developer app |
+| GitHub | Easy | Requires GitHub OAuth app |
+| Phone (SMS) | Easy | Pay-per-use for SMS |
+
+### Task 7.1: Firebase Auth Setup (Android)
+- [ ] Enable authentication providers in Firebase Console:
+  - Authentication → Sign-in method → Enable desired providers
+- [ ] Add Firebase Auth dependencies:
+  ```bash
+  yarn workspace @universal/mobile-host add @react-native-firebase/app @react-native-firebase/auth
+  yarn workspace @universal/mobile-remote-hello add @react-native-firebase/app @react-native-firebase/auth
+  ```
+- [ ] For Google Sign-In, add additional dependency:
+  ```bash
+  yarn workspace @universal/mobile-host add @react-native-google-signin/google-signin
+  ```
+- [ ] Configure SHA-1 fingerprint in Firebase Console (required for Google Sign-In):
+  ```bash
+  cd packages/mobile-host/android
+  ./gradlew signingReport
+  ```
+- [ ] Update Android configuration for Firebase
+
+### Task 7.2: Firebase Auth Setup (iOS)
+- [ ] Add Firebase Auth pods (automatic via react-native-firebase)
+- [ ] Download and add `GoogleService-Info.plist` to iOS project
+- [ ] Configure URL schemes for social login providers
+- [ ] For Apple Sign-In, configure in Apple Developer Portal
+
+### Task 7.3: Integrate with shared-auth-store
+- [ ] Update `packages/shared-auth-store` to use Firebase Auth:
+  ```typescript
+  // src/authStore.ts
+  import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
+  
+  interface AuthState {
+    user: FirebaseAuthTypes.User | null;
+    isLoading: boolean;
+    isAuthenticated: boolean;
+    
+    // Actions
+    initAuth: () => () => void;  // Returns unsubscribe function
+    signInWithEmail: (email: string, password: string) => Promise<void>;
+    signInWithGoogle: () => Promise<void>;
+    signUp: (email: string, password: string) => Promise<void>;
+    signOut: () => Promise<void>;
+    resetPassword: (email: string) => Promise<void>;
+  }
+  
+  export const useAuthStore = create<AuthState>((set) => ({
+    user: null,
+    isLoading: true,
+    isAuthenticated: false,
+    
+    initAuth: () => {
+      const unsubscribe = auth().onAuthStateChanged((user) => {
+        set({ 
+          user, 
+          isLoading: false,
+          isAuthenticated: !!user 
+        });
+      });
+      return unsubscribe;
+    },
+    
+    signInWithEmail: async (email, password) => {
+      await auth().signInWithEmailAndPassword(email, password);
+    },
+    
+    signInWithGoogle: async () => {
+      // Implement Google Sign-In flow
+    },
+    
+    signUp: async (email, password) => {
+      await auth().createUserWithEmailAndPassword(email, password);
+    },
+    
+    signOut: async () => {
+      await auth().signOut();
+    },
+    
+    resetPassword: async (email) => {
+      await auth().sendPasswordResetEmail(email);
+    },
+  }));
+  ```
+
+### Task 7.4: Create Auth UI Components
+- [ ] Create universal login/signup screens in `shared-hello-ui`:
+  - `LoginScreen.tsx` - Email/password + social login buttons
+  - `SignUpScreen.tsx` - Registration form
+  - `ForgotPasswordScreen.tsx` - Password reset
+- [ ] Use React Native primitives for cross-platform compatibility
+- [ ] Integrate with `shared-theme-context` for theming
+- [ ] Integrate with `shared-i18n` for translations (Hindi/English)
+
+### Task 7.5: Protected Routes
+- [ ] Update `shared-router` to support protected routes:
+  ```typescript
+  interface Route {
+    path: string;
+    component: React.ComponentType;
+    protected?: boolean;  // Requires authentication
+    roles?: string[];     // Optional role-based access
+  }
+  ```
+- [ ] Add authentication guard in hosts
+- [ ] Redirect unauthenticated users to login
+
+### Task 7.6: Web Authentication
+- [ ] Add Firebase web SDK for web-shell and web-remote-hello:
+  ```bash
+  yarn workspace @universal/web-shell add firebase
+  yarn workspace @universal/web-remote-hello add firebase
+  ```
+- [ ] Create platform abstraction for auth (mobile uses @react-native-firebase, web uses firebase SDK)
+- [ ] Ensure auth state syncs across MFEs via event bus
+
+### Cost Summary for Phase 7
+
+| Item | Cost | Notes |
+|------|------|-------|
+| Firebase Auth (Spark Plan) | $0 | Up to 50K MAU free |
+| Google Sign-In | $0 | Included with Firebase |
+| Apple Sign-In | $99/year | Requires Apple Developer account |
+| Facebook Login | $0 | Requires Facebook Developer app |
+| Phone Auth (SMS) | ~$0.01/verification | Pay-per-use after free tier |
+| **Minimum** | **$0** | Email + Google Sign-In |
+| **With Apple Sign-In** | **$99/year** | Required for iOS App Store apps |
+
+**Note:** Apple requires apps that offer social login to also offer "Sign in with Apple" if distributed via App Store.
+
+### Cost Summary for Phase 6
+
+| Item | Cost | Required For |
+|------|------|--------------|
+| Android Release Keystore | $0 (self-signed) | Android release builds |
+| Apple Developer Account | $99/year | iOS release builds (required) |
+| Google Play Console | $25 one-time | Play Store distribution only |
+| Firebase App Distribution | $0 | OTA distribution (optional) |
+| **Minimum for Android** | **$0** | Release APK for testing |
+| **Minimum for iOS** | **$99/year** | Release IPA for testing |
+| **Full distribution** | **$124 first year** | Both platforms, Play Store |
 
 ---
 
@@ -505,8 +834,8 @@ These tasks are required for fully standalone mobile apps that work without a de
   - Remote: https://universal-mfe-2026-remote.vercel.app/
   - Shell: https://universal-mfe-2026-shell.vercel.app/
 - [x] Tagged releases automatically build and publish Android APK ✅
-  - Host: `mobile-host-debug.apk`
-  - Standalone: `mobile-remote-standalone-debug.apk`
+  - Host: `mobile-host-release.apk` (release build, standalone - no Metro needed)
+  - Standalone: `mobile-remote-standalone-release.apk` (release build, standalone - no Metro needed)
 - [x] Tagged releases automatically build and publish iOS Simulator app ✅
   - Host: `mobile-host-simulator.zip`
   - Standalone: `mobile-remote-standalone-simulator.zip`
@@ -569,4 +898,17 @@ These tasks are required for fully standalone mobile apps that work without a de
 - Task 5.6: Update PR summary comment ✅
 - Task 5.7: Update documentation ✅
 
-**Phase 6: FUTURE** - Production mobile builds (requires signing setup and developer accounts)
+**Phase 6: IN PROGRESS** - Production mobile builds
+- Task 6.1: Android release build (keystore signing) ✅ COMPLETE - $0
+- Task 6.2: Android distribution options (APK, Firebase, Play Store) - documented
+- Task 6.3: iOS release build (requires Apple Developer $99/year) - future
+- Task 6.4: iOS distribution options (TestFlight, Ad Hoc, Firebase) - documented
+- Task 6.5: Firebase App Distribution setup - detailed plan added, pending implementation
+
+**Phase 7: FUTURE** - Firebase Authentication
+- Task 7.1: Firebase Auth Setup (Android) - Email/password + Google Sign-In
+- Task 7.2: Firebase Auth Setup (iOS) - with Apple Sign-In
+- Task 7.3: Integrate with shared-auth-store (Zustand)
+- Task 7.4: Create Auth UI Components (universal, themed, i18n)
+- Task 7.5: Protected Routes in shared-router
+- Task 7.6: Web Authentication (Firebase web SDK)

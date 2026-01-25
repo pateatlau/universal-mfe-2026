@@ -20,10 +20,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@v4
 
       - name: Setup Java 17
-        uses: actions/setup-java@v5.1.0
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -32,13 +32,13 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6.1.0
+        uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'yarn'
 
       - name: Setup Gradle cache
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -53,31 +53,50 @@ jobs:
       - name: Build shared packages
         run: yarn build:shared
 
-      # Build Host App
+      - name: Decode release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/release.keystore
+          echo "ANDROID_KEYSTORE_FILE=${{ github.workspace }}/release.keystore" >> $GITHUB_ENV
+
+      # Build Host App (Release)
       - name: Build mobile remote for Android (MF bundles)
         run: yarn build:mobile:android
 
-      - name: Build Host Android APK (debug)
+      - name: Build Host Android APK (Release)
         working-directory: packages/mobile-host/android
-        run: ./gradlew assembleDebug --no-daemon
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ github.workspace }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Rename Host APK
         run: |
-          mv packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk \
-             packages/mobile-host/android/app/build/outputs/apk/debug/mobile-host-debug.apk
+          mv packages/mobile-host/android/app/build/outputs/apk/release/app-release.apk \
+             packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk
 
-      # Build Standalone App
+      # Build Standalone App (Release)
       - name: Build standalone bundle for Android
         run: PLATFORM=android yarn workspace @universal/mobile-remote-hello build:standalone
 
-      - name: Build Standalone Android APK (debug)
+      - name: Build Standalone Android APK (Release)
         working-directory: packages/mobile-remote-hello/android
-        run: ./gradlew assembleDebug --no-daemon
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ github.workspace }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Rename Standalone APK
         run: |
-          mv packages/mobile-remote-hello/android/app/build/outputs/apk/debug/app-debug.apk \
-             packages/mobile-remote-hello/android/app/build/outputs/apk/debug/mobile-remote-standalone-debug.apk
+          mv packages/mobile-remote-hello/android/app/build/outputs/apk/release/app-release.apk \
+             packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f ${{ github.workspace }}/release.keystore
 
       - name: Get tag name
         id: tag
@@ -89,57 +108,58 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
-            ## Android APKs (Debug Builds)
+            ## Android APKs (Release Builds)
 
-            Download the debug APKs below to install on your Android device or emulator.
+            Download the release APKs below to install on your Android device.
 
-            > **⚠️ Important:** These are debug builds that require the Metro bundler to be running on your development machine. They are not standalone production APKs.
+            > **✅ These are standalone release builds** - no Metro bundler or development setup required. Just install and run!
 
             ---
 
-            ### 🏠 Host App (`mobile-host-debug.apk`)
+            ### 🏠 Host App (`mobile-host-release.apk`)
 
             The main shell app that loads remote modules via Module Federation.
 
-            **Prerequisites:**
-            1. Clone the repository and run `yarn install`
-            2. Start the Metro bundler: `yarn workspace @universal/mobile-host start:bundler:android`
-            3. Start the remote server: `yarn workspace @universal/mobile-remote-hello serve:android`
-            4. Ensure your device/emulator can reach your machine (same network or USB debugging)
+            **Features:**
+            - Standalone operation (no dev server needed)
+            - Optimized and minified JavaScript bundle
+            - Signed with release certificate
 
             **Installation:**
-            1. Download `mobile-host-debug.apk`
-            2. Enable "Install from unknown sources" on your device
+            1. Download `mobile-host-release.apk`
+            2. Enable "Install from unknown sources" on your device (Settings → Security)
             3. Open the APK to install
-            4. The app connects to Metro at `http://10.0.2.2:8081` (emulator) or your machine's IP
+            4. Launch the app - it works offline!
 
             ---
 
-            ### 📱 Standalone Remote App (`mobile-remote-standalone-debug.apk`)
+            ### 📱 Standalone Remote App (`mobile-remote-standalone-release.apk`)
 
             The remote module running as an independent "Super App" without the host shell.
 
-            **Prerequisites:**
-            1. Clone the repository and run `yarn install`
-            2. Start the standalone bundler: `yarn workspace @universal/mobile-remote-hello start:bundler:android`
-            3. Ensure your device/emulator can reach your machine
+            **Features:**
+            - Standalone operation (no dev server needed)
+            - Demonstrates remote module running independently
+            - Signed with release certificate
 
             **Installation:**
-            1. Download `mobile-remote-standalone-debug.apk`
+            1. Download `mobile-remote-standalone-release.apk`
             2. Enable "Install from unknown sources" on your device
             3. Open the APK to install
-            4. The app connects to Metro at `http://10.0.2.2:8083` (emulator) or your machine's IP
-
-            **Note:** Host and Standalone apps can run simultaneously on different emulators (ports 8081 vs 8083).
+            4. Launch the app - it works offline!
 
             ---
 
-            See the [README](https://github.com/pateatlau/universal-mfe-yarn-seed#mobile-build-limitations) for more details.
+            ### 📋 System Requirements
+            - Android 7.0 (API 24) or higher
+            - ARM64 or x86_64 device
 
-            *For production builds without Metro dependency, see Phase 5 in the CI/CD Implementation Plan.*
+            ---
+
+            See the [README](https://github.com/${{ github.repository }}#quick-start) for more details.
           files: |
-            packages/mobile-host/android/app/build/outputs/apk/debug/mobile-host-debug.apk
-            packages/mobile-remote-hello/android/app/build/outputs/apk/debug/mobile-remote-standalone-debug.apk
+            packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk
+            packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk
           draft: false
           prerelease: false
         env:
