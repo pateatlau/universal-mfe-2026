@@ -88,20 +88,33 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools@15.4.0
 
-      # Build Host App (Release)
+      # =============================================================
+      # HOST APP BUILD
+      # =============================================================
+
+      # Build MF bundles for host app
       - name: Build mobile remote for Android (MF bundles)
         run: yarn build:mobile:android
 
-      # Generate codegen for native dependencies (New Architecture requirement)
-      # Building debug first generates the codegen artifacts for native libraries
-      # like @callstack/repack which have TurboModules. This is required before
-      # the release build's CMake configuration can find the codegen directories.
-      - name: Generate codegen (debug build)
-        working-directory: packages/mobile-host/android
+      # Pre-build the JS bundle with rspack (Re.Pack approach)
+      # This creates the bundle BEFORE Gradle runs, so we can skip Gradle's bundling
+      - name: Pre-build Host JS bundle with rspack
         run: |
-          ./gradlew assembleDebug --no-daemon
-          echo "Debug build completed - codegen artifacts generated"
+          cd packages/mobile-host
+          # Create assets directory
+          mkdir -p android/app/src/main/assets
+          # Build the bundle using react-native CLI (which uses rspack via react-native.config.js)
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res \
+            --minify true
+          echo "Host JS bundle created at android/app/src/main/assets/index.android.bundle"
+          ls -la android/app/src/main/assets/
 
+      # Build the APK - bundling is skipped because bundle already exists in assets
       - name: Build Host Android APK (Release)
         working-directory: packages/mobile-host/android
         env:
@@ -110,6 +123,8 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Skip JS bundling - we already pre-built it
+          ORG_GRADLE_PROJECT_bundleInRelease: false
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Rename Host APK
@@ -117,17 +132,24 @@ jobs:
           mv packages/mobile-host/android/app/build/outputs/apk/release/app-release.apk \
              packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk
 
-      # Build Standalone App (Release)
-      - name: Build standalone bundle for Android
-        run: PLATFORM=android yarn workspace @universal/mobile-remote-hello build:standalone
+      # =============================================================
+      # STANDALONE APP BUILD
+      # =============================================================
 
-      # Generate codegen for standalone app (same issue as host app)
-      - name: Generate codegen for standalone (debug build)
-        working-directory: packages/mobile-remote-hello/android
+      # Pre-build the standalone JS bundle with rspack
+      - name: Pre-build Standalone JS bundle with rspack
         run: |
-          ./gradlew assembleDebug --no-daemon
-          echo "Debug build completed - codegen artifacts generated"
+          cd packages/mobile-remote-hello
+          # Create assets directory
+          mkdir -p android/app/src/main/assets
+          # Build the standalone bundle using rspack directly
+          PLATFORM=android yarn build:standalone
+          # Copy the bundle to assets (rspack outputs to dist/standalone/android/)
+          cp dist/standalone/android/index.bundle android/app/src/main/assets/index.android.bundle
+          echo "Standalone JS bundle created at android/app/src/main/assets/index.android.bundle"
+          ls -la android/app/src/main/assets/
 
+      # Build the standalone APK - bundling is skipped because bundle already exists
       - name: Build Standalone Android APK (Release)
         working-directory: packages/mobile-remote-hello/android
         env:
@@ -136,12 +158,18 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Skip JS bundling - we already pre-built it
+          ORG_GRADLE_PROJECT_bundleInRelease: false
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Rename Standalone APK
         run: |
           mv packages/mobile-remote-hello/android/app/build/outputs/apk/release/app-release.apk \
              packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk
+
+      # =============================================================
+      # CLEANUP AND RELEASE
+      # =============================================================
 
       - name: Clean up keystore
         if: always()
