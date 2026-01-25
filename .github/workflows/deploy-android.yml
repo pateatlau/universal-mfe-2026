@@ -92,29 +92,11 @@ jobs:
       # HOST APP BUILD
       # =============================================================
 
-      # Build MF bundles for host app
+      # Build MF bundles for host app (these are loaded dynamically by the host)
       - name: Build mobile remote for Android (MF bundles)
         run: yarn build:mobile:android
 
-      # Pre-build the JS bundle with rspack (Re.Pack approach)
-      # This creates the bundle BEFORE Gradle runs, so we can skip Gradle's bundling
-      - name: Pre-build Host JS bundle with rspack
-        run: |
-          cd packages/mobile-host
-          # Create assets directory
-          mkdir -p android/app/src/main/assets
-          # Build the bundle using react-native CLI (which uses rspack via react-native.config.js)
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file index.js \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res \
-            --minify true
-          echo "Host JS bundle created at android/app/src/main/assets/index.android.bundle"
-          ls -la android/app/src/main/assets/
-
-      # Build the APK - bundling is skipped because bundle already exists in assets
+      # Build the APK - Gradle will use Re.Pack to bundle the JS automatically
       - name: Build Host Android APK (Release)
         working-directory: packages/mobile-host/android
         env:
@@ -123,9 +105,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          # Skip JS bundling - we already pre-built it
-          ORG_GRADLE_PROJECT_bundleInRelease: false
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Rename Host APK
         run: |
@@ -136,20 +116,7 @@ jobs:
       # STANDALONE APP BUILD
       # =============================================================
 
-      # Pre-build the standalone JS bundle with rspack
-      - name: Pre-build Standalone JS bundle with rspack
-        run: |
-          cd packages/mobile-remote-hello
-          # Create assets directory
-          mkdir -p android/app/src/main/assets
-          # Build the standalone bundle using rspack directly
-          PLATFORM=android yarn build:standalone
-          # Copy the bundle to assets (rspack outputs to dist/standalone/android/)
-          cp dist/standalone/android/index.bundle android/app/src/main/assets/index.android.bundle
-          echo "Standalone JS bundle created at android/app/src/main/assets/index.android.bundle"
-          ls -la android/app/src/main/assets/
-
-      # Build the standalone APK - bundling is skipped because bundle already exists
+      # Build the standalone APK - Gradle will use Re.Pack to bundle the JS automatically
       - name: Build Standalone Android APK (Release)
         working-directory: packages/mobile-remote-hello/android
         env:
@@ -158,9 +125,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          # Skip JS bundling - we already pre-built it
-          ORG_GRADLE_PROJECT_bundleInRelease: false
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Rename Standalone APK
         run: |

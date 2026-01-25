@@ -9,12 +9,6 @@ if (file("google-services.json").exists()) {
 }
 
 /**
- * Check if a pre-built bundle exists. If so, we skip Gradle's bundling.
- * This allows CI to pre-build the bundle with rspack and skip the Gradle bundling task.
- */
-def prebuiltBundleExists = file("src/main/assets/index.android.bundle").exists()
-
-/**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
@@ -31,15 +25,9 @@ react {
     cliFile = file("../../../../node_modules/react-native/cli.js")
 
     /* Re.Pack Configuration */
-    // This project uses Re.Pack (rspack) instead of Metro for bundling.
-    // For CI release builds, we pre-build the bundle with rspack before Gradle runs.
-    // When the bundle exists in assets, we skip Gradle's bundling by marking release as debuggable.
-    
-    // If bundle is pre-built, treat release as "debuggable" to skip bundling
-    // (debuggable variants skip the createBundle task)
-    if (prebuiltBundleExists) {
-        debuggableVariants = ["debug", "release"]
-    }
+    // This project uses Re.Pack (rspack) instead of Metro for bundling (standalone mode).
+    // Re.Pack is configured via react-native.config.js and rspack.standalone.config.mjs.
+    // The React Native Gradle plugin will automatically use Re.Pack for bundling.
 
     /* Autolinking */
     autolinkLibrariesWithApp()
