@@ -1,7 +1,12 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
-apply plugin: "com.google.gms.google-services"
+
+// Apply Google Services plugin only if google-services.json exists
+// This file is gitignored and only available locally or via CI secrets
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -102,6 +107,8 @@ android {
             def keystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
             def keyAliasValue = System.getenv("ANDROID_KEY_ALIAS")
             def keyPasswordValue = System.getenv("ANDROID_KEY_PASSWORD")
+            def isCI = System.getenv("CI") != null
+            def allowDebugSignRelease = System.getenv("ALLOW_DEBUG_SIGN_RELEASE") == "true"
 
             // Use release signing only if ALL credentials are present
             def hasAllCredentials = keystoreFile != null &&
@@ -115,8 +122,16 @@ android {
                 storePassword keystorePassword
                 keyAlias keyAliasValue
                 keyPassword keyPasswordValue
+            } else if (isCI && !allowDebugSignRelease) {
+                // In CI, fail if release credentials are missing (unless explicitly allowed)
+                throw new GradleException(
+                    "Release signing credentials are missing in CI environment.\n" +
+                    "Required secrets: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD\n" +
+                    "Set ALLOW_DEBUG_SIGN_RELEASE=true to use debug signing in CI (not recommended for production)."
+                )
             } else {
                 // Fallback to debug signing for local development
+                logger.warn("WARNING: Using debug signing for release build. This is only suitable for local development.")
                 storeFile file('debug.keystore')
                 storePassword 'android'
                 keyAlias 'androiddebugkey'

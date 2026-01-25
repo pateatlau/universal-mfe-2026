@@ -592,7 +592,7 @@ Firebase App Distribution provides OTA (over-the-air) distribution for testers, 
 5. Download and save the JSON key file securely
 
 **Step 5: Add GitHub Secrets** ✅
-```
+```text
 FIREBASE_SERVICE_ACCOUNT_JSON    - Full contents of the service account JSON file
 FIREBASE_APP_ID_ANDROID_HOST     - App ID from Firebase Console → Project Settings → Your apps (e.g., 1:123456789:android:abc123)
 FIREBASE_APP_ID_ANDROID_REMOTE   - App ID for standalone app (if distributing)
