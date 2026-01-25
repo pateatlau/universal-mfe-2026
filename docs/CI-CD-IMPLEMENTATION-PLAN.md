@@ -1,7 +1,7 @@
 # CI/CD Implementation Plan
 
-**Status:** Phase 5 Complete - Standalone Mode CI/CD Added
-**Last Updated:** 2026-01-06
+**Status:** Phase 6.1 Complete - Android Release Builds Added
+**Last Updated:** 2026-01-25
 **Target:** POC with minimal costs / free tier options
 
 ---
@@ -451,54 +451,30 @@ These tasks are required for fully standalone mobile apps that work without a de
 | **Distribution** | Developer testing only | Can distribute to testers/users |
 | **Developer Account** | Not required | Android: No, iOS: Yes ($99/year) |
 
-### Task 6.1: Android Release Build
-- [ ] Create release signing keystore (free, self-signed)
+### Task 6.1: Android Release Build ✅ COMPLETE
+- [x] Create release signing keystore (free, self-signed)
   ```bash
   keytool -genkeypair -v -storetype PKCS12 \
     -keystore my-release-key.keystore \
     -alias my-key-alias \
     -keyalg RSA -keysize 2048 -validity 10000
   ```
-- [ ] Configure `android/app/build.gradle` for release signing:
-  ```groovy
-  android {
-    signingConfigs {
-      release {
-        storeFile file(System.getenv("KEYSTORE_FILE") ?: "debug.keystore")
-        storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
-        keyAlias System.getenv("KEY_ALIAS") ?: ""
-        keyPassword System.getenv("KEY_PASSWORD") ?: ""
-      }
-    }
-    buildTypes {
-      release {
-        signingConfig signingConfigs.release
-        minifyEnabled true
-        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-      }
-    }
-  }
-  ```
-- [ ] Add GitHub Secrets for signing:
+- [x] Configure `android/app/build.gradle` for release signing:
+  - Updated both `packages/mobile-host/android/app/build.gradle` and `packages/mobile-remote-hello/android/app/build.gradle`
+  - Uses environment variables: `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
+  - Falls back to debug signing for local development when env vars not set
+- [x] Add GitHub Secrets for signing:
   - `ANDROID_KEYSTORE_BASE64` - Base64-encoded keystore file
   - `ANDROID_KEYSTORE_PASSWORD` - Keystore password
   - `ANDROID_KEY_ALIAS` - Key alias
   - `ANDROID_KEY_PASSWORD` - Key password
-- [ ] Update `deploy-android.yml` workflow:
-  ```yaml
-  - name: Decode keystore
-    run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
-    
-  - name: Build release APK
-    env:
-      KEYSTORE_FILE: release.keystore
-      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-    run: ./gradlew assembleRelease
-  ```
-- [ ] Configure ProGuard/R8 minification
-- [ ] Test release APK on physical device
+- [x] Update `deploy-android.yml` workflow:
+  - Decodes keystore from `ANDROID_KEYSTORE_BASE64` secret
+  - Builds `assembleRelease` instead of `assembleDebug`
+  - Outputs `mobile-host-release.apk` and `mobile-remote-standalone-release.apk`
+  - Cleans up keystore file after build for security
+- [x] ProGuard/R8 minification configured (controlled by `enableProguardInReleaseBuilds` flag)
+- [ ] Test release APK on physical device (pending first tag push)
 
 **Cost:** $0 (Android release builds require no developer account)
 
@@ -638,8 +614,8 @@ These tasks are required for fully standalone mobile apps that work without a de
   - Remote: https://universal-mfe-2026-remote.vercel.app/
   - Shell: https://universal-mfe-2026-shell.vercel.app/
 - [x] Tagged releases automatically build and publish Android APK ✅
-  - Host: `mobile-host-debug.apk`
-  - Standalone: `mobile-remote-standalone-debug.apk`
+  - Host: `mobile-host-release.apk` (release build, standalone - no Metro needed)
+  - Standalone: `mobile-remote-standalone-release.apk` (release build, standalone - no Metro needed)
 - [x] Tagged releases automatically build and publish iOS Simulator app ✅
   - Host: `mobile-host-simulator.zip`
   - Standalone: `mobile-remote-standalone-simulator.zip`
@@ -702,9 +678,9 @@ These tasks are required for fully standalone mobile apps that work without a de
 - Task 5.6: Update PR summary comment ✅
 - Task 5.7: Update documentation ✅
 
-**Phase 6: FUTURE** - Production mobile builds
-- Task 6.1: Android release build (keystore signing) - $0
-- Task 6.2: Android distribution options (APK, Firebase, Play Store)
-- Task 6.3: iOS release build (requires Apple Developer $99/year)
-- Task 6.4: iOS distribution options (TestFlight, Ad Hoc, Firebase)
-- Task 6.5: Firebase App Distribution setup (optional, free)
+**Phase 6: IN PROGRESS** - Production mobile builds
+- Task 6.1: Android release build (keystore signing) ✅ COMPLETE - $0
+- Task 6.2: Android distribution options (APK, Firebase, Play Store) - documented
+- Task 6.3: iOS release build (requires Apple Developer $99/year) - future
+- Task 6.4: iOS distribution options (TestFlight, Ad Hoc, Firebase) - documented
+- Task 6.5: Firebase App Distribution setup (optional, free) - future
