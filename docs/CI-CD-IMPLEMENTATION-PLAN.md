@@ -612,7 +612,7 @@ FIREBASE_APP_ID_ANDROID_REMOTE   - App ID for standalone app (if distributing)
   ```groovy
   buildscript {
     dependencies {
-      classpath 'com.google.gms:google-services:4.4.2'
+      classpath 'com.google.gms:google-services:4.4.4'
     }
   }
   ```
