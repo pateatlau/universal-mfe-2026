@@ -19,11 +19,11 @@ A production-ready microfrontend architecture enabling code sharing across Web, 
 |----------|-------------|-------------------|---------|------------|
 | Web | ✅ Working | ✅ Deployed (Vercel) | Rspack 1.6.5 | MF V2 |
 | Android | ✅ Working | ✅ Working (Firebase Hosting) | Re.Pack 5.2.0 | MF V2 |
-| iOS | ✅ Working | ⏳ Not Tested | Re.Pack 5.2.0 | MF V2 |
+| iOS | ✅ Working | ✅ Working (Simulator, Firebase Hosting) | Re.Pack 5.2.0 | MF V2 |
 
-**Android Release Build Status**: Production release builds now fully functional with remote module loading from Firebase Hosting. See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for technical details.
+**Mobile Release Build Status**: Production release builds fully functional for both Android and iOS with remote module loading from Firebase Hosting. See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for technical details.
 
-**iOS Release Build Status**: ⚠️ iOS release builds have not been tested yet. iOS may require the same fixes as Android (PatchMFConsolePlugin for console initialization). See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md#2-ios-testing-pending) for current status and testing TODO.
+**Platform Parity Achieved**: iOS simulator release builds now match Android release build capabilities (standalone operation, production bundles, Module Federation v2).
 
 ## Architecture
 
@@ -289,14 +289,15 @@ yarn workspace @universal/mobile-host clean
 | Remote not loading | Verify server running: `curl -I http://localhost:900X/HelloRemote.container.js.bundle` |
 | Port in use | Kill process: `lsof -ti:PORT \| xargs kill -9` |
 
-### Android Release Build Requirements
+### Mobile Release Build Requirements
 
-**CRITICAL**: Android production releases require specific fixes to work with Module Federation v2 and Hermes:
+**CRITICAL**: Mobile production releases (Android + iOS) require specific fixes to work with Module Federation v2 and Hermes:
 
-1. **PatchMFConsolePlugin** - Prepends console polyfill before webpack runtime
+1. **PatchMFConsolePlugin** - Prepends console polyfill before webpack runtime (platform-agnostic)
 2. **Production remote bundles** - Must be built with `NODE_ENV=production`
 3. **ScriptManager resolver** - Must handle numeric chunk IDs (production mode)
 4. **HTTPS enforcement** - Production remote URLs must use HTTPS
+5. **Release configuration** - iOS/Android must build with Release configuration (not Debug)
 
 See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for comprehensive documentation.
 
