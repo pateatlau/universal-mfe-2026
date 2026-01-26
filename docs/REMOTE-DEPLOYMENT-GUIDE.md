@@ -33,7 +33,7 @@ cd packages/mobile-remote-hello
 # Build for Android
 PLATFORM=android yarn build:remote
 
-# The bundle is output to: dist/remote/android/
+# The bundle is output to: dist/android/
 ```
 
 ### 2. Configure Firebase Hosting
@@ -43,7 +43,7 @@ Create or update `firebase.json` in the project root:
 ```json
 {
   "hosting": {
-    "public": "packages/mobile-remote-hello/dist/remote/android",
+    "public": "packages/mobile-remote-hello/dist/android",
     "ignore": [
       "firebase.json",
       "**/.*",

@@ -1,11 +1,19 @@
+/* eslint-env node */
+
 /**
- * Rspack plugin to patch Module Federation runtime console calls and inject InitializeCore
+ * Rspack plugin to patch Module Federation runtime console calls
  *
  * Module Federation's runtime includes console.warn() calls that execute during
  * bundle initialization, but console doesn't exist in React Native release builds
  * until InitializeCore runs. This plugin:
- * 1. Prepends InitializeCore import to ensure console exists before any code runs
- * 2. Replaces MF console calls with safe no-ops as additional safety
+ * 1. Prepends a console polyfill at the very start of the bundle (before webpack runtime)
+ * 2. Replaces Module Federation console calls with safe no-ops as additional safety
+ *
+ * Why this is needed:
+ * - Hermes doesn't have console available until React Native's InitializeCore runs
+ * - InitializeCore is loaded as a webpack module, so it runs AFTER webpack runtime
+ * - The polyfill ensures console exists before ANY code executes
+ * - InitializeCore later replaces the polyfill with the real console implementation
  */
 
 export default class PatchMFConsolePlugin {
@@ -24,11 +32,11 @@ export default class PatchMFConsolePlugin {
               continue;
             }
 
-          // CRITICAL: Prepend console polyfill BEFORE all webpack code
-          // React Native's console isn't available until InitializeCore runs,
-          // but that's loaded as a webpack module. We need to ensure console exists
-          // BEFORE webpack runtime code executes.
-          const consolePolyfill = `
+            // CRITICAL: Prepend console polyfill BEFORE all webpack code
+            // React Native's console isn't available until InitializeCore runs,
+            // but that's loaded as a webpack module. We need to ensure console exists
+            // BEFORE webpack runtime code executes.
+            const consolePolyfill = `
 if (typeof console === 'undefined') {
   globalThis.console = {
     log: function() {},
@@ -54,14 +62,14 @@ if (typeof console === 'undefined') {
   };
 }
 `;
-          source = consolePolyfill + source;
+            source = consolePolyfill + source;
 
-          // Replace console.warn with a safe no-op in Module Federation runtime
-          // We target the specific "[MF]" prefixed messages to avoid breaking legitimate console usage
-          source = source.replace(
-            /console\.warn\('\[MF\][^']*'\)/g,
-            '(function(){})()'
-          );
+            // Replace console.warn with a safe no-op in Module Federation runtime
+            // We target the specific "[MF]" prefixed messages to avoid breaking legitimate console usage
+            source = source.replace(
+              /console\.warn\('\[MF\][^']*'\)/g,
+              '(function(){})()'
+            );
 
             // Update the asset with patched content
             compilation.assets[filename] = {

@@ -59,7 +59,11 @@ ScriptManager.shared.addResolver(async (scriptId, caller) => {
     throw new Error(`[ScriptManager] Invalid scriptId: ${scriptId}`);
   }
 
-  // Prevent path traversal attempts
+  // Prevent path traversal and protocol injection attempts
+  // - '..' prevents directory traversal (e.g., '../../../etc/passwd')
+  // - '://' prevents protocol injection (e.g., 'file:///path', 'http://evil.com')
+  // - leading '/' prevents absolute path injection (e.g., '/system/bin/sh')
+  // Webpack/Rspack chunk names are alphanumeric or numeric, so this is safe
   if (scriptId.includes('..') || scriptId.includes('://') || scriptId.startsWith('/')) {
     throw new Error(`[ScriptManager] Security: Invalid scriptId detected: ${scriptId}`);
   }

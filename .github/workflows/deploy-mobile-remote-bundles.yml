@@ -53,7 +53,7 @@ jobs:
       - name: Build production remote bundle (Android)
         run: |
           cd packages/mobile-remote-hello
-          NODE_ENV=production PLATFORM=android yarn build:remote
+          PLATFORM=android yarn build:remote
         env:
           NODE_ENV: production
 
@@ -138,7 +138,7 @@ jobs:
       - name: Build production remote bundle (iOS)
         run: |
           cd packages/mobile-remote-hello
-          NODE_ENV=production PLATFORM=ios yarn build:remote
+          PLATFORM=ios yarn build:remote
         env:
           NODE_ENV: production
 

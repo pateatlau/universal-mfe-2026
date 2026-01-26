@@ -71,6 +71,9 @@ GoogleService-Info.plist
 # Firebase service account keys (NEVER commit - contains private keys!)
 *-firebase-adminsdk-*.json
 
+# Firebase cache (generated deployment metadata - should not be committed)
+.firebase/
+
 # Yarn
 .yarn/cache
 .yarn/unplugged

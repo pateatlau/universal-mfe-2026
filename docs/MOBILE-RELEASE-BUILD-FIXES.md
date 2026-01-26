@@ -39,7 +39,7 @@ In React Native release builds using Hermes:
 ### Technical Details
 
 **Execution Order in Release Builds**:
-```
+```text
 1. Hermes loads and executes bundle.js
 2. Webpack runtime initializes → CRASH (console doesn't exist)
 3. (Never reaches) __webpack_require__('InitializeCore')
@@ -111,7 +111,7 @@ Running 'MobileHost'
 ### Problem Description
 
 The app successfully launched but failed to load remote modules with error:
-```
+```text
 [ScriptManager] Failed to prefetch script: [NetworkFailure]
 Error: Unable to resolve host "universal-mfe.web.app": No address associated with hostname
 ```
@@ -155,7 +155,7 @@ Physical Android devices **do not have this issue**. The DNS problem is specific
 ### Problem Description
 
 After fixing DNS, the app crashed with:
-```
+```text
 TypeError: undefined is not a function
 at HelloRemote (https://universal-mfe.web.app/__federation_expose_HelloRemote.index.bundle:2590:21)
 ```
@@ -210,12 +210,12 @@ curl -sI https://universal-mfe.web.app/HelloRemote.container.js.bundle | grep co
 ### Problem Description
 
 After deploying production remote bundle, the app showed:
-```
+```text
 An error occurred: Loading chunk 889 failed. (exec 889)
 ```
 
 Logcat revealed:
-```
+```text
 [ScriptManager] Failed while resolving script locator: {"scriptId":"889","caller":"216"}
 Error: Unknown scriptId: 889
 ```
