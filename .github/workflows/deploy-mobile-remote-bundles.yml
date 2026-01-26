@@ -1,0 +1,158 @@
+name: Deploy Mobile Remote Bundles
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/mobile-remote-hello/**'
+      - 'packages/shared-*/**'
+      - '.github/workflows/deploy-mobile-remote-bundles.yml'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build (android or ios)'
+        required: false
+        default: 'android'
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+
+# Cancel in-progress deployments for the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-android-bundles:
+    name: Build and Deploy Android Remote Bundles
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.inputs.platform == 'android' || github.event.inputs.platform == 'both'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Build production remote bundle (Android)
+        run: |
+          cd packages/mobile-remote-hello
+          NODE_ENV=production PLATFORM=android yarn build:remote
+        env:
+          NODE_ENV: production
+
+      - name: Verify bundle output
+        run: |
+          echo "Checking Android bundle output..."
+          ls -lh packages/mobile-remote-hello/dist/android/*.bundle | head -10
+          echo "Total bundles:"
+          ls packages/mobile-remote-hello/dist/android/*.bundle | wc -l
+
+          # Check for container bundle
+          if [ -f "packages/mobile-remote-hello/dist/android/HelloRemote.container.js.bundle" ]; then
+            echo "✅ Container bundle exists"
+            ls -lh packages/mobile-remote-hello/dist/android/HelloRemote.container.js.bundle
+          else
+            echo "❌ Container bundle not found!"
+            exit 1
+          fi
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          channelId: live
+          projectId: universal-mfe
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting 10 seconds for Firebase CDN to propagate..."
+          sleep 10
+
+          echo "Testing deployed bundle..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://universal-mfe.web.app/HelloRemote.container.js.bundle)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Bundle successfully deployed and accessible"
+            echo "URL: https://universal-mfe.web.app/HelloRemote.container.js.bundle"
+
+            # Check bundle size
+            SIZE=$(curl -sI https://universal-mfe.web.app/HelloRemote.container.js.bundle | grep -i content-length | awk '{print $2}' | tr -d '\r')
+            echo "Bundle size: $SIZE bytes"
+          else
+            echo "❌ Bundle not accessible (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Android Remote Bundle Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Production Bundle URL**: https://universal-mfe.web.app" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Container Bundle**: https://universal-mfe.web.app/HelloRemote.container.js.bundle" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Test remote loading in mobile host app (emulator)" >> $GITHUB_STEP_SUMMARY
+          echo "2. Create release tag to build and distribute release APK" >> $GITHUB_STEP_SUMMARY
+          echo "3. Test on physical devices via Firebase App Distribution" >> $GITHUB_STEP_SUMMARY
+
+  deploy-ios-bundles:
+    name: Build and Deploy iOS Remote Bundles
+    runs-on: ubuntu-latest
+    if: github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'both'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Build production remote bundle (iOS)
+        run: |
+          cd packages/mobile-remote-hello
+          NODE_ENV=production PLATFORM=ios yarn build:remote
+        env:
+          NODE_ENV: production
+
+      - name: Verify bundle output
+        run: |
+          echo "Checking iOS bundle output..."
+          ls -lh packages/mobile-remote-hello/dist/ios/*.bundle | head -10
+          echo "Total bundles:"
+          ls packages/mobile-remote-hello/dist/ios/*.bundle | wc -l
+
+      - name: Summary
+        run: |
+          echo "## ℹ️ iOS Bundle Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "iOS bundles are built but not deployed (Firebase Hosting configured for Android only)." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To deploy iOS bundles, update \`firebase.json\` to support iOS bundles." >> $GITHUB_STEP_SUMMARY
