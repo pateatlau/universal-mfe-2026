@@ -48,59 +48,57 @@ import Home from './pages/Home';
 import Remote from './pages/Remote';
 import Settings from './pages/Settings';
 
-// Platform-specific remote host configuration
-// Android uses port 9004, iOS uses port 9005 to allow simultaneous testing
-// Use a function to ensure Platform is available when called
-const getRemoteHost = () => {
-  if (Platform && Platform.OS) {
-    return Platform.OS === 'android'
-      ? // Android emulator → host machine
-        'http://10.0.2.2:9004'
-      : // iOS simulator → localhost (uses separate port 9005)
-        'http://localhost:9005';
-  }
-  // Fallback: assume iOS if Platform not available (for initial load)
-  return 'http://localhost:9005';
-};
+// Import remote configuration
+import { getRemoteHost } from './config/remoteConfig';
 
 ScriptManager.shared.addResolver(async (scriptId, caller) => {
-  console.log('[ScriptManager resolver]', { scriptId, caller });
-
   const REMOTE_HOST = getRemoteHost();
+
+  // Validate scriptId to prevent path traversal attacks
+  if (!scriptId || typeof scriptId !== 'string') {
+    throw new Error(`[ScriptManager] Invalid scriptId: ${scriptId}`);
+  }
+
+  // Prevent path traversal and protocol injection attempts
+  // - '..' prevents directory traversal (e.g., '../../../etc/passwd')
+  // - '://' prevents protocol injection (e.g., 'file:///path', 'http://evil.com')
+  // - leading '/' prevents absolute path injection (e.g., '/system/bin/sh')
+  // Webpack/Rspack chunk names are alphanumeric or numeric, so this is safe
+  if (scriptId.includes('..') || scriptId.includes('://') || scriptId.startsWith('/')) {
+    throw new Error(`[ScriptManager] Security: Invalid scriptId detected: ${scriptId}`);
+  }
 
   // 1. Main container bundle for the remote
   if (scriptId === 'HelloRemote') {
-    const url = `${REMOTE_HOST}/HelloRemote.container.js.bundle`;
-    console.log('[ScriptManager resolver] resolved URL for HelloRemote:', url);
-    return { url };
+    return {
+      url: `${REMOTE_HOST}/HelloRemote.container.js.bundle`,
+      fetch: true,
+    };
   }
 
   // 2. MF V2 expose chunks (e.g., __federation_expose_HelloRemote)
   // Re.Pack outputs these with .index.bundle extension
   if (scriptId.startsWith('__federation_expose_')) {
-    const url = `${REMOTE_HOST}/${scriptId}.index.bundle`;
-    console.log(
-      '[ScriptManager resolver] resolved URL for federation expose chunk:',
-      scriptId,
-      url
-    );
-    return { url };
+    return {
+      url: `${REMOTE_HOST}/${scriptId}.index.bundle`,
+      fetch: true,
+    };
   }
 
-  // 3. All other chunks requested by HelloRemote container
-  // This handles async chunks like vendors-*, src_*, etc.
+  // 3. All other chunks requested by remote modules
+  // This handles async chunks with numeric IDs (production builds)
+  // or named chunks (development builds)
+  // In production: caller might be numeric (e.g., '216'), scriptId is numeric (e.g., '889')
+  // In development: caller is 'HelloRemote', scriptId might be named or numeric
   // Re.Pack outputs these with .index.bundle extension
-  if (caller === 'HelloRemote') {
-    const url = `${REMOTE_HOST}/${scriptId}.index.bundle`;
-    console.log(
-      '[ScriptManager resolver] resolved URL for HelloRemote chunk:',
-      scriptId,
-      url
-    );
-    return { url };
+  if (caller) {
+    return {
+      url: `${REMOTE_HOST}/${scriptId}.index.bundle`,
+      fetch: true,
+    };
   }
 
-  throw new Error(`Unknown scriptId: ${scriptId}`);
+  throw new Error(`[ScriptManager] Unknown scriptId: ${scriptId}, caller: ${caller}`);
 });
 
 interface HeaderStyles {

@@ -1008,6 +1008,12 @@ Use this matrix to guide architecture selection:
 | Android emulator network | Use 10.0.2.2 instead of localhost | ✅ Documented |
 | Hermes bytecode debugging | Source maps required | ✅ Configured |
 | Metro cache conflicts | Clear with `yarn clean:android` | ✅ Documented |
+| **Console not available in Hermes release builds** | **PatchMFConsolePlugin** (prepends console polyfill) | ✅ **RESOLVED** |
+| **Android emulator DNS resolution fails** | Restart emulator with `-dns-server 8.8.8.8` | ✅ **RESOLVED** |
+| **Production chunk IDs not resolved** | Updated ScriptManager resolver for numeric chunks | ✅ **RESOLVED** |
+| **Remote bundle in development mode** | Respect `NODE_ENV` in repack.remote.config.mjs | ✅ **RESOLVED** |
+
+**See**: [MOBILE-RELEASE-BUILD-FIXES.md](./MOBILE-RELEASE-BUILD-FIXES.md) for comprehensive documentation of Android release build issues and solutions.
 
 ---
 

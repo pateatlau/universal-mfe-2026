@@ -85,6 +85,33 @@ The `@react-native-community/cli@19.1.2` used by RN 0.80.0 has a known vulnerabi
 - For additional security, bind Metro to localhost: `react-native start --host 127.0.0.1`
 - Upgrade to `@react-native-community/cli@20.0.0+` when compatible with your RN version
 
+### Release Build Requirements (CRITICAL)
+
+**Android release builds require several critical fixes to work with Module Federation v2 and Hermes:**
+
+1. **PatchMFConsolePlugin** (REQUIRED)
+   - Location: `packages/mobile-host/scripts/PatchMFConsolePlugin.mjs`
+   - Purpose: Prepends console polyfill before webpack runtime code
+   - Why: Hermes doesn't have `console` available until InitializeCore runs
+   - Status: ✅ Implemented and working
+
+2. **Production Remote Bundles** (REQUIRED)
+   - Remote bundles MUST be built with `NODE_ENV=production`
+   - Development mode bundles contain React DevTools code that crashes in production
+   - Build command: `NODE_ENV=production PLATFORM=android yarn build:remote`
+
+3. **ScriptManager Resolver** (REQUIRED)
+   - Must handle numeric chunk IDs (production) and string IDs (development)
+   - Must validate scriptIds to prevent path traversal attacks
+   - Must enforce HTTPS for production remote URLs
+
+4. **Android Emulator DNS**
+   - Emulators may fail to resolve DNS after running for extended periods
+   - Solution: Restart emulator with `-dns-server 8.8.8.8,8.8.4.4`
+   - Physical devices do not have this issue
+
+**See**: `docs/MOBILE-RELEASE-BUILD-FIXES.md` for comprehensive documentation.
+
 ### Pods Directory
 
 The `ios/Pods/` directory is committed to ensure reproducible builds. This is intentional - it guarantees all developers use identical native dependencies without relying on CocoaPods CDN availability.
@@ -439,7 +466,10 @@ For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 - `docs/universal-mfe-architecture-overview.md` - Complete system design
 - `docs/universal-mfe-all-platforms-testing-guide.md` - Running apps and testing guide
 - `docs/universal-mfe-mf-v2-implementation.md` - MF v2 implementation details
+- `docs/GIT-FLOW-WORKFLOW.md` - Branch strategy, PR process, release workflow
 - `docs/CI-CD-IMPLEMENTATION-PLAN.md` - CI/CD workflows and deployment
+- `docs/MOBILE-RELEASE-BUILD-FIXES.md` - Critical Android release build fixes
+- `docs/PATCHMFCONSOLEPLUGIN-GUIDE.md` - Community guide for Hermes + MF v2 console fix
 
 **Pattern Documentation:**
 
