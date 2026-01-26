@@ -1,8 +1,23 @@
 # Continuation Prompt: iOS Simulator Release Builds Implementation
 
+## 🚀 Quick Start
+
+**Branch**: `feature/updated-full-ios-deploy-flow`
+**Base**: `develop`
+**Goal**: Implement iOS simulator release builds (Phase 6.7)
+
+```bash
+# You should already be on this branch
+git status  # Verify: On branch feature/updated-full-ios-deploy-flow
+```
+
+---
+
 ## Context Summary
 
 We have successfully completed Android release builds for physical devices with Module Federation v2. The next step is to implement iOS simulator release builds to achieve platform parity.
+
+**Important**: All work should be done in the `feature/updated-full-ios-deploy-flow` branch, following Git Flow workflow.
 
 ### Recent Accomplishments (2026-01-26)
 
@@ -279,9 +294,11 @@ After successful implementation:
 ## Repository Information
 
 - **Repo**: https://github.com/pateatlau/universal-mfe-2026
-- **Branch**: main
-- **Latest Tag**: v2.8.0 (Android release builds)
-- **Next Tag**: v2.9.0 (iOS simulator release builds)
+- **Current Branch**: `feature/updated-full-ios-deploy-flow` (created from `develop`)
+- **Base Branch**: `develop`
+- **Merge Target**: `develop` (after implementation complete)
+- **Latest Production Tag**: v2.8.0 (Android release builds)
+- **Next Tag**: v2.9.0 (iOS simulator release builds - after merge to main)
 
 ---
 
@@ -335,12 +352,55 @@ open https://github.com/pateatlau/universal-mfe-2026/actions
 
 When you begin the next session:
 
-1. **Review** this continuation prompt
-2. **Read** `docs/CI-CD-IMPLEMENTATION-PLAN.md` Phase 6.7 for detailed steps
-3. **Start with** Task 6.7.1 (Mobile-Host iOS release build)
-4. **Test locally** before updating CI/CD
-5. **Update workflow** once local testing succeeds
-6. **Create tag** to trigger CI/CD
-7. **Verify** and update documentation
+### 1. Verify Branch Setup
+```bash
+git status  # Should show: On branch feature/updated-full-ios-deploy-flow
+git branch -vv  # Verify tracking origin/feature/updated-full-ios-deploy-flow
+```
+
+### 2. Review Documentation
+- **This file** - Complete implementation guide
+- `docs/CI-CD-IMPLEMENTATION-PLAN.md` Phase 6.7 - Detailed steps
+- `docs/MOBILE-RELEASE-BUILD-FIXES.md` - Context on Android fixes
+
+### 3. Implementation Order
+1. ✅ **Verify branch** (feature/updated-full-ios-deploy-flow)
+2. 🔧 **Task 6.7.1** - Mobile-Host iOS release build
+3. 🔧 **Task 6.7.2** - Mobile-Remote-Hello iOS release build
+4. ✅ **Task 6.7.3** - Verify PatchMFConsolePlugin on iOS
+5. 📝 **Task 6.7.4** - Update documentation
+6. 🧪 **Test locally** before updating CI/CD
+7. 🔄 **Update workflow** `.github/workflows/deploy-ios.yml`
+8. ✅ **Commit and push** to feature branch
+9. 🔀 **Create PR** to merge to develop
+10. 🏷️ **Create tag** after merge to main (v2.9.0)
+
+### 4. Git Flow Workflow
+```bash
+# Work on feature branch
+git checkout feature/updated-full-ios-deploy-flow
+# ... make changes, test ...
+git add .
+git commit -m "feat: implement iOS simulator release builds"
+git push origin feature/updated-full-ios-deploy-flow
+
+# After all work is done and tested
+# Create PR: feature/updated-full-ios-deploy-flow → develop
+# After review and merge to develop
+# Merge develop → main
+# Then create release tag v2.9.0 on main
+```
+
+### 5. Success Checklist
+- [ ] iOS host builds with `-configuration Release`
+- [ ] iOS standalone builds with `-configuration Release`
+- [ ] Production bundles embedded (no Metro needed)
+- [ ] PatchMFConsolePlugin verified on iOS
+- [ ] Module Federation loads remote correctly
+- [ ] Documentation updated
+- [ ] CI/CD workflow updated
+- [ ] Changes committed to feature branch
+- [ ] PR created and merged
+- [ ] Tag v2.9.0 created (triggers deployment)
 
 Let's implement iOS simulator release builds and achieve complete platform parity! 🚀
