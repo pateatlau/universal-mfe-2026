@@ -606,13 +606,31 @@ try {
 
 **Long-term**: This is an Android emulator bug, not a React Native or Module Federation issue.
 
-### 2. iOS Testing Pending
+### 2. iOS Simulator Release Builds
 
-**Status**: iOS release builds have not been tested yet.
+**Status**: ⏳ **PLANNED** - See CI/CD Implementation Plan Phase 6.7
 
-**Likelihood**: iOS may have similar console initialization issues and will likely need the same PatchMFConsolePlugin solution.
+**Current State**:
+- ✅ iOS Debug builds work on simulator (requires Metro bundler)
+- ⏳ iOS Release builds planned (standalone, no Metro required)
 
-**Action**: Test iOS release builds and document findings.
+**Implementation Plan**:
+- Update workflow to build Release configuration instead of Debug
+- Build production bundles with `NODE_ENV=production`
+- Verify PatchMFConsolePlugin works on iOS (same as Android)
+- Test standalone operation with Firebase Hosting remote bundles
+
+**Expected Result**: iOS release builds will work exactly like Android release builds:
+- Standalone operation (no Metro bundler)
+- Production bundles embedded
+- PatchMFConsolePlugin prevents console crashes
+- Module Federation v2 with dynamic remote loading
+
+**Limitation**: Simulator-only (physical devices require Apple Developer account $99/year)
+
+**Documentation**: Complete implementation plan in `docs/CI-CD-IMPLEMENTATION-PLAN.md` Phase 6.7
+
+**Action**: Implement in next development session
 
 ### 3. Codegen Dependency
 

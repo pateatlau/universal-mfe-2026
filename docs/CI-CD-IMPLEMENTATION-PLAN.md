@@ -797,6 +797,196 @@ jobs:
 
 ---
 
+## Phase 6.7: iOS Simulator Release Builds ⏳ PLANNED
+
+**Objective:** Build iOS release configuration apps for simulator testing, matching the Android release build setup (standalone, production bundles, no Metro bundler required).
+
+**Context:**
+- Currently: iOS workflow builds Debug configuration that requires Metro bundler
+- Goal: Build Release configuration with embedded production bundles
+- Limitation: Simulator-only (physical devices require Apple Developer account)
+- Benefit: Platform parity for release testing without paid Apple account
+
+### Task 6.7.1: Update Mobile-Host iOS Release Build for Simulator ⏳ PENDING
+
+**Objective:** Build mobile-host iOS app in Release configuration with production bundles for simulator.
+
+**Steps:**
+- [ ] Update `packages/mobile-host/rspack.config.mjs`:
+  - [ ] Verify PatchMFConsolePlugin is configured (already present for Android)
+  - [ ] Ensure production mode respects `NODE_ENV=production`
+  - [ ] Verify Hermes bytecode compilation is enabled
+
+- [ ] Update `.github/workflows/deploy-ios.yml`:
+  - [ ] Change `-configuration Debug` to `-configuration Release` for host build
+  - [ ] Add production bundle build step before Xcode build:
+    ```yaml
+    - name: Build Host iOS Production Bundle
+      working-directory: packages/mobile-host
+      run: NODE_ENV=production PLATFORM=ios npx rspack build --config ./rspack.config.mjs
+    ```
+  - [ ] Update release notes to indicate these are Release builds (not Debug)
+  - [ ] Update installation instructions (no Metro bundler needed)
+
+- [ ] Test locally on macOS:
+  ```bash
+  cd packages/mobile-host
+  NODE_ENV=production PLATFORM=ios npx rspack build
+  cd ios
+  xcodebuild -workspace MobileHostTmp.xcworkspace \
+    -scheme MobileHostTmp \
+    -configuration Release \
+    -sdk iphonesimulator \
+    -destination 'platform=iOS Simulator,name=iPhone 16' \
+    -derivedDataPath ./build \
+    build
+  ```
+
+- [ ] Verify app runs standalone:
+  - [ ] No Metro bundler required
+  - [ ] Loads production remote from `https://universal-mfe.web.app`
+  - [ ] All chunks resolve correctly
+  - [ ] PatchMFConsolePlugin prevents console crashes
+
+**Expected Output:**
+- `mobile-host-simulator-release.zip` - Release configuration app bundle
+- Works completely offline (no dev server)
+- Production bundles embedded
+
+**Cost:** $0 (no Apple account required for simulator builds)
+
+### Task 6.7.2: Update Mobile-Remote-Hello iOS Release Build for Simulator ⏳ PENDING
+
+**Objective:** Build mobile-remote-hello iOS app in Release configuration for simulator.
+
+**Steps:**
+- [ ] Update `packages/mobile-remote-hello/rspack.config.mjs`:
+  - [ ] Verify production mode configuration
+  - [ ] Ensure standalone build works
+
+- [ ] Update `.github/workflows/deploy-ios.yml`:
+  - [ ] Change `-configuration Debug` to `-configuration Release` for standalone build
+  - [ ] Add production bundle build step:
+    ```yaml
+    - name: Build Standalone iOS Production Bundle
+      working-directory: packages/mobile-remote-hello
+      run: NODE_ENV=production PLATFORM=ios yarn build:standalone
+    ```
+
+- [ ] Test locally on macOS:
+  ```bash
+  cd packages/mobile-remote-hello
+  NODE_ENV=production PLATFORM=ios yarn build:standalone
+  cd ios
+  xcodebuild -workspace MobileRemoteHello.xcworkspace \
+    -scheme MobileRemoteHello \
+    -configuration Release \
+    -sdk iphonesimulator \
+    -destination 'platform=iOS Simulator,name=iPhone 16' \
+    -derivedDataPath ./build \
+    build
+  ```
+
+**Expected Output:**
+- `mobile-remote-standalone-simulator-release.zip` - Release configuration app bundle
+- Works completely offline
+- Production bundles embedded
+
+**Cost:** $0 (no Apple account required)
+
+### Task 6.7.3: Verify PatchMFConsolePlugin on iOS ⏳ PENDING
+
+**Objective:** Confirm that PatchMFConsolePlugin works on iOS release builds, preventing console-related crashes.
+
+**Steps:**
+- [ ] Review PatchMFConsolePlugin in `packages/mobile-host/scripts/PatchMFConsolePlugin.mjs`
+- [ ] Verify it's included in iOS build (same Rspack config as Android)
+- [ ] Test on iOS Simulator with release build:
+  - [ ] Check build output for: `✓ Prepended console polyfill and patched Module Federation console calls`
+  - [ ] Verify no console-related crashes on app launch
+  - [ ] Monitor Xcode Console for any Hermes/console errors
+
+- [ ] Compare with Android behavior:
+  - [ ] Same console polyfill prepended
+  - [ ] Same Module Federation console patching
+  - [ ] Same production bundle loading
+
+**Expected Result:**
+- iOS release builds work exactly like Android release builds
+- No "console is not defined" errors
+- Standalone operation verified
+
+**Documentation:**
+- Update `docs/MOBILE-RELEASE-BUILD-FIXES.md` with iOS verification results
+- Note any iOS-specific differences or issues
+
+**Cost:** $0
+
+### Task 6.7.4: Update Documentation ⏳ PENDING
+
+**Steps:**
+- [ ] Update `docs/CI-CD-IMPLEMENTATION-PLAN.md`:
+  - [ ] Mark Phase 6.7 tasks as complete
+  - [ ] Update status summary
+
+- [ ] Update `docs/MOBILE-RELEASE-BUILD-FIXES.md`:
+  - [ ] Change "iOS Testing Pending" to "iOS Simulator Testing Complete"
+  - [ ] Add iOS simulator release build verification results
+  - [ ] Document any iOS-specific issues or differences
+
+- [ ] Update `README.md`:
+  - [ ] Add iOS simulator release build instructions
+  - [ ] Update release notes template
+
+- [ ] Update `.github/workflows/deploy-ios.yml` release notes:
+  - [ ] Change from "Debug Builds" to "Release Builds"
+  - [ ] Remove Metro bundler requirement from instructions
+  - [ ] Add note about standalone operation
+
+**Cost:** $0
+
+### Success Criteria for Phase 6.7
+
+| Metric | Target | Verification |
+|--------|--------|--------------|
+| iOS Host Release Build | ✅ Compiles successfully | `xcodebuild` succeeds with `-configuration Release` |
+| iOS Standalone Release Build | ✅ Compiles successfully | `xcodebuild` succeeds with `-configuration Release` |
+| PatchMFConsolePlugin on iOS | ✅ Works correctly | No console crashes, polyfill prepended |
+| Standalone Operation | ✅ No Metro required | App runs completely offline |
+| Production Bundles | ✅ Loads from Firebase | Fetches from `https://universal-mfe.web.app` |
+| Module Federation | ✅ Remote loads correctly | Dynamic chunks resolve |
+| Platform Parity | ✅ iOS matches Android | Same release build behavior |
+| CI/CD Automation | ✅ Workflow updated | Tag push builds and releases |
+
+### Benefits of Phase 6.7
+
+1. **Platform Parity:** iOS release builds match Android capabilities
+2. **No Apple Account Required:** All testing can be done on simulators
+3. **Production Testing:** Verify production bundles before investing in Apple Developer account
+4. **Documentation Complete:** Full iOS release process documented
+5. **Foundation for Physical Devices:** When Apple account is acquired, just add code signing
+6. **Cost:** $0 - Complete iOS release testing infrastructure at zero cost
+
+### Known Limitations
+
+- **Simulator Only:** Cannot test on physical iOS devices without Apple Developer account
+- **No TestFlight:** Cannot use Apple's OTA distribution
+- **macOS Required:** Testers must have macOS with Xcode to run simulator builds
+- **Not End-User Distribution:** Simulator builds are for internal testing only
+
+### Future: Physical Device Support
+
+When Apple Developer account is acquired ($99/year):
+- [ ] Add code signing certificates (Task 6.3)
+- [ ] Add provisioning profiles
+- [ ] Change from `-sdk iphonesimulator` to `-sdk iphoneos`
+- [ ] Export as IPA instead of .app bundle
+- [ ] Distribute via TestFlight or Firebase App Distribution
+
+**Cost:** $99/year (Apple Developer Program)
+
+---
+
 ## Phase 7: Firebase Authentication (Future)
 
 Firebase Authentication will provide secure user authentication with support for email/password and social login providers. This builds on the Firebase project created in Task 6.5.
@@ -1055,6 +1245,8 @@ Firebase Authentication will provide secure user authentication with support for
 - Task 6.3: iOS release build (requires Apple Developer $99/year) - future
 - Task 6.4: iOS distribution options (TestFlight, Ad Hoc, Firebase) - documented
 - Task 6.5: Firebase App Distribution setup ✅ COMPLETE - $0
+- Task 6.6: Firebase Hosting for Mobile Remote Bundles ✅ COMPLETE - $0
+- Task 6.7: iOS Simulator Release Builds ⏳ PLANNED - $0
 
 **Phase 7: FUTURE** - Firebase Authentication
 - Task 7.1: Firebase Auth Setup (Android) - Email/password + Google Sign-In
