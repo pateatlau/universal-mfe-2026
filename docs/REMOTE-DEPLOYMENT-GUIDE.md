@@ -288,7 +288,16 @@ After successfully deploying:
 
 ---
 
-For questions or issues, refer to:
+## Related Documentation
+
+### Internal Documentation
+- [Mobile Release Build Fixes](./MOBILE-RELEASE-BUILD-FIXES.md) - Critical fixes for Android release builds
+- [PatchMFConsolePlugin Guide](./PATCHMFCONSOLEPLUGIN-GUIDE.md) - Console polyfill plugin guide
+- [CI/CD Implementation Plan](./CI-CD-IMPLEMENTATION-PLAN.md) - Automated deployment workflows
+- [CI/CD Testing Guide](./CI-CD-TESTING-GUIDE.md) - Testing deployment pipelines
+- [Git Flow Workflow](./GIT-FLOW-WORKFLOW.md) - Development and release process
+
+### External References
 - [Firebase Hosting Documentation](https://firebase.google.com/docs/hosting)
 - [Re.Pack Documentation](https://re-pack.dev/)
-- Project README and CLAUDE.md
+- Project [README](../README.md) and [CLAUDE.md](../CLAUDE.md)

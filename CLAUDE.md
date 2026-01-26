@@ -466,7 +466,10 @@ For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 - `docs/universal-mfe-architecture-overview.md` - Complete system design
 - `docs/universal-mfe-all-platforms-testing-guide.md` - Running apps and testing guide
 - `docs/universal-mfe-mf-v2-implementation.md` - MF v2 implementation details
+- `docs/GIT-FLOW-WORKFLOW.md` - Branch strategy, PR process, release workflow
 - `docs/CI-CD-IMPLEMENTATION-PLAN.md` - CI/CD workflows and deployment
+- `docs/MOBILE-RELEASE-BUILD-FIXES.md` - Critical Android release build fixes
+- `docs/PATCHMFCONSOLEPLUGIN-GUIDE.md` - Community guide for Hermes + MF v2 console fix
 
 **Pattern Documentation:**
 

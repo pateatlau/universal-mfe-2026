@@ -23,6 +23,8 @@ A production-ready microfrontend architecture enabling code sharing across Web, 
 
 **Android Release Build Status**: Production release builds now fully functional with remote module loading from Firebase Hosting. See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for technical details.
 
+**iOS Release Build Status**: ⚠️ iOS release builds have not been tested yet. iOS may require the same fixes as Android (PatchMFConsolePlugin for console initialization). See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md#2-ios-testing-pending) for current status and testing TODO.
+
 ## Architecture
 
 ```
@@ -228,8 +230,10 @@ git push --tags
 |----------|-------------|
 | [Enterprise Enhancements](docs/ENTERPRISE-ENHANCEMENTS.md) | Overview of all enterprise features |
 | [Testing Guide](docs/universal-mfe-all-platforms-testing-guide.md) | Running apps and testing guide |
+| [**Git Flow Workflow**](docs/GIT-FLOW-WORKFLOW.md) | **Branch strategy, PR process, release workflow** |
 | [CI/CD Implementation](docs/CI-CD-IMPLEMENTATION-PLAN.md) | CI/CD workflows and deployment guide |
 | [**Mobile Release Build Fixes**](docs/MOBILE-RELEASE-BUILD-FIXES.md) | **Critical fixes for Android production releases** |
+| [**PatchMFConsolePlugin Guide**](docs/PATCHMFCONSOLEPLUGIN-GUIDE.md) | **Community guide for Hermes + MF v2 console fix** |
 | [Critical Analysis](docs/CRITICAL-ANALYSIS-OF-UNIVERSAL-MFE.md) | Architecture assessment and recommendations |
 | [MF V2 Implementation](docs/universal-mfe-mf-v2-implementation.md) | Configuration reference and troubleshooting |
 | [Architecture Overview](docs/universal-mfe-architecture-overview.md) | System design and patterns |

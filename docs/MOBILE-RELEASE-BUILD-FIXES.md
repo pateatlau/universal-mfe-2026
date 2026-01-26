@@ -539,8 +539,16 @@ try {
 
 ---
 
-## References
+## Related Documentation
 
+### Internal Documentation
+- [PatchMFConsolePlugin Guide](./PATCHMFCONSOLEPLUGIN-GUIDE.md) - Comprehensive guide to the console polyfill plugin
+- [Remote Deployment Guide](./REMOTE-DEPLOYMENT-GUIDE.md) - Firebase Hosting setup and deployment
+- [CI/CD Implementation Plan](./CI-CD-IMPLEMENTATION-PLAN.md) - Automated deployment workflows
+- [CI/CD Testing Guide](./CI-CD-TESTING-GUIDE.md) - Step-by-step testing instructions
+- [Git Flow Workflow](./GIT-FLOW-WORKFLOW.md) - Development and release process
+
+### External References
 - [Module Federation v2 Documentation](https://module-federation.io/)
 - [Re.Pack Documentation](https://re-pack.dev/)
 - [React Native Hermes](https://reactnative.dev/docs/hermes)
