@@ -623,6 +623,178 @@ FIREBASE_APP_ID_ANDROID_REMOTE   - App ID for standalone app (if distributing)
 
 ---
 
+## Phase 6.6: Firebase Hosting for Mobile Remote Bundles ✅ COMPLETE
+
+Firebase Hosting provides a fast, secure CDN for hosting mobile remote bundles (Module Federation remote containers and chunks). This enables production release builds to load remote modules from a publicly accessible URL.
+
+### Overview
+
+**Why Firebase Hosting?**
+- Free tier includes 10 GB storage, 360 MB/day bandwidth
+- Global CDN with automatic SSL/TLS
+- CORS headers configurable
+- GitHub Actions integration
+- Same project as Firebase App Distribution
+
+**What gets deployed?**
+- `packages/mobile-remote-hello/dist/android/*.bundle` - All production remote bundles
+- Includes container bundle and all async chunks (numeric IDs in production)
+
+### Task 6.6.1: Firebase Hosting Setup ✅ COMPLETE
+
+**Step 1: Initialize Firebase Hosting** ✅
+```bash
+# Install Firebase CLI if not already installed
+npm install -g firebase-tools
+
+# Login to Firebase
+firebase login
+
+# Initialize hosting in project root
+firebase init hosting
+```
+
+**Configuration** (`firebase.json`):
+```json
+{
+  "hosting": {
+    "public": "packages/mobile-remote-hello/dist/android",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.bundle",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/javascript"
+          },
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Step 2: Build Production Remote Bundles** ✅
+```bash
+cd packages/mobile-remote-hello
+NODE_ENV=production PLATFORM=android yarn build:remote
+```
+
+**Critical**: Remote bundles MUST be built with `NODE_ENV=production`. Development mode bundles contain React DevTools code that crashes in production release builds.
+
+**Step 3: Deploy to Firebase Hosting** ✅
+```bash
+firebase deploy --only hosting
+```
+
+**Verification**:
+```bash
+# Check deployed bundle
+curl -I https://universal-mfe.web.app/HelloRemote.container.js.bundle
+
+# Should return:
+# HTTP/2 200
+# content-type: application/javascript
+# access-control-allow-origin: *
+```
+
+### Task 6.6.2: Mobile Host Configuration ✅ COMPLETE
+
+**Update Production Remote URL** (`packages/mobile-host/src/config/remoteConfig.ts`):
+```typescript
+const PRODUCTION_REMOTE_URL = 'https://universal-mfe.web.app';
+
+// Enforce HTTPS in production
+if (!__DEV__ && !PRODUCTION_REMOTE_URL.startsWith('https://')) {
+  throw new Error('[RemoteConfig] Production remote URL must use HTTPS for security');
+}
+```
+
+**ScriptManager Resolver Requirements**:
+- Must handle numeric chunk IDs (production builds use numeric IDs like `889`, `895`)
+- Must validate scriptIds to prevent path traversal attacks
+- Must return `fetch: true` for all remote scripts
+
+See `docs/MOBILE-RELEASE-BUILD-FIXES.md` for detailed implementation.
+
+### Task 6.6.3: CI/CD Integration (TODO)
+
+**Add to `.github/workflows/deploy-mobile-remote-bundles.yml`**:
+```yaml
+name: Deploy Mobile Remote Bundles
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/mobile-remote-hello/**'
+      - 'packages/shared-*/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-android-bundles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.11.0'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Build production remote bundle (Android)
+        run: |
+          cd packages/mobile-remote-hello
+          NODE_ENV=production PLATFORM=android yarn build:remote
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          channelId: live
+          projectId: universal-mfe
+```
+
+**Required GitHub Secrets**:
+- `FIREBASE_SERVICE_ACCOUNT` - Service account JSON from Firebase Console → Project Settings → Service Accounts
+
+### Testing Checklist
+
+- [x] Build production remote bundle with `NODE_ENV=production`
+- [x] Deploy to Firebase Hosting
+- [x] Verify bundle accessible via HTTPS
+- [x] Verify CORS headers present
+- [x] Test loading in mobile host release build on emulator
+- [x] Verify all chunks load (numeric IDs in production)
+- [ ] Test on physical Android device
+- [ ] Test on physical iOS device
+- [ ] Set up CI/CD workflow
+
+**Cost:** $0 (within Firebase Hosting free tier)
+
+---
+
 ## Phase 7: Firebase Authentication (Future)
 
 Firebase Authentication will provide secure user authentication with support for email/password and social login providers. This builds on the Firebase project created in Task 6.5.

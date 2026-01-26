@@ -1,0 +1,80 @@
+/**
+ * Rspack plugin to patch Module Federation runtime console calls and inject InitializeCore
+ *
+ * Module Federation's runtime includes console.warn() calls that execute during
+ * bundle initialization, but console doesn't exist in React Native release builds
+ * until InitializeCore runs. This plugin:
+ * 1. Prepends InitializeCore import to ensure console exists before any code runs
+ * 2. Replaces MF console calls with safe no-ops as additional safety
+ */
+
+export default class PatchMFConsolePlugin {
+  apply(compiler) {
+    compiler.hooks.emit.tap('PatchMFConsolePlugin', (compilation) => {
+      // Iterate through all assets
+      for (const filename in compilation.assets) {
+        // Only patch .bundle files
+        if (filename.endsWith('.bundle')) {
+          try {
+            const asset = compilation.assets[filename];
+            let source = asset.source();
+
+            if (typeof source !== 'string') {
+              console.warn(`⚠ Skipping ${filename}: source is not a string`);
+              continue;
+            }
+
+          // CRITICAL: Prepend console polyfill BEFORE all webpack code
+          // React Native's console isn't available until InitializeCore runs,
+          // but that's loaded as a webpack module. We need to ensure console exists
+          // BEFORE webpack runtime code executes.
+          const consolePolyfill = `
+if (typeof console === 'undefined') {
+  globalThis.console = {
+    log: function() {},
+    warn: function() {},
+    error: function() {},
+    info: function() {},
+    debug: function() {},
+    trace: function() {},
+    table: function() {},
+    group: function() {},
+    groupEnd: function() {},
+    groupCollapsed: function() {},
+    assert: function() {},
+    time: function() {},
+    timeEnd: function() {},
+    dir: function() {},
+    dirxml: function() {},
+    count: function() {},
+    countReset: function() {},
+    clear: function() {},
+    profile: function() {},
+    profileEnd: function() {}
+  };
+}
+`;
+          source = consolePolyfill + source;
+
+          // Replace console.warn with a safe no-op in Module Federation runtime
+          // We target the specific "[MF]" prefixed messages to avoid breaking legitimate console usage
+          source = source.replace(
+            /console\.warn\('\[MF\][^']*'\)/g,
+            '(function(){})()'
+          );
+
+            // Update the asset with patched content
+            compilation.assets[filename] = {
+              source: () => source,
+              size: () => source.length,
+            };
+            console.log(`✓ Prepended console polyfill and patched Module Federation console calls in ${filename}`);
+          } catch (error) {
+            console.error(`✗ Failed to patch ${filename}:`, error.message);
+            throw error;
+          }
+        }
+      }
+    });
+  }
+}

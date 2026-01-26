@@ -17,7 +17,8 @@ import { Platform } from 'react-native';
 /**
  * Production remote bundle URL
  *
- * TODO: Update this with your deployed remote URL
+ * SECURITY NOTE: Always use HTTPS in production to prevent MITM attacks
+ *
  * Options:
  * - Firebase Hosting: https://your-project.web.app
  * - GitHub Pages: https://username.github.io/repo
@@ -27,22 +28,25 @@ import { Platform } from 'react-native';
 const PRODUCTION_REMOTE_URL = 'https://universal-mfe.web.app';
 
 /**
+ * Validate that production URL uses HTTPS
+ */
+if (!__DEV__ && !PRODUCTION_REMOTE_URL.startsWith('https://')) {
+  throw new Error('[RemoteConfig] Production remote URL must use HTTPS for security');
+}
+
+/**
  * Get the remote host URL based on environment and platform
  */
 export const getRemoteHost = (): string => {
   // Production builds: use deployed remote
   if (!__DEV__) {
-    console.log('[RemoteConfig] Using production remote:', PRODUCTION_REMOTE_URL);
     return PRODUCTION_REMOTE_URL;
   }
 
   // Development builds: use local dev server with platform-specific addresses
   // Android emulator: 10.0.2.2 maps to host machine's localhost
   // iOS simulator: localhost works directly
-  const devUrl = Platform.OS === 'android' ? 'http://10.0.2.2:9004' : 'http://localhost:9005';
-
-  console.log('[RemoteConfig] Using development remote:', devUrl);
-  return devUrl;
+  return Platform.OS === 'android' ? 'http://10.0.2.2:9004' : 'http://localhost:9005';
 };
 
 /**

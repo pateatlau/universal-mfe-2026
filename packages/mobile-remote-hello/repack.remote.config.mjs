@@ -11,7 +11,7 @@ const outputDir = path.join(dirname, 'dist', platform);
 
 export default {
   context: dirname,
-  mode: 'development',
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
 
   entry: {
     // This should import your HelloRemote component somewhere

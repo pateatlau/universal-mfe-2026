@@ -15,11 +15,13 @@ A production-ready microfrontend architecture enabling code sharing across Web, 
 
 ## Platform Status
 
-| Platform | Status | Bundler | MF Version |
-|----------|--------|---------|------------|
-| Web | Deployed | Rspack 1.6.5 | MF V2 |
-| Android | Deployed | Re.Pack 5.2.0 | MF V2 |
-| iOS | Deployed | Re.Pack 5.2.0 | MF V2 |
+| Platform | Development | Production Release | Bundler | MF Version |
+|----------|-------------|-------------------|---------|------------|
+| Web | ✅ Working | ✅ Deployed (Vercel) | Rspack 1.6.5 | MF V2 |
+| Android | ✅ Working | ✅ Working (Firebase Hosting) | Re.Pack 5.2.0 | MF V2 |
+| iOS | ✅ Working | ⏳ Not Tested | Re.Pack 5.2.0 | MF V2 |
+
+**Android Release Build Status**: Production release builds now fully functional with remote module loading from Firebase Hosting. See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for technical details.
 
 ## Architecture
 
@@ -180,6 +182,25 @@ Language toggle switches between English and Hindi across all platforms.
 | Deploy Web | Push to main | Deploy to Vercel (remote first, then shell) |
 | Deploy Android | Tag push (v*) | Build host + standalone APKs, create GitHub Release |
 | Deploy iOS | Tag push (v*) | Build host + standalone Simulator apps, create GitHub Release |
+| **Deploy Mobile Remote Bundles** | **Push to main** | **Build production bundles, deploy to Firebase Hosting** |
+
+### Mobile Remote Bundle Deployment
+
+Production mobile apps load remote modules from **Firebase Hosting** instead of localhost:
+
+**Production Remote URL**: `https://universal-mfe.web.app`
+
+**Manual Deployment**:
+```bash
+# Build production remote bundle
+cd packages/mobile-remote-hello
+NODE_ENV=production PLATFORM=android yarn build:remote
+
+# Deploy to Firebase Hosting
+firebase deploy --only hosting
+```
+
+**CI/CD**: See [Phase 6.6 in CI/CD Implementation Plan](docs/CI-CD-IMPLEMENTATION-PLAN.md#phase-66-firebase-hosting-for-mobile-remote-bundles--complete) for automated workflow setup.
 
 ### Creating a Release
 
@@ -190,18 +211,16 @@ git tag v1.0.0
 git push --tags
 ```
 
-### Mobile Build Limitations
+### Mobile Build Types
 
-Current mobile builds are **debug builds** that require Metro bundler running:
+| Build Type | Artifact | Metro Required? | Use Case |
+|------------|----------|-----------------|----------|
+| **Debug Build** | `mobile-host-debug.apk` | ✅ Yes (port 8081/8082) | Development testing |
+| **Release Build** | `mobile-host-release.apk` | ❌ No (loads from Firebase) | Production distribution |
+| **Standalone Debug** | `mobile-remote-standalone-debug.apk` | ✅ Yes (port 8083/8084) | Remote testing in isolation |
+| **Standalone Release** | `mobile-remote-standalone-release.apk` | ❌ No | Super app deployment |
 
-| Platform | Artifact | Metro Port |
-|----------|----------|------------|
-| Android (Host) | `mobile-host-debug.apk` | 8081 |
-| Android (Standalone) | `mobile-remote-standalone-debug.apk` | 8083 |
-| iOS (Host) | `mobile-host-simulator.zip` | 8082 |
-| iOS (Standalone) | `mobile-remote-standalone-simulator.zip` | 8084 |
-
-For production builds without Metro dependency, see [Phase 6 in CI/CD Implementation Plan](docs/CI-CD-IMPLEMENTATION-PLAN.md#phase-6-production-mobile-builds-future).
+**Android Release Builds**: Now fully functional with Firebase Hosting remote loading. See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for critical fixes required.
 
 ## Documentation
 
@@ -210,6 +229,8 @@ For production builds without Metro dependency, see [Phase 6 in CI/CD Implementa
 | [Enterprise Enhancements](docs/ENTERPRISE-ENHANCEMENTS.md) | Overview of all enterprise features |
 | [Testing Guide](docs/universal-mfe-all-platforms-testing-guide.md) | Running apps and testing guide |
 | [CI/CD Implementation](docs/CI-CD-IMPLEMENTATION-PLAN.md) | CI/CD workflows and deployment guide |
+| [**Mobile Release Build Fixes**](docs/MOBILE-RELEASE-BUILD-FIXES.md) | **Critical fixes for Android production releases** |
+| [Critical Analysis](docs/CRITICAL-ANALYSIS-OF-UNIVERSAL-MFE.md) | Architecture assessment and recommendations |
 | [MF V2 Implementation](docs/universal-mfe-mf-v2-implementation.md) | Configuration reference and troubleshooting |
 | [Architecture Overview](docs/universal-mfe-architecture-overview.md) | System design and patterns |
 | [CLAUDE.md](CLAUDE.md) | Development guidelines and constraints |
@@ -256,10 +277,24 @@ yarn workspace @universal/mobile-host clean
 
 | Issue | Solution |
 |-------|----------|
+| **Release build crashes on launch** | **See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md)** |
+| **"Loading chunk 889 failed"** | **ScriptManager resolver needs numeric chunk support** |
+| **Android emulator DNS fails** | **Restart emulator with `-dns-server 8.8.8.8,8.8.4.4`** |
 | Android path errors | Run `clean:android` to clear stale caches |
 | iOS "file not found" | Run `node scripts/setup-symlinks.js` in mobile-host |
 | Remote not loading | Verify server running: `curl -I http://localhost:900X/HelloRemote.container.js.bundle` |
 | Port in use | Kill process: `lsof -ti:PORT \| xargs kill -9` |
+
+### Android Release Build Requirements
+
+**CRITICAL**: Android production releases require specific fixes to work with Module Federation v2 and Hermes:
+
+1. **PatchMFConsolePlugin** - Prepends console polyfill before webpack runtime
+2. **Production remote bundles** - Must be built with `NODE_ENV=production`
+3. **ScriptManager resolver** - Must handle numeric chunk IDs (production mode)
+4. **HTTPS enforcement** - Production remote URLs must use HTTPS
+
+See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for comprehensive documentation.
 
 ## Turborepo
 
