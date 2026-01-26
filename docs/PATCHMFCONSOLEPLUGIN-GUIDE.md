@@ -584,7 +584,7 @@ npm install @universal-mfe/patch-mf-console-plugin
 import { PatchMFConsolePlugin } from '@universal-mfe/patch-mf-console-plugin';
 ```
 
-**Vote**: Add a 👍 to [this issue](https://github.com/pateatlau/universal-mfe-2026/issues/XXX) if you'd use an npm package.
+**Feedback**: If you'd use an npm package, please open a [GitHub Discussion](https://github.com/pateatlau/universal-mfe-2026/discussions) or create an issue to express interest.
 
 ---
 

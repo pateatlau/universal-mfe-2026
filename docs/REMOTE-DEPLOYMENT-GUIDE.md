@@ -30,8 +30,8 @@ Firebase Hosting provides free, fast CDN hosting for static files - perfect for 
 # From project root
 cd packages/mobile-remote-hello
 
-# Build for Android
-PLATFORM=android yarn build:remote
+# Build for Android (CRITICAL: Must use NODE_ENV=production for release builds)
+NODE_ENV=production PLATFORM=android yarn build:remote
 
 # The bundle is output to: dist/android/
 ```
@@ -230,7 +230,7 @@ Add to `.github/workflows/deploy-android.yml`:
 - name: Deploy Remote to Firebase Hosting
   run: |
     cd packages/mobile-remote-hello
-    PLATFORM=android yarn build:remote
+    NODE_ENV=production PLATFORM=android yarn build:remote
     cd ../../
     firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
 ```
@@ -245,7 +245,7 @@ set -e
 
 echo "Building mobile remote..."
 cd packages/mobile-remote-hello
-PLATFORM=android yarn build:remote
+NODE_ENV=production PLATFORM=android yarn build:remote
 
 echo "Deploying to Firebase Hosting..."
 cd ../../
