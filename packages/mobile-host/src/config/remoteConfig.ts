@@ -24,7 +24,7 @@ import { Platform } from 'react-native';
  * - Your CDN: https://cdn.yourcompany.com/remotes
  * - ngrok (temp testing): https://abc123.ngrok.io
  */
-const PRODUCTION_REMOTE_URL = 'https://your-project.web.app'; // ⚠️ UPDATE THIS
+const PRODUCTION_REMOTE_URL = 'https://universal-mfe.web.app';
 
 /**
  * Get the remote host URL based on environment and platform
@@ -39,9 +39,7 @@ export const getRemoteHost = (): string => {
   // Development builds: use local dev server with platform-specific addresses
   // Android emulator: 10.0.2.2 maps to host machine's localhost
   // iOS simulator: localhost works directly
-  const devUrl = Platform.OS === 'android'
-    ? 'http://10.0.2.2:9004'
-    : 'http://localhost:9005';
+  const devUrl = Platform.OS === 'android' ? 'http://10.0.2.2:9004' : 'http://localhost:9005';
 
   console.log('[RemoteConfig] Using development remote:', devUrl);
   return devUrl;
