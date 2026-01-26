@@ -789,9 +789,9 @@ jobs:
 - [x] Verify CORS headers present
 - [x] Test loading in mobile host release build on emulator
 - [x] Verify all chunks load (numeric IDs in production)
+- [x] Set up CI/CD workflow
 - [ ] Test on physical Android device
 - [ ] Test on physical iOS device
-- [ ] Set up CI/CD workflow
 
 **Cost:** $0 (within Firebase Hosting free tier)
 

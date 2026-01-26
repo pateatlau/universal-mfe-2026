@@ -124,7 +124,7 @@ adb logcat | grep -i "RemoteConfig\|ScriptManager"
 ```
 
 You should see logs like:
-```
+```text
 [RemoteConfig] Using production remote: https://your-project.web.app
 [ScriptManager resolver] resolved URL for HelloRemote: https://your-project.web.app/HelloRemote.container.js.bundle
 ```

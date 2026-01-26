@@ -1,6 +1,6 @@
 # PatchMFConsolePlugin Guide
 
-**A Custom Rspack/Webpack Plugin Solving Hermes + Module Federation v2 Console Initialization**
+## A Custom Rspack/Webpack Plugin Solving Hermes + Module Federation v2 Console Initialization
 
 > **TL;DR**: This plugin solves a critical crash in React Native release builds using Hermes and Module Federation v2 by prepending a console polyfill before webpack runtime code executes.
 
