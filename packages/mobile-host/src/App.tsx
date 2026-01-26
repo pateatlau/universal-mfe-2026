@@ -48,20 +48,8 @@ import Home from './pages/Home';
 import Remote from './pages/Remote';
 import Settings from './pages/Settings';
 
-// Platform-specific remote host configuration
-// Android uses port 9004, iOS uses port 9005 to allow simultaneous testing
-// Use a function to ensure Platform is available when called
-const getRemoteHost = () => {
-  if (Platform && Platform.OS) {
-    return Platform.OS === 'android'
-      ? // Android emulator → host machine
-        'http://10.0.2.2:9004'
-      : // iOS simulator → localhost (uses separate port 9005)
-        'http://localhost:9005';
-  }
-  // Fallback: assume iOS if Platform not available (for initial load)
-  return 'http://localhost:9005';
-};
+// Import remote configuration
+import { getRemoteHost, getRemoteModuleUrl, getExposeChunkUrl } from './config/remoteConfig';
 
 ScriptManager.shared.addResolver(async (scriptId, caller) => {
   console.log('[ScriptManager resolver]', { scriptId, caller });
