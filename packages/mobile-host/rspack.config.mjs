@@ -1,7 +1,7 @@
 import * as Repack from '@callstack/repack';
 import rspack from '@rspack/core';
 import path from 'node:path';
-
+import PatchMFConsolePlugin from './scripts/PatchMFConsolePlugin.mjs';
 const dirname = Repack.getDirname(import.meta.url);
 const platform = process.env.PLATFORM || 'android';
 
@@ -12,6 +12,11 @@ const devServerPort = process.env.PORT || 8081;
 
 export default {
   context: dirname,
+
+  // CRITICAL: Use 'development' mode even for release builds
+  // React Native handles minification via Hermes compilation
+  // Production mode in Rspack breaks Module Federation runtime initialization
+  mode: 'development',
 
   // Tell Rspack this is a React Native target, not web
   // target: Repack.getTarget(platform),
@@ -78,6 +83,54 @@ export default {
       platform: platform,
       hermes: true,
     }),
+    new PatchMFConsolePlugin(),
+
+    // Fix @swc/helpers internal path imports
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_call_super$/,
+      '@swc/helpers/cjs/_call_super.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_class_call_check$/,
+      '@swc/helpers/cjs/_class_call_check.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_create_class$/,
+      '@swc/helpers/cjs/_create_class.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_define_property$/,
+      '@swc/helpers/cjs/_define_property.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_get$/,
+      '@swc/helpers/cjs/_get.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_get_prototype_of$/,
+      '@swc/helpers/cjs/_get_prototype_of.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_inherits$/,
+      '@swc/helpers/cjs/_inherits.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_possible_constructor_return$/,
+      '@swc/helpers/cjs/_possible_constructor_return.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_set$/,
+      '@swc/helpers/cjs/_set.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_set_prototype_of$/,
+      '@swc/helpers/cjs/_set_prototype_of.cjs'
+    ),
+    new rspack.NormalModuleReplacementPlugin(
+      /^@swc\/helpers\/_\/_to_consumable_array$/,
+      '@swc/helpers/cjs/_to_consumable_array.cjs'
+    ),
+
     // Replace React Native dev tools internal modules with empty stubs
     // These modules don't exist in the published React Native package
     new rspack.NormalModuleReplacementPlugin(

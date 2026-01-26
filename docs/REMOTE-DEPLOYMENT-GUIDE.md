@@ -30,10 +30,10 @@ Firebase Hosting provides free, fast CDN hosting for static files - perfect for 
 # From project root
 cd packages/mobile-remote-hello
 
-# Build for Android
-PLATFORM=android yarn build:remote
+# Build for Android (CRITICAL: Must use NODE_ENV=production for release builds)
+NODE_ENV=production PLATFORM=android yarn build:remote
 
-# The bundle is output to: dist/remote/android/
+# The bundle is output to: dist/android/
 ```
 
 ### 2. Configure Firebase Hosting
@@ -43,7 +43,7 @@ Create or update `firebase.json` in the project root:
 ```json
 {
   "hosting": {
-    "public": "packages/mobile-remote-hello/dist/remote/android",
+    "public": "packages/mobile-remote-hello/dist/android",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -124,7 +124,7 @@ adb logcat | grep -i "RemoteConfig\|ScriptManager"
 ```
 
 You should see logs like:
-```
+```text
 [RemoteConfig] Using production remote: https://your-project.web.app
 [ScriptManager resolver] resolved URL for HelloRemote: https://your-project.web.app/HelloRemote.container.js.bundle
 ```
@@ -230,7 +230,7 @@ Add to `.github/workflows/deploy-android.yml`:
 - name: Deploy Remote to Firebase Hosting
   run: |
     cd packages/mobile-remote-hello
-    PLATFORM=android yarn build:remote
+    NODE_ENV=production PLATFORM=android yarn build:remote
     cd ../../
     firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
 ```
@@ -245,7 +245,7 @@ set -e
 
 echo "Building mobile remote..."
 cd packages/mobile-remote-hello
-PLATFORM=android yarn build:remote
+NODE_ENV=production PLATFORM=android yarn build:remote
 
 echo "Deploying to Firebase Hosting..."
 cd ../../
@@ -288,7 +288,16 @@ After successfully deploying:
 
 ---
 
-For questions or issues, refer to:
+## Related Documentation
+
+### Internal Documentation
+- [Mobile Release Build Fixes](./MOBILE-RELEASE-BUILD-FIXES.md) - Critical fixes for Android release builds
+- [PatchMFConsolePlugin Guide](./PATCHMFCONSOLEPLUGIN-GUIDE.md) - Console polyfill plugin guide
+- [CI/CD Implementation Plan](./CI-CD-IMPLEMENTATION-PLAN.md) - Automated deployment workflows
+- [CI/CD Testing Guide](./CI-CD-TESTING-GUIDE.md) - Testing deployment pipelines
+- [Git Flow Workflow](./GIT-FLOW-WORKFLOW.md) - Development and release process
+
+### External References
 - [Firebase Hosting Documentation](https://firebase.google.com/docs/hosting)
 - [Re.Pack Documentation](https://re-pack.dev/)
-- Project README and CLAUDE.md
+- Project [README](../README.md) and [CLAUDE.md](../CLAUDE.md)
