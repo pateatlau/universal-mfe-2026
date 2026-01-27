@@ -345,7 +345,7 @@ cd packages/mobile-host/android
 - [ ] Fix any critical issues found
   - Update code in repository
   - Rebuild via CI/CD (push new tag)
-  - Upload new APK
+  - Upload new AAB
   - Re-run pre-launch tests
 
 **Timeline:** 1-2 hours (including wait time)
@@ -1121,8 +1121,11 @@ base64 -i app-store-profile.mobileprovision | pbcopy
 
   **Option B: Using Fastlane (CI-Friendly Alternative)**
   ```yaml
+  # IMPORTANT: Pin Fastlane to a specific version to prevent supply chain attacks
+  # Fastlane has access to App Store Connect API keys and signing credentials
+  # Current version: 2.225.0 (latest stable as of 2026-01)
   - name: Install Fastlane
-    run: gem install fastlane
+    run: gem install fastlane -v 2.225.0
 
   - name: Upload to App Store Connect via Fastlane
     working-directory: packages/mobile-host/ios
@@ -1147,6 +1150,8 @@ base64 -i app-store-profile.mobileprovision | pbcopy
       # Clean up API key
       rm -f ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
   ```
+
+  **Security Note:** Fastlane is pinned to a specific version to prevent supply chain attacks. A compromised fastlane gem could exfiltrate App Store Connect API keys and signing credentials. Update the version only after reviewing the changelog and verifying the release integrity.
 
   **Note:** `xcrun altool` was deprecated by Apple and replaced with `xcrun iTMSTransporter`. Fastlane provides a higher-level, more CI-friendly interface with better error handling and progress reporting.
 
