@@ -12,7 +12,7 @@
     "build": "turbo run build",
     "build:shared": "turbo run build --filter=@universal/shared-*",
     "build:web": "turbo run build --filter=@universal/web-*",
-    "build:mobile:android": "yarn workspace @universal/mobile-remote-hello build:remote",
+    "build:mobile:android": "PLATFORM=android yarn workspace @universal/mobile-remote-hello build:remote",
     "build:mobile:ios": "PLATFORM=ios yarn workspace @universal/mobile-remote-hello build:remote",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
