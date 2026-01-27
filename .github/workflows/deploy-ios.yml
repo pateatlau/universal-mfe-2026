@@ -54,17 +54,26 @@ jobs:
       - name: Generate React Native codegen for mobile-host
         working-directory: packages/mobile-host
         run: |
-          # Run codegen (ignore exit code 1 from non-fatal cleanup error)
-          # All required files are generated successfully before the error occurs
-          yarn react-native codegen || EXIT_CODE=$?
+          # Run codegen and capture exit code
+          set +e
+          yarn react-native codegen
+          EXIT_CODE=$?
+          set -e
 
-          # Verify codegen files were generated
+          # Only tolerate exit code 1 (known non-fatal cleanup error in RN CLI 19.1.2)
+          # All other exit codes indicate real failures
+          if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
+            echo "❌ Error: Codegen failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+          # Verify codegen files were generated despite exit code 1
           if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
             echo "❌ Error: Codegen did not generate iOS files"
             exit 1
           fi
 
-          echo "✅ Codegen files generated successfully"
+          echo "✅ Codegen files generated successfully (exit code $EXIT_CODE is expected)"
           ls -la build/generated/ios/
 
           # Copy codegen to Xcode's expected location (direct contents, not nested)
@@ -135,17 +144,26 @@ jobs:
       - name: Generate React Native codegen for mobile-remote-hello
         working-directory: packages/mobile-remote-hello
         run: |
-          # Run codegen (ignore exit code 1 from non-fatal cleanup error)
-          # All required files are generated successfully before the error occurs
-          yarn react-native codegen || EXIT_CODE=$?
+          # Run codegen and capture exit code
+          set +e
+          yarn react-native codegen
+          EXIT_CODE=$?
+          set -e
 
-          # Verify codegen files were generated
+          # Only tolerate exit code 1 (known non-fatal cleanup error in RN CLI 19.1.2)
+          # All other exit codes indicate real failures
+          if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
+            echo "❌ Error: Codegen failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+          # Verify codegen files were generated despite exit code 1
           if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
             echo "❌ Error: Codegen did not generate iOS files"
             exit 1
           fi
 
-          echo "✅ Codegen files generated successfully"
+          echo "✅ Codegen files generated successfully (exit code $EXIT_CODE is expected)"
           ls -la build/generated/ios/
 
           # Copy codegen to Xcode's expected location (direct contents, not nested)
