@@ -51,6 +51,14 @@ jobs:
       - name: Build mobile remote for iOS (MF bundles)
         run: yarn build:mobile:ios
 
+      - name: Generate React Native codegen for mobile-host
+        working-directory: packages/mobile-host
+        run: |
+          yarn react-native codegen
+          # Copy codegen to Xcode's expected location (direct contents, not nested)
+          mkdir -p ios/build/generated
+          cp -R build/generated/ios/* ios/build/generated/
+
       - name: Install CocoaPods for Host
         working-directory: packages/mobile-host/ios
         run: |
@@ -60,12 +68,15 @@ jobs:
 
       - name: Build Host iOS app for Simulator
         working-directory: packages/mobile-host/ios
+        env:
+          NODE_ENV: production
+          PLATFORM: ios
         run: |
           set -o pipefail
           xcodebuild \
             -workspace MobileHostTmp.xcworkspace \
             -scheme MobileHostTmp \
-            -configuration Debug \
+            -configuration Release \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -derivedDataPath build \
@@ -81,6 +92,15 @@ jobs:
           fi
 
           echo "=== Host build completed successfully ==="
+
+          # Verify bundle was created by custom bundling script
+          if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileHostTmp.app/main.jsbundle" ]; then
+            echo "❌ Error: main.jsbundle not found in app bundle"
+            echo "Custom bundling script may have failed"
+            exit 1
+          fi
+
+          echo "✅ Verified bundle exists in app"
 
       - name: Zip Host iOS app bundle
         working-directory: packages/mobile-host/ios
@@ -99,8 +119,13 @@ jobs:
           zip -r "$GITHUB_WORKSPACE/packages/mobile-host/ios/mobile-host-simulator.zip" MobileHostTmp.app
 
       # Build Standalone App
-      - name: Build standalone bundle for iOS
-        run: PLATFORM=ios yarn workspace @universal/mobile-remote-hello build:standalone
+      - name: Generate React Native codegen for mobile-remote-hello
+        working-directory: packages/mobile-remote-hello
+        run: |
+          yarn react-native codegen
+          # Copy codegen to Xcode's expected location (direct contents, not nested)
+          mkdir -p ios/build/generated
+          cp -R build/generated/ios/* ios/build/generated/
 
       - name: Install CocoaPods for Standalone
         working-directory: packages/mobile-remote-hello/ios
@@ -111,12 +136,15 @@ jobs:
 
       - name: Build Standalone iOS app for Simulator
         working-directory: packages/mobile-remote-hello/ios
+        env:
+          NODE_ENV: production
+          PLATFORM: ios
         run: |
           set -o pipefail
           xcodebuild \
             -workspace MobileRemoteHello.xcworkspace \
             -scheme MobileRemoteHello \
-            -configuration Debug \
+            -configuration Release \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -derivedDataPath build \
@@ -132,6 +160,15 @@ jobs:
           fi
 
           echo "=== Standalone build completed successfully ==="
+
+          # Verify bundle was created by custom bundling script
+          if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileRemoteHello.app/main.jsbundle" ]; then
+            echo "❌ Error: main.jsbundle not found in app bundle"
+            echo "Custom bundling script may have failed"
+            exit 1
+          fi
+
+          echo "✅ Verified bundle exists in app"
 
       - name: Zip Standalone iOS app bundle
         working-directory: packages/mobile-remote-hello/ios
@@ -159,22 +196,24 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
-            ## iOS Simulator Apps (Debug Builds)
+            ## iOS Simulator Apps (Release Builds)
 
             Download the iOS Simulator app bundles below.
 
-            > **⚠️ Important:** These are debug builds that require the Metro bundler to be running on your development machine. They are not standalone production apps.
+            > **✅ Production Ready:** These are release builds with production bundles embedded. They run completely standalone without requiring the Metro bundler.
 
             ---
 
             ### 🏠 Host App (`mobile-host-simulator.zip`)
 
-            The main shell app that loads remote modules via Module Federation.
+            The main shell app that loads remote modules via Module Federation v2.
 
-            **Prerequisites:**
-            1. Clone the repository and run `yarn install`
-            2. Start the Metro bundler: `yarn workspace @universal/mobile-host start:bundler:ios`
-            3. Start the remote server: `yarn workspace @universal/mobile-remote-hello serve:ios`
+            **Features:**
+            - ✅ Release configuration build
+            - ✅ Production bundles embedded
+            - ✅ Loads remote modules from `https://universal-mfe.web.app`
+            - ✅ No Metro bundler required
+            - ✅ PatchMFConsolePlugin for Hermes console compatibility
 
             **Installation:**
             1. Download `mobile-host-simulator.zip`
@@ -184,7 +223,7 @@ jobs:
                xcrun simctl install booted MobileHostTmp.app
                xcrun simctl launch booted com.universal.mobilehost
                ```
-            4. The app connects to Metro at `http://localhost:8082`
+            4. The app runs standalone - no development server needed!
 
             ---
 
@@ -192,9 +231,11 @@ jobs:
 
             The remote module running as an independent "Super App" without the host shell.
 
-            **Prerequisites:**
-            1. Clone the repository and run `yarn install`
-            2. Start the standalone bundler: `yarn workspace @universal/mobile-remote-hello start:bundler:ios`
+            **Features:**
+            - ✅ Release configuration build
+            - ✅ Production bundles embedded
+            - ✅ Fully self-contained
+            - ✅ No Metro bundler required
 
             **Installation:**
             1. Download `mobile-remote-standalone-simulator.zip`
@@ -204,9 +245,9 @@ jobs:
                xcrun simctl install booted MobileRemoteHello.app
                xcrun simctl launch booted com.mobileremotehello
                ```
-            4. The app connects to Metro at `http://localhost:8084`
+            4. The app runs standalone - no development server needed!
 
-            **Note:** Host and Standalone apps can run simultaneously on different simulators (ports 8082 vs 8084).
+            **Note:** Host and Standalone apps can run simultaneously on different simulators.
 
             ---
 
@@ -214,9 +255,12 @@ jobs:
             - macOS with Xcode installed
             - iOS Simulator (iPhone 16 recommended)
 
-            See the [README](https://github.com/pateatlau/universal-mfe-yarn-seed#mobile-build-limitations) for more details.
+            ### Platform Parity
+            - ✅ iOS Simulator Release Builds (this release)
+            - ✅ Android Physical Device Release Builds (v2.8.0+)
+            - ✅ Web Production Builds (Vercel)
 
-            *For production builds without Metro dependency, see Phase 5 in the CI/CD Implementation Plan.*
+            See the [README](https://github.com/pateatlau/universal-mfe-yarn-seed) for more details.
           files: |
             packages/mobile-host/ios/mobile-host-simulator.zip
             packages/mobile-remote-hello/ios/mobile-remote-standalone-simulator.zip

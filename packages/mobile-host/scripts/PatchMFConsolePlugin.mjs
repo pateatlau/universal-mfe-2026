@@ -1,22 +1,30 @@
 /* eslint-env node */
 
 /**
- * Rspack plugin to patch Module Federation runtime console calls
+ * Rspack plugin to patch React Native runtime initialization issues
  *
- * Module Federation's runtime includes console.warn() calls that execute during
- * bundle initialization, but console doesn't exist in React Native release builds
- * until InitializeCore runs. This plugin:
- * 1. Prepends a console polyfill at the very start of the bundle (before webpack runtime)
- * 2. Replaces Module Federation console calls with safe no-ops as additional safety
+ * In React Native release builds with Hermes, certain global objects don't exist
+ * until InitializeCore runs. This plugin polyfills them BEFORE bundle execution.
+ *
+ * Issues addressed:
+ * 1. console - Module Federation runtime calls console.warn() during initialization
+ * 2. Platform.constants - React Native's checkVersions() accesses this at module load time
  *
  * Why this is needed:
- * - Hermes doesn't have console available until React Native's InitializeCore runs
+ * - Hermes doesn't have console/Platform available until React Native's InitializeCore runs
  * - InitializeCore is loaded as a webpack module, so it runs AFTER webpack runtime
- * - The polyfill ensures console exists before ANY code executes
- * - InitializeCore later replaces the polyfill with the real console implementation
+ * - The polyfills ensure these exist before ANY code executes
+ * - InitializeCore later replaces the polyfills with real implementations
  */
 
 export default class PatchMFConsolePlugin {
+  constructor(options = {}) {
+    // Detect platform from options or environment variable
+    this.platform = options.platform || process.env.PLATFORM || 'ios';
+    // Normalize to lowercase
+    this.platform = this.platform.toLowerCase();
+  }
+
   apply(compiler) {
     compiler.hooks.emit.tap('PatchMFConsolePlugin', (compilation) => {
       // Iterate through all assets
@@ -32,11 +40,13 @@ export default class PatchMFConsolePlugin {
               continue;
             }
 
-            // CRITICAL: Prepend console polyfill BEFORE all webpack code
-            // React Native's console isn't available until InitializeCore runs,
-            // but that's loaded as a webpack module. We need to ensure console exists
+            // CRITICAL: Prepend polyfills BEFORE all webpack code
+            // React Native's console and Platform aren't available until InitializeCore runs,
+            // but that's loaded as a webpack module. We need to ensure these exist
             // BEFORE webpack runtime code executes.
-            const consolePolyfill = `
+            const detectedPlatform = this.platform;
+            const runtimePolyfills = `
+// Console polyfill for Module Federation runtime
 if (typeof console === 'undefined') {
   globalThis.console = {
     log: function() {},
@@ -61,8 +71,48 @@ if (typeof console === 'undefined') {
     profileEnd: function() {}
   };
 }
+
+// Platform polyfill for React Native initialization
+// Various React Native code accesses Platform properties at module load time
+if (typeof __PLATFORM_POLYFILL__ === 'undefined') {
+  globalThis.__PLATFORM_POLYFILL__ = true;
+
+  // Create a polyfill Platform object that will be replaced when real Platform loads
+  var _realPlatform = null;
+
+  globalThis.__rn_platform_polyfill__ = {
+    get constants() {
+      if (_realPlatform !== null) return _realPlatform.constants;
+      return {
+        reactNativeVersion: { major: 0, minor: 80, patch: 0 },
+        isTesting: false
+      };
+    },
+    get isTesting() {
+      if (_realPlatform !== null) return _realPlatform.isTesting;
+      return false;
+    },
+    get OS() {
+      if (_realPlatform !== null) return _realPlatform.OS;
+      return '${detectedPlatform}';
+    },
+    get Version() {
+      if (_realPlatform !== null) return _realPlatform.Version;
+      return '';
+    },
+    select: function(obj) {
+      if (_realPlatform !== null) return _realPlatform.select(obj);
+      const platform = '${detectedPlatform}';
+      return obj[platform] !== undefined ? obj[platform] : obj.default;
+    },
+    // Setter to replace with real Platform when it loads
+    __setRealPlatform: function(platform) {
+      _realPlatform = platform;
+    }
+  };
+}
 `;
-            source = consolePolyfill + source;
+            source = runtimePolyfills + source;
 
             // Replace console.warn with a safe no-op in Module Federation runtime
             // We target the specific "[MF]" prefixed messages to avoid breaking legitimate console usage
@@ -71,12 +121,19 @@ if (typeof console === 'undefined') {
               '(function(){})()'
             );
 
+            // Patch ALL _Platform.default accesses to use our polyfill
+            // This handles .constants, .isTesting, .OS, .select(), etc.
+            source = source.replace(
+              /(_Platform\.default)/g,
+              '(__rn_platform_polyfill__)'
+            );
+
             // Update the asset with patched content
             compilation.assets[filename] = {
               source: () => source,
               size: () => source.length,
             };
-            console.log(`✓ Prepended console polyfill and patched Module Federation console calls in ${filename}`);
+            console.log(`✓ Prepended runtime polyfills and patched Module Federation + Platform.constants in ${filename}`);
           } catch (error) {
             console.error(`✗ Failed to patch ${filename}:`, error.message);
             throw error;

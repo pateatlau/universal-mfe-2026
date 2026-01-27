@@ -45,9 +45,29 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
     // iOS simulator can access localhost directly
     // IMPORTANT: Re.Pack requires the platform query parameter
     let bundleURL = URL(string: "http://localhost:8082/index.bundle?platform=ios")
+    NSLog("[AppDelegate] DEBUG: Loading bundle from dev server: \(bundleURL?.absoluteString ?? "nil")")
     return bundleURL
 #else
-    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    let bundleURL = Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    NSLog("[AppDelegate] RELEASE: Loading bundle from app: \(bundleURL?.absoluteString ?? "nil")")
+    if let url = bundleURL {
+      NSLog("[AppDelegate] Bundle file exists at: \(url.path)")
+      let fileManager = FileManager.default
+      if fileManager.fileExists(atPath: url.path) {
+        do {
+          let attributes = try fileManager.attributesOfItem(atPath: url.path)
+          let fileSize = attributes[.size] as? UInt64 ?? 0
+          NSLog("[AppDelegate] Bundle file size: \(fileSize) bytes")
+        } catch {
+          NSLog("[AppDelegate] Error reading bundle file attributes: \(error)")
+        }
+      } else {
+        NSLog("[AppDelegate] ERROR: Bundle file does not exist!")
+      }
+    } else {
+      NSLog("[AppDelegate] ERROR: Bundle URL is nil!")
+    }
+    return bundleURL
 #endif
   }
 }

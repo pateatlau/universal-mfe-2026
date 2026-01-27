@@ -15,7 +15,8 @@ export default {
 
   // CRITICAL: Use 'development' mode even for release builds
   // React Native handles minification via Hermes compilation
-  // Production mode in Rspack breaks Module Federation runtime initialization
+  // Production mode breaks React Native runtime initialization
+  // Dev tools are disabled at native level: Android via BuildConfig.DEBUG, iOS via RCT_DEV=0
   mode: 'development',
 
   // Tell Rspack this is a React Native target, not web
@@ -84,6 +85,15 @@ export default {
       hermes: true,
     }),
     new PatchMFConsolePlugin(),
+
+    // Replace React Native dev tools with stub in production builds
+    // This prevents dev tools from being loaded while keeping mode='development'
+    ...(process.env.NODE_ENV === 'production' ? [
+      new rspack.NormalModuleReplacementPlugin(
+        /react-native\/Libraries\/Core\/setUpReactDevTools/,
+        path.join(dirname, 'src', 'stubs', 'setUpReactDevTools.js')
+      ),
+    ] : []),
 
     // Fix @swc/helpers internal path imports
     new rspack.NormalModuleReplacementPlugin(

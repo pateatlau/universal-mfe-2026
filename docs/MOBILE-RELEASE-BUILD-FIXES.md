@@ -34,15 +34,15 @@ This document details the critical issues discovered and fixed to enable React N
 
 ---
 
-## Issue #1: Console Global Not Available
+## Issue #1: Console and Platform Globals Not Available
 
 ### Problem Description
 
 In React Native release builds using Hermes:
 1. The JavaScript bundle executes immediately when loaded
 2. Webpack runtime code (including Module Federation) runs first
-3. React Native's `InitializeCore` hasn't executed yet, so `console` is `undefined`
-4. Any `console.warn()` or `console.error()` calls cause crashes
+3. React Native's `InitializeCore` hasn't executed yet, so `console` and `Platform` are `undefined`
+4. Any `console.warn()`, `console.error()`, or `Platform.constants` calls cause crashes
 
 ### Technical Details
 
@@ -50,26 +50,38 @@ In React Native release builds using Hermes:
 ```text
 1. Hermes loads and executes bundle.js
 2. Webpack runtime initializes → CRASH (console doesn't exist)
-3. (Never reaches) __webpack_require__('InitializeCore')
-4. (Never reaches) React Native sets up console global
+3. React Native code tries to access Platform.constants → CRASH
+4. (Never reaches) __webpack_require__('InitializeCore')
+5. (Never reaches) React Native sets up console and Platform globals
 ```
 
 **Why Debug Builds Don't Crash**:
 - Chrome DevTools provides `console` object
 - Metro dev server handles initialization differently
+- Development mode has different initialization order
 - Issue only manifests in Hermes release builds
 
-### Solution: PatchMFConsolePlugin
+**iOS-Specific Issue**:
+On iOS, React Native code attempts to access `Platform.constants.reactNativeVersion` and `Platform.isTesting` during module initialization, before React Native's runtime is ready. This causes crashes in Release builds with errors like:
+```
+TypeError: Cannot read property 'constants' of undefined
+TypeError: Cannot read property 'isTesting' of undefined
+```
+
+### Solution: PatchMFConsolePlugin with Platform Polyfill
 
 **Location**: `/packages/mobile-host/scripts/PatchMFConsolePlugin.mjs`
 
 **What it does**:
 1. **Prepends console polyfill** at the very start of the bundle (before webpack runtime)
-2. **Patches Module Federation console calls** as additional safety
+2. **Prepends Platform polyfill** to handle React Native initialization
+3. **Patches Module Federation console calls** as additional safety
 
 **Code**:
 ```javascript
 // Prepended to bundle BEFORE all webpack code
+
+// 1. Console polyfill
 if (typeof console === 'undefined') {
   globalThis.console = {
     log: function() {},
@@ -78,12 +90,60 @@ if (typeof console === 'undefined') {
     // ... all console methods as no-ops
   };
 }
+
+// 2. Platform polyfill (iOS critical)
+if (typeof __PLATFORM_POLYFILL__ === 'undefined') {
+  globalThis.__PLATFORM_POLYFILL__ = true;
+
+  // Temporary Platform polyfill until real Platform loads
+  var _realPlatform = null;
+
+  globalThis.__rn_platform_polyfill__ = {
+    get constants() {
+      if (_realPlatform !== null) return _realPlatform.constants;
+      return {
+        reactNativeVersion: { major: 0, minor: 80, patch: 0 },
+        isTesting: false
+      };
+    },
+    get isTesting() {
+      if (_realPlatform !== null) return _realPlatform.isTesting;
+      return false;
+    },
+    get OS() {
+      if (_realPlatform !== null) return _realPlatform.OS;
+      return 'ios';  // or 'android' based on platform
+    },
+    get Version() {
+      if (_realPlatform !== null) return _realPlatform.Version;
+      return '';
+    },
+    select: function(obj) {
+      if (_realPlatform !== null) return _realPlatform.select(obj);
+      return obj.ios !== undefined ? obj.ios : obj.default;
+    },
+    __setRealPlatform: function(platform) {
+      _realPlatform = platform;
+    }
+  };
+}
+
+// 3. Patch all Platform.default accesses to use polyfill
+source = source.replace(
+  /(_Platform\.default)/g,
+  '(__rn_platform_polyfill__)'
+);
 ```
 
 **Why This Works**:
 - Raw JavaScript prepended to bundle executes immediately when Hermes starts
-- Console exists before webpack runtime code runs
-- InitializeCore later replaces the polyfill with the real console
+- Console and Platform exist before webpack runtime and React Native code run
+- Platform polyfill provides minimal API until real Platform loads
+- Once React Native initializes, the real Platform object is used
+- InitializeCore later replaces polyfills with real implementations
+
+**Platform-Agnostic**:
+This solution works identically on both Android and iOS - the polyfill handles the platform-specific differences transparently.
 
 **Configuration**:
 ```javascript
@@ -94,7 +154,7 @@ export default {
   // ...
   plugins: [
     new Repack.RepackPlugin({ platform, hermes: true }),
-    new PatchMFConsolePlugin(), // ← CRITICAL for release builds
+    new PatchMFConsolePlugin(), // ← CRITICAL for release builds (Android + iOS)
     // ...
   ],
 };
@@ -105,11 +165,15 @@ export default {
 **Success Indicators**:
 ```bash
 # Build output
-✓ Prepended console polyfill and patched Module Federation console calls in index.bundle
+✓ Prepended runtime polyfills and patched Module Federation + Platform.constants in index.bundle
 
-# Logcat (no crashes)
+# Android Logcat (no crashes)
 Running 'MobileHost'
 # App stays running, no "runtime not ready" errors
+
+# iOS Console (no crashes)
+[AppDelegate] RELEASE: Loading bundle from app: file:///.../main.jsbundle
+# App launches and displays UI
 ```
 
 ---
@@ -606,31 +670,122 @@ try {
 
 **Long-term**: This is an Android emulator bug, not a React Native or Module Federation issue.
 
-### 2. iOS Simulator Release Builds
+### 2. iOS Release Builds
 
-**Status**: ⏳ **PLANNED** - See CI/CD Implementation Plan Phase 6.7
+**Status**: ✅ **COMPLETE** - Implemented in Phase 6.7 (v2.9.0+)
 
 **Current State**:
-- ✅ iOS Debug builds work on simulator (requires Metro bundler)
-- ⏳ iOS Release builds planned (standalone, no Metro required)
+- ✅ iOS Release builds work on simulator (standalone, no Metro required)
+- ✅ Production bundles embedded in app
+- ✅ Platform parity with Android release builds achieved
+- ✅ Module Federation v2 loading verified working
 
-**Implementation Plan**:
-- Update workflow to build Release configuration instead of Debug
-- Build production bundles with `NODE_ENV=production`
-- Verify PatchMFConsolePlugin works on iOS (same as Android)
-- Test standalone operation with Firebase Hosting remote bundles
+**Implementation Details**:
 
-**Expected Result**: iOS release builds will work exactly like Android release builds:
-- Standalone operation (no Metro bundler)
-- Production bundles embedded
-- PatchMFConsolePlugin prevents console crashes
-- Module Federation v2 with dynamic remote loading
+#### Platform Polyfill (iOS-Critical Fix)
+iOS Release builds require an extended Platform polyfill to handle React Native's initialization dependencies:
+
+```javascript
+// Platform.constants.reactNativeVersion accessed at module load time
+Platform.constants.reactNativeVersion
+// Platform.isTesting accessed during initialization
+Platform.isTesting
+// Platform.OS and Platform.select() used throughout React Native code
+Platform.OS, Platform.Version, Platform.select()
+```
+
+The PatchMFConsolePlugin provides all these properties with sensible defaults until React Native's real Platform module loads.
+
+#### Custom iOS Bundling Script
+iOS requires a custom Xcode build phase script to integrate Re.Pack bundling:
+
+**Location**: `packages/mobile-host/ios/scripts/bundle-repack.sh`
+
+```bash
+#!/bin/bash
+# Custom bundling script for Re.Pack iOS builds
+
+set -e
+
+echo "🔧 Custom Re.Pack bundling script for iOS"
+
+# For Release builds, create production bundle
+echo "🏗️  Building production bundle with Re.Pack..."
+yarn build:ios
+
+# Copy the bundle to Xcode's destination
+BUNDLE_FILE="$PROJECT_ROOT/ios/main.jsbundle"
+cp "$BUNDLE_FILE" "$DEST/main.jsbundle"
+
+echo "✨ Re.Pack bundling complete!"
+```
+
+**Xcode Integration**:
+```javascript
+// ios/MobileHostTmp.xcodeproj/project.pbxproj
+// Replace standard React Native bundling script with:
+shellScript = "set -e\n\n# Use custom Re.Pack bundling script\nexport NODE_BINARY=node\n\"${SRCROOT}/scripts/bundle-repack.sh\"\n";
+```
+
+This approach:
+- ✅ Integrates seamlessly with Xcode's build process
+- ✅ Handles code signing correctly
+- ✅ Works for both Debug and Release configurations
+- ✅ Skips bundling in Debug simulator mode (uses dev server)
+
+#### Build Process
+```bash
+# 1. Build production bundle
+cd packages/mobile-host
+NODE_ENV=production yarn build:ios
+
+# 2. Build Xcode project (script above runs automatically)
+cd ios
+xcodebuild -workspace MobileHostTmp.xcworkspace \
+  -scheme MobileHostTmp \
+  -configuration Release \
+  -sdk iphonesimulator \
+  clean build
+
+# 3. Install on simulator
+xcrun simctl install <DEVICE_UUID> build/.../MobileHostTmp.app
+
+# 4. Launch app
+xcrun simctl launch <DEVICE_UUID> com.universal.mobilehost
+```
+
+#### Verification Results
+- ✅ Host app launches successfully
+- ✅ UI renders correctly (no blank white screen)
+- ✅ "Load Remote Component" button works
+- ✅ Remote module loads from Firebase Hosting
+- ✅ Module Federation v2 dynamic loading verified
+- ✅ Standalone remote app also works on separate simulator
+- ✅ Theme switching functional
+- ✅ No console or Platform crashes
+
+**Result**: iOS release builds work exactly like Android release builds:
+- ✅ Standalone operation (no Metro bundler)
+- ✅ Production bundles embedded
+- ✅ PatchMFConsolePlugin prevents console and Platform crashes
+- ✅ Module Federation v2 with dynamic remote loading
+- ✅ Custom Xcode bundling script integration
+- ✅ Code signing handled correctly
+
+**Tested Configurations**:
+- iPhone 15 Simulator (iOS 17.5) - Host app ✅
+- iPhone 15 Pro Simulator (iOS 17.5) - Remote standalone app ✅
 
 **Limitation**: Simulator-only (physical devices require Apple Developer account $99/year)
 
-**Documentation**: Complete implementation plan in `docs/CI-CD-IMPLEMENTATION-PLAN.md` Phase 6.7
+**Documentation**: Complete implementation in `docs/CI-CD-IMPLEMENTATION-PLAN.md` Phase 6.7
 
-**Action**: Implement in next development session
+**Workflow File**: `.github/workflows/deploy-ios.yml`
+
+**Related Files**:
+- `packages/mobile-host/ios/scripts/bundle-repack.sh` - Custom bundling script
+- `packages/mobile-remote-hello/ios/scripts/bundle-repack.sh` - Remote app bundling script
+- `packages/mobile-host/scripts/PatchMFConsolePlugin.mjs` - Platform polyfill implementation
 
 ### 3. Codegen Dependency
 
@@ -674,11 +829,14 @@ try {
    - ⏳ Verify all functionality on real devices
    - ⏳ Document any device-specific issues
 
-3. **iOS Testing** ⏳ **PENDING**
-   - ⏳ Build iOS release
-   - ⏳ Test on iOS simulator
-   - ⏳ Test on physical iOS device
-   - ⏳ Document iOS-specific fixes if needed
+3. **iOS Testing** ✅ **COMPLETE**
+   - ✅ Build iOS release (Release configuration)
+   - ✅ Test on iOS simulator (standalone operation verified)
+   - ✅ PatchMFConsolePlugin with Platform polyfill verified (platform-agnostic)
+   - ✅ Host app tested (iPhone 15 simulator)
+   - ✅ Remote standalone app tested (iPhone 15 Pro simulator)
+   - ✅ Module Federation v2 loading verified working
+   - ⏳ Test on physical iOS device (requires Apple Developer account - future)
 
 4. **Performance Testing**
    - Measure app startup time
@@ -710,7 +868,7 @@ try {
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2026-01-26
+**Document Version**: 1.1
+**Last Updated**: 2026-01-27
 **Authors**: Claude + Development Team
-**Status**: Complete and Verified
+**Status**: Complete and Verified (Android + iOS)

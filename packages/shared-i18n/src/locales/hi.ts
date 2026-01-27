@@ -50,6 +50,11 @@ export const hi: Translations = {
     welcome: 'स्वागत है',
     welcomeUser: 'स्वागत है, {{name}}!',
     homeDescription: 'यूनिवर्सल माइक्रोफ्रंटेंड प्लेटफॉर्म का अन्वेषण करें',
+    standaloneTitle: {
+      web: 'वेब रिमोट - स्टैंडअलोन मोड',
+      mobile: 'मोबाइल रिमोट - स्टैंडअलोन',
+    },
+    standaloneSubtitle: 'रिमोट कॉम्पोनेन्ट को अलगाव में परीक्षण करना',
     items: {
       zero: 'कोई आइटम नहीं',
       one: '{{count}} आइटम',
