@@ -8,6 +8,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# React DevTools stubs (generated during development)
+packages/mobile-host/src/stubs/setUpReactDevTools.js
+packages/mobile-remote-hello/src/stubs/setUpReactDevTools.js
+
 # Test coverage
 coverage/
 
@@ -28,6 +32,10 @@ packages/mobile-remote-hello/android/.gradle/
 packages/mobile-remote-hello/android/build/
 packages/mobile-remote-hello/android/app/build/
 
+# Android release APKs (build artifacts - should be in build/ but sometimes generated at root)
+*.apk
+!packages/*/android/app/release/*.apk
+
 # iOS local environment (contains machine-specific paths)
 packages/mobile-host/ios/.xcode.env.local
 packages/mobile-remote-hello/ios/.xcode.env.local
@@ -35,6 +43,16 @@ packages/mobile-remote-hello/ios/.xcode.env.local
 # iOS build outputs
 packages/mobile-remote-hello/ios/build/
 packages/mobile-remote-hello/ios/Pods/
+
+# iOS generated bundles and maps (build artifacts)
+packages/mobile-host/ios/main.jsbundle
+packages/mobile-host/ios/main.jsbundle.map
+packages/mobile-remote-hello/ios/main.jsbundle
+packages/mobile-remote-hello/ios/main.jsbundle.map
+
+# CocoaPods build configuration cache
+packages/mobile-host/ios/Pods/.last_build_configuration
+packages/mobile-remote-hello/ios/Pods/.last_build_configuration
 
 # IDE
 .vscode/
