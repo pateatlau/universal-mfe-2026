@@ -10,8 +10,9 @@ This document details the critical issues discovered and fixed to enable React N
 4. [Issue #3: Development Mode Remote Bundle](#issue-3-development-mode-remote-bundle)
 5. [Issue #4: Production Chunk ID Resolution](#issue-4-production-chunk-id-resolution)
 6. [Issue #5: Missing React Native Codegen for Re.Pack](#issue-5-missing-react-native-codegen-for-repack)
-7. [Security Hardening](#security-hardening)
-8. [Testing Checklist](#testing-checklist)
+7. [Issue #6: PLATFORM Environment Variable Required](#issue-6-platform-environment-variable-required)
+8. [Security Hardening](#security-hardening)
+9. [Testing Checklist](#testing-checklist)
 
 ---
 
@@ -23,12 +24,14 @@ This document details the critical issues discovered and fixed to enable React N
 1. Module Federation v2's webpack runtime code executes before React Native's `InitializeCore` sets up the `console` global in Hermes release builds
 2. React Native New Architecture requires codegen artifacts before native compilation
 3. Remote bundles must be built in production mode to match host environment
+4. PatchMFConsolePlugin requires `PLATFORM` env var to generate correct Platform polyfill
 
 **Solutions**:
 1. Custom Rspack plugin (`PatchMFConsolePlugin`) prepends console polyfill before webpack code
 2. Automated codegen generation (`generateCodegenArtifactsFromSchema`) in CI/CD workflow
 3. Production bundle builds with `NODE_ENV=production`
 4. Dynamic chunk resolution for both development and production modes
+5. `PLATFORM` environment variable set in all build scripts (`PLATFORM=android` or `PLATFORM=ios`)
 
 **Status**: ✅ **RESOLVED** - Release builds now work on emulators and physical devices. CI/CD fully automated via GitHub Actions (v2.8.0+).
 
@@ -488,6 +491,123 @@ Without codegen, the native bridge fails to link, making Module Federation impos
 
 ---
 
+## Issue #6: PLATFORM Environment Variable Required
+
+### Problem Description
+
+When building iOS and Android release bundles, the `PatchMFConsolePlugin` needs to know which platform is being built to generate the correct Platform polyfill. Without this information, the polyfill defaults to `'ios'`, which causes Android builds to have incorrect `Platform.OS` values.
+
+**Symptoms of Missing PLATFORM Variable**:
+- Android release builds may crash or behave unexpectedly due to `Platform.OS` returning `'ios'` instead of `'android'`
+- `Platform.select()` returns wrong platform-specific values
+- Any code that checks `Platform.OS === 'android'` will fail
+
+### Root Cause
+
+The `PatchMFConsolePlugin` (located at `packages/mobile-host/scripts/PatchMFConsolePlugin.mjs`) generates a Platform polyfill that is prepended to the bundle **before** React Native's real Platform module loads. This polyfill must return the correct platform value.
+
+**Plugin Code (line 23)**:
+```javascript
+this.platform = options.platform || process.env.PLATFORM || 'ios';
+```
+
+The plugin checks for the `PLATFORM` environment variable. If not set, it defaults to `'ios'`, which is incorrect for Android builds.
+
+**Generated Polyfill**:
+```javascript
+get OS() {
+  if (_realPlatform !== null) return _realPlatform.OS;
+  return '${detectedPlatform}';  // ← Uses PLATFORM env var
+},
+select: function(obj) {
+  if (_realPlatform !== null) return _realPlatform.select(obj);
+  const platform = '${detectedPlatform}';  // ← Uses PLATFORM env var
+  return obj[platform] !== undefined ? obj[platform] : obj.default;
+}
+```
+
+### Solution
+
+**Always set `PLATFORM` environment variable when building release bundles.**
+
+**Build Scripts (packages/mobile-host/package.json)**:
+```json
+{
+  "scripts": {
+    "build:android": "PLATFORM=android NODE_ENV=production react-native bundle --platform android ...",
+    "build:ios": "PLATFORM=ios NODE_ENV=production react-native bundle --platform ios ..."
+  }
+}
+```
+
+**Key Points**:
+- `PLATFORM=android` for Android builds
+- `PLATFORM=ios` for iOS builds
+- Must be set **before** `NODE_ENV` and the bundle command
+- Also applies to `mobile-remote-hello` and any other mobile packages using `PatchMFConsolePlugin`
+
+### CI/CD Integration
+
+The GitHub Actions workflows must also set the `PLATFORM` environment variable:
+
+**`.github/workflows/deploy-android.yml`**:
+```yaml
+- name: Build Host Bundle
+  env:
+    PLATFORM: android
+    NODE_ENV: production
+  run: yarn build:android
+```
+
+**`.github/workflows/deploy-ios.yml`**:
+```yaml
+- name: Build Host Bundle
+  env:
+    PLATFORM: ios
+    NODE_ENV: production
+  run: yarn build:ios
+```
+
+### Verification
+
+**Success Indicators**:
+```bash
+# Build output should show the correct platform
+✓ Prepended runtime polyfills and patched Module Federation + Platform.constants in index.android.bundle
+
+# In the generated bundle, search for the polyfill:
+grep "return 'android'" android/app/src/main/assets/index.android.bundle
+# Should find: return 'android';
+
+grep "return 'ios'" ios/main.jsbundle
+# Should find: return 'ios';
+```
+
+**Testing Platform Detection**:
+```javascript
+// Add temporary logging in your app to verify
+console.log('Platform.OS:', Platform.OS);  // Should be 'android' or 'ios'
+```
+
+### Why This Matters
+
+Without the correct `PLATFORM` value:
+1. `Platform.select({ android: X, ios: Y })` returns wrong values
+2. Platform-specific code paths execute incorrectly
+3. Android apps may try to use iOS-specific APIs (or vice versa)
+4. Theme/styling may be wrong for the platform
+5. Native module resolution may fail
+
+### Related Files
+
+- `packages/mobile-host/scripts/PatchMFConsolePlugin.mjs` - Plugin that uses PLATFORM
+- `packages/mobile-host/package.json` - Build scripts with PLATFORM set
+- `packages/mobile-remote-hello/package.json` - Remote app build scripts (also needs PLATFORM)
+- `.github/workflows/deploy-android.yml` - Android CI/CD workflow
+- `.github/workflows/deploy-ios.yml` - iOS CI/CD workflow
+
+---
+
 ## Security Hardening
 
 ### 1. ScriptManager Resolver Security
@@ -628,22 +748,28 @@ try {
 
 1. **`/packages/mobile-host/scripts/PatchMFConsolePlugin.mjs`** (NEW)
    - Console polyfill injection
+   - Platform polyfill injection (uses `PLATFORM` env var)
    - Module Federation console patching
    - Error handling
 
-2. **`/packages/mobile-host/rspack.config.mjs`**
+2. **`/packages/mobile-host/package.json`**
+   - Added `PLATFORM=android` to `build:android` script
+   - Added `PLATFORM=ios` to `build:ios` script
+   - Required for PatchMFConsolePlugin to generate correct Platform polyfill
+
+3. **`/packages/mobile-host/rspack.config.mjs`**
    - Added PatchMFConsolePlugin to plugins array
 
-3. **`/packages/mobile-host/src/App.tsx`**
+4. **`/packages/mobile-host/src/App.tsx`**
    - Updated ScriptManager resolver for production chunks
    - Added security validation
    - Improved error messages
 
-4. **`/packages/mobile-host/src/config/remoteConfig.ts`**
+5. **`/packages/mobile-host/src/config/remoteConfig.ts`**
    - Added HTTPS enforcement for production
    - Updated comments for security guidance
 
-5. **`/packages/mobile-remote-hello/repack.remote.config.mjs`**
+6. **`/packages/mobile-remote-hello/repack.remote.config.mjs`**
    - Changed `mode` from hardcoded `'development'` to respect `NODE_ENV`
 
 ### Supporting Files
@@ -868,7 +994,7 @@ xcrun simctl launch <DEVICE_UUID> com.universal.mobilehost
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Last Updated**: 2026-01-27
 **Authors**: Claude + Development Team
 **Status**: Complete and Verified (Android + iOS)
