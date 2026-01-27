@@ -48,6 +48,11 @@ export const en: Translations = {
     welcome: 'Welcome',
     welcomeUser: 'Welcome, {{name}}!',
     homeDescription: 'Explore the Universal Microfrontend Platform',
+    standaloneTitle: {
+      web: 'Web Remote - Standalone Mode',
+      mobile: 'Mobile Remote - Standalone',
+    },
+    standaloneSubtitle: 'Testing remote component in isolation',
     items: {
       zero: 'No items',
       one: '{{count}} item',

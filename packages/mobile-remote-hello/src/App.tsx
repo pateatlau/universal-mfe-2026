@@ -160,7 +160,7 @@ function AppContent() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Mobile Remote - Standalone</Text>
+          <Text style={styles.title}>{t('standaloneTitle.mobile')}</Text>
         </View>
         <View style={styles.controlsRow}>
           <Pressable style={styles.themeToggle} onPress={toggleTheme}>
@@ -175,7 +175,7 @@ function AppContent() {
           </Pressable>
         </View>
         <Text style={styles.subtitle}>
-          Testing remote component in isolation
+          {t('standaloneSubtitle')}
         </Text>
       </View>
 

@@ -162,7 +162,7 @@ function StandaloneAppContent() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Web Remote - Standalone Mode</Text>
+          <Text style={styles.title}>{t('standaloneTitle.web')}</Text>
         </View>
         <View style={styles.controlsRow}>
           <Pressable style={styles.themeToggle} onPress={toggleTheme}>
@@ -177,7 +177,7 @@ function StandaloneAppContent() {
           </Pressable>
         </View>
         <Text style={styles.subtitle}>
-          Testing remote component in isolation
+          {t('standaloneSubtitle')}
         </Text>
       </View>
 
