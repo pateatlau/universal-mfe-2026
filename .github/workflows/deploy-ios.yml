@@ -54,10 +54,32 @@ jobs:
       - name: Generate React Native codegen for mobile-host
         working-directory: packages/mobile-host
         run: |
+          # Run codegen and capture exit code
+          set +e
           yarn react-native codegen
+          EXIT_CODE=$?
+          set -e
+
+          # Only tolerate exit code 1 (known non-fatal cleanup error in RN CLI 19.1.2)
+          # All other exit codes indicate real failures
+          if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
+            echo "❌ Error: Codegen failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+          # Verify codegen files were generated despite exit code 1
+          if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
+            echo "❌ Error: Codegen did not generate iOS files"
+            exit 1
+          fi
+
+          echo "✅ Codegen files generated successfully (exit code $EXIT_CODE is expected)"
+          ls -la build/generated/ios/
+
           # Copy codegen to Xcode's expected location (direct contents, not nested)
           mkdir -p ios/build/generated
           cp -R build/generated/ios/* ios/build/generated/
+          echo "✅ Codegen files copied to ios/build/generated/"
 
       - name: Install CocoaPods for Host
         working-directory: packages/mobile-host/ios
@@ -122,10 +144,32 @@ jobs:
       - name: Generate React Native codegen for mobile-remote-hello
         working-directory: packages/mobile-remote-hello
         run: |
+          # Run codegen and capture exit code
+          set +e
           yarn react-native codegen
+          EXIT_CODE=$?
+          set -e
+
+          # Only tolerate exit code 1 (known non-fatal cleanup error in RN CLI 19.1.2)
+          # All other exit codes indicate real failures
+          if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
+            echo "❌ Error: Codegen failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+          # Verify codegen files were generated despite exit code 1
+          if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
+            echo "❌ Error: Codegen did not generate iOS files"
+            exit 1
+          fi
+
+          echo "✅ Codegen files generated successfully (exit code $EXIT_CODE is expected)"
+          ls -la build/generated/ios/
+
           # Copy codegen to Xcode's expected location (direct contents, not nested)
           mkdir -p ios/build/generated
           cp -R build/generated/ios/* ios/build/generated/
+          echo "✅ Codegen files copied to ios/build/generated/"
 
       - name: Install CocoaPods for Standalone
         working-directory: packages/mobile-remote-hello/ios
