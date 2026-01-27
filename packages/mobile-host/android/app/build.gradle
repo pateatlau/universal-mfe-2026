@@ -28,6 +28,10 @@ react {
     // This project uses Re.Pack (rspack) instead of Metro for bundling.
     // Re.Pack is configured via react-native.config.js and rspack.config.mjs.
     // The React Native Gradle plugin will automatically use Re.Pack for bundling.
+    //
+    // CRITICAL: For release builds, ensure PLATFORM=android and NODE_ENV=production
+    // are set in the CI workflow environment. The PatchMFConsolePlugin requires
+    // these to properly polyfill console and Platform for Hermes.
 
     /* Autolinking */
     autolinkLibrariesWithApp()
