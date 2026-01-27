@@ -51,9 +51,21 @@ jobs:
       - name: Build mobile remote for iOS (MF bundles)
         run: yarn build:mobile:ios
 
+      - name: Generate React Native codegen for mobile-host
+        working-directory: packages/mobile-host
+        run: |
+          yarn react-native codegen
+          # Copy codegen to Xcode's expected location
+          mkdir -p ios/build/generated
+          cp -R build/generated/ios ios/build/generated/
+
       - name: Build Host iOS Production Bundle
         working-directory: packages/mobile-host
-        run: NODE_ENV=production PLATFORM=ios npx rspack build --config ./rspack.config.mjs
+        run: |
+          NODE_ENV=production PLATFORM=ios npx rspack build --config ./rspack.config.mjs
+          # Copy bundle to Xcode's build directory
+          mkdir -p ios/build/Build/Products/Release-iphonesimulator
+          cp dist/index.bundle ios/build/Build/Products/Release-iphonesimulator/main.jsbundle
 
       - name: Install CocoaPods for Host
         working-directory: packages/mobile-host/ios
@@ -64,6 +76,10 @@ jobs:
 
       - name: Build Host iOS app for Simulator
         working-directory: packages/mobile-host/ios
+        env:
+          SKIP_BUNDLING: 1
+          NODE_ENV: production
+          PLATFORM: ios
         run: |
           set -o pipefail
           xcodebuild \
@@ -75,6 +91,10 @@ jobs:
             -derivedDataPath build \
             build \
             2>&1 | tee build.log
+
+          # Copy the bundle into the app
+          cp build/Build/Products/Release-iphonesimulator/main.jsbundle \
+             build/Build/Products/Release-iphonesimulator/MobileHostTmp.app/
 
           BUILD_EXIT_CODE=${PIPESTATUS[0]}
           if [ $BUILD_EXIT_CODE -ne 0 ]; then
@@ -103,9 +123,21 @@ jobs:
           zip -r "$GITHUB_WORKSPACE/packages/mobile-host/ios/mobile-host-simulator.zip" MobileHostTmp.app
 
       # Build Standalone App
+      - name: Generate React Native codegen for mobile-remote-hello
+        working-directory: packages/mobile-remote-hello
+        run: |
+          yarn react-native codegen
+          # Copy codegen to Xcode's expected location
+          mkdir -p ios/build/generated
+          cp -R build/generated/ios ios/build/generated/
+
       - name: Build Standalone iOS Production Bundle
         working-directory: packages/mobile-remote-hello
-        run: NODE_ENV=production PLATFORM=ios yarn build:standalone
+        run: |
+          NODE_ENV=production PLATFORM=ios yarn build:standalone
+          # Copy bundle to Xcode's build directory
+          mkdir -p ios/build/Build/Products/Release-iphonesimulator
+          cp dist/standalone/ios/index.bundle ios/build/Build/Products/Release-iphonesimulator/main.jsbundle
 
       - name: Install CocoaPods for Standalone
         working-directory: packages/mobile-remote-hello/ios
@@ -116,6 +148,10 @@ jobs:
 
       - name: Build Standalone iOS app for Simulator
         working-directory: packages/mobile-remote-hello/ios
+        env:
+          SKIP_BUNDLING: 1
+          NODE_ENV: production
+          PLATFORM: ios
         run: |
           set -o pipefail
           xcodebuild \
@@ -127,6 +163,10 @@ jobs:
             -derivedDataPath build \
             build \
             2>&1 | tee build.log
+
+          # Copy the bundle into the app
+          cp build/Build/Products/Release-iphonesimulator/main.jsbundle \
+             build/Build/Products/Release-iphonesimulator/MobileRemoteHello.app/
 
           BUILD_EXIT_CODE=${PIPESTATUS[0]}
           if [ $BUILD_EXIT_CODE -ne 0 ]; then
