@@ -924,7 +924,7 @@ base64 -i app-store-profile.mobileprovision | pbcopy
   - **Platforms:** iOS
   - **Name:** Universal MFE Host (must be unique on App Store)
   - **Primary Language:** English (U.S.)
-  - **Bundle ID:** Select `com.mobilehosttmp` (from Task 2.2)
+  - **Bundle ID:** Select `com.universal.mobilehost` (from Task 2.2)
   - **SKU:** `universal-mfe-host-001` (unique identifier for internal tracking)
   - **User Access:** Full Access (or Limited Access as needed)
 - [ ] Click "Create"
@@ -1110,10 +1110,10 @@ base64 -i app-store-profile.mobileprovision | pbcopy
       # Upload using iTMSTransporter (replaces deprecated altool)
       xcrun iTMSTransporter \
         -m upload \
-        -f build/ipa/mobile-host-release.ipa \
-        -k $APP_STORE_CONNECT_API_KEY_ID \
-        -i $APP_STORE_CONNECT_ISSUER_ID \
-        -p ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+        -assetFile build/ipa/mobile-host-release.ipa \
+        -apiKey $APP_STORE_CONNECT_API_KEY_ID \
+        -apiIssuer $APP_STORE_CONNECT_ISSUER_ID \
+        -v eXtreme
 
       # Clean up API key
       rm -f ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
