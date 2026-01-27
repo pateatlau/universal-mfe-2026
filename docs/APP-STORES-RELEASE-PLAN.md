@@ -369,7 +369,7 @@ cd packages/mobile-host/android
   - Store settings: ✅ Complete
   - Data safety: ✅ Complete
   - App content: ✅ Complete
-  - Production release: ✅ APK uploaded
+  - Production release: ✅ Android App Bundle (AAB) uploaded
 - [ ] Resolve any warnings or errors shown in dashboard
 - [ ] In Production release, click "Review release"
 - [ ] Review rollout summary
