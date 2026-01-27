@@ -595,9 +595,9 @@ This replaces the asset in memory before it's written to disk.
 
 ### Platform Support
 
-- ✅ **Android** - Fully tested and working
-- ⚠️ **iOS** - Likely works (not yet tested in release builds)
-- ❌ **Web** - Not needed (browsers provide console)
+- ✅ **Android** - Fully tested and working (console polyfill essential)
+- ✅ **iOS** - Fully tested and working (console + Platform polyfill essential)
+- ❌ **Web** - Not needed (browsers provide console and no Platform module)
 
 ---
 
@@ -634,7 +634,7 @@ If you encounter issues:
 ### Submitting Improvements
 
 Pull requests welcome! Areas for improvement:
-- [ ] iOS release build testing
+- [x] iOS release build testing (completed Jan 2026)
 - [ ] Configuration options
 - [ ] Support for other file extensions
 - [ ] Performance optimizations

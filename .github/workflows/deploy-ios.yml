@@ -55,9 +55,9 @@ jobs:
         working-directory: packages/mobile-host
         run: |
           yarn react-native codegen
-          # Copy codegen to Xcode's expected location
+          # Copy codegen to Xcode's expected location (direct contents, not nested)
           mkdir -p ios/build/generated
-          cp -R build/generated/ios ios/build/generated/
+          cp -R build/generated/ios/* ios/build/generated/
 
       - name: Install CocoaPods for Host
         working-directory: packages/mobile-host/ios
@@ -123,9 +123,9 @@ jobs:
         working-directory: packages/mobile-remote-hello
         run: |
           yarn react-native codegen
-          # Copy codegen to Xcode's expected location
+          # Copy codegen to Xcode's expected location (direct contents, not nested)
           mkdir -p ios/build/generated
-          cp -R build/generated/ios ios/build/generated/
+          cp -R build/generated/ios/* ios/build/generated/
 
       - name: Install CocoaPods for Standalone
         working-directory: packages/mobile-remote-hello/ios

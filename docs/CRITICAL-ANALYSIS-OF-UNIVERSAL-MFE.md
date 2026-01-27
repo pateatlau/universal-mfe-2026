@@ -104,7 +104,7 @@ Technology Stack:
 
 ### 2.2 Effort Breakdown
 
-```
+```text
 Infrastructure Setup:     44% (178 hours)
 Build/CI Configuration:   25% (101 hours)
 Debugging Tooling Issues: 21% (85 hours)

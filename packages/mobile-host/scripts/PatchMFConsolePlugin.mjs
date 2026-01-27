@@ -18,6 +18,13 @@
  */
 
 export default class PatchMFConsolePlugin {
+  constructor(options = {}) {
+    // Detect platform from options or environment variable
+    this.platform = options.platform || process.env.PLATFORM || 'ios';
+    // Normalize to lowercase
+    this.platform = this.platform.toLowerCase();
+  }
+
   apply(compiler) {
     compiler.hooks.emit.tap('PatchMFConsolePlugin', (compilation) => {
       // Iterate through all assets
@@ -37,6 +44,7 @@ export default class PatchMFConsolePlugin {
             // React Native's console and Platform aren't available until InitializeCore runs,
             // but that's loaded as a webpack module. We need to ensure these exist
             // BEFORE webpack runtime code executes.
+            const detectedPlatform = this.platform;
             const runtimePolyfills = `
 // Console polyfill for Module Federation runtime
 if (typeof console === 'undefined') {
@@ -86,7 +94,7 @@ if (typeof __PLATFORM_POLYFILL__ === 'undefined') {
     },
     get OS() {
       if (_realPlatform !== null) return _realPlatform.OS;
-      return 'ios';
+      return '${detectedPlatform}';
     },
     get Version() {
       if (_realPlatform !== null) return _realPlatform.Version;
@@ -94,7 +102,8 @@ if (typeof __PLATFORM_POLYFILL__ === 'undefined') {
     },
     select: function(obj) {
       if (_realPlatform !== null) return _realPlatform.select(obj);
-      return obj.ios !== undefined ? obj.ios : obj.default;
+      const platform = '${detectedPlatform}';
+      return obj[platform] !== undefined ? obj[platform] : obj.default;
     },
     // Setter to replace with real Platform when it loads
     __setRealPlatform: function(platform) {

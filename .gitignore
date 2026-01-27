@@ -8,9 +8,8 @@ dist/
 build/
 *.tsbuildinfo
 
-# React DevTools stubs (generated during development)
-packages/mobile-host/src/stubs/setUpReactDevTools.js
-packages/mobile-remote-hello/src/stubs/setUpReactDevTools.js
+# React DevTools stubs are now committed to the repository
+# (previously generated, now static stubs for production builds)
 
 # Test coverage
 coverage/
@@ -32,9 +31,10 @@ packages/mobile-remote-hello/android/.gradle/
 packages/mobile-remote-hello/android/build/
 packages/mobile-remote-hello/android/app/build/
 
-# Android release APKs (build artifacts - should be in build/ but sometimes generated at root)
+# Android release APKs (build artifacts - ignore all APKs except actual Gradle output)
 *.apk
-!packages/*/android/app/release/*.apk
+!packages/*/android/app/build/outputs/apk/release/*.apk
+!packages/*/android/app/build/outputs/apk/debug/*.apk
 
 # iOS local environment (contains machine-specific paths)
 packages/mobile-host/ios/.xcode.env.local

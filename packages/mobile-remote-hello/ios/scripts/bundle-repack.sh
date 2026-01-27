@@ -45,10 +45,15 @@ if [ -f "$BUNDLE_FILE" ]; then
 
   # Also copy assets if they exist
   ASSETS_DIR="$PROJECT_ROOT/dist/standalone/ios/assets"
-  if [ -d "$ASSETS_DIR" ]; then
+  if [ -d "$ASSETS_DIR" ] && [ "$(ls -A "$ASSETS_DIR" 2>/dev/null)" ]; then
     echo "📦 Copying assets..."
-    cp -R "$ASSETS_DIR/"* "$DEST/" 2>/dev/null || true
-    echo "✅ Assets copied"
+    if cp -R "$ASSETS_DIR/"* "$DEST/" 2>/dev/null; then
+      echo "✅ Assets copied successfully"
+    else
+      echo "⚠️  Warning: Some assets may not have been copied (check permissions/disk space)"
+    fi
+  else
+    echo "ℹ️  No assets to copy (assets directory is empty or doesn't exist)"
   fi
 else
   echo "❌ Error: Bundle file not found at $BUNDLE_FILE"

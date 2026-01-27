@@ -181,7 +181,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\n# Use custom Re.Pack bundling script for iOS Release builds\nexport NODE_BINARY=node\n\"${SRCROOT}/scripts/bundle-repack.sh\"\n";
+			shellScript = "set -e\n\n# Source .xcode.env files to get proper Node path (fixes Xcode limited PATH issue)\nif [ -f \"${SRCROOT}/.xcode.env\" ]; then\n  source \"${SRCROOT}/.xcode.env\"\nfi\nif [ -f \"${SRCROOT}/.xcode.env.local\" ]; then\n  source \"${SRCROOT}/.xcode.env.local\"\nfi\n\n# Use custom Re.Pack bundling script for iOS Release builds\nexport NODE_BINARY=node\n\"${SRCROOT}/scripts/bundle-repack.sh\"\n";
 		};
 		00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;

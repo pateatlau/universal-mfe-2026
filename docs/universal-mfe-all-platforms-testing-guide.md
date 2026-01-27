@@ -541,7 +541,7 @@ yarn build:shared
 
 #### Host App (MobileHostTmp)
 
-**Step 1: Build the Release APK**
+##### Step 1: Build the Release APK
 
 ```bash
 cd packages/mobile-host
@@ -557,7 +557,7 @@ cd android
 ./gradlew assembleRelease --no-daemon --stacktrace
 ```
 
-**Step 2: Install on Emulator or Device**
+##### Step 2: Install on Emulator or Device
 
 ```bash
 # For emulator (ensure one is running)
@@ -598,7 +598,7 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
 
 #### Host App (MobileHostTmp)
 
-**Step 1: Build Production Bundle**
+##### Step 1: Build Production Bundle
 
 ```bash
 cd packages/mobile-host
@@ -607,7 +607,7 @@ cd packages/mobile-host
 NODE_ENV=production yarn build:ios
 ```
 
-**Step 2: Build Release Configuration in Xcode**
+##### Step 2: Build Release Configuration in Xcode
 
 ```bash
 cd ios
@@ -628,7 +628,7 @@ xcodebuild -workspace MobileHostTmp.xcworkspace \
   build
 ```
 
-**Step 3: Install on Simulator**
+##### Step 3: Install on Simulator
 
 ```bash
 # Get app bundle path (from DerivedData)
