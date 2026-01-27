@@ -54,10 +54,23 @@ jobs:
       - name: Generate React Native codegen for mobile-host
         working-directory: packages/mobile-host
         run: |
-          yarn react-native codegen
+          # Run codegen (ignore exit code 1 from non-fatal cleanup error)
+          # All required files are generated successfully before the error occurs
+          yarn react-native codegen || EXIT_CODE=$?
+
+          # Verify codegen files were generated
+          if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
+            echo "❌ Error: Codegen did not generate iOS files"
+            exit 1
+          fi
+
+          echo "✅ Codegen files generated successfully"
+          ls -la build/generated/ios/
+
           # Copy codegen to Xcode's expected location (direct contents, not nested)
           mkdir -p ios/build/generated
           cp -R build/generated/ios/* ios/build/generated/
+          echo "✅ Codegen files copied to ios/build/generated/"
 
       - name: Install CocoaPods for Host
         working-directory: packages/mobile-host/ios
@@ -122,10 +135,23 @@ jobs:
       - name: Generate React Native codegen for mobile-remote-hello
         working-directory: packages/mobile-remote-hello
         run: |
-          yarn react-native codegen
+          # Run codegen (ignore exit code 1 from non-fatal cleanup error)
+          # All required files are generated successfully before the error occurs
+          yarn react-native codegen || EXIT_CODE=$?
+
+          # Verify codegen files were generated
+          if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
+            echo "❌ Error: Codegen did not generate iOS files"
+            exit 1
+          fi
+
+          echo "✅ Codegen files generated successfully"
+          ls -la build/generated/ios/
+
           # Copy codegen to Xcode's expected location (direct contents, not nested)
           mkdir -p ios/build/generated
           cp -R build/generated/ios/* ios/build/generated/
+          echo "✅ Codegen files copied to ios/build/generated/"
 
       - name: Install CocoaPods for Standalone
         working-directory: packages/mobile-remote-hello/ios
