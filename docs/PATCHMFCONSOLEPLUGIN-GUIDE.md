@@ -377,26 +377,43 @@ module.exports = {
 
 ## Configuration
 
-### Basic (Default)
+### Environment Variable (CRITICAL)
 
-No configuration needed - the plugin works out of the box:
+The plugin requires the `PLATFORM` environment variable to generate the correct Platform.OS polyfill:
+
+```bash
+# Android builds
+PLATFORM=android NODE_ENV=production yarn build:android
+
+# iOS builds
+PLATFORM=ios NODE_ENV=production yarn build:ios
+```
+
+**Why this matters**: The Platform polyfill returns `Platform.OS` based on this variable. Without it, the plugin defaults to `'ios'`, which would cause Android builds to incorrectly report `Platform.OS === 'ios'`.
+
+### Basic Usage
+
+No constructor configuration needed - the plugin reads `PLATFORM` from environment:
 
 ```javascript
 new PatchMFConsolePlugin()
 ```
 
-### Advanced (Custom Options)
+### Advanced (Custom Platform Option)
 
-Currently, the plugin has no configurable options. It:
+You can also pass the platform explicitly:
+
+```javascript
+new PatchMFConsolePlugin({ platform: 'android' })
+```
+
+### What the Plugin Does
+
 - ✅ Patches all `.bundle` files
-- ✅ Prepends console polyfill
-- ✅ Replaces Module Federation console calls
-
-**Future enhancements** could include:
-- Custom file patterns
-- Selective patching
-- Custom polyfill methods
-- Verbose logging mode
+- ✅ Prepends console polyfill (Hermes compatibility)
+- ✅ Prepends Platform polyfill (iOS-critical)
+- ✅ Replaces Module Federation console calls with no-ops
+- ✅ Patches `_Platform.default` references to use polyfill
 
 ---
 

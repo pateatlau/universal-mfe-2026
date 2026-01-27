@@ -91,8 +91,9 @@ The `@react-native-community/cli@19.1.2` used by RN 0.80.0 has a known vulnerabi
 
 1. **PatchMFConsolePlugin** (REQUIRED)
    - Location: `packages/mobile-host/scripts/PatchMFConsolePlugin.mjs`
-   - Purpose: Prepends console polyfill before webpack runtime code
-   - Why: Hermes doesn't have `console` available until InitializeCore runs
+   - Purpose: Prepends console and Platform polyfills before webpack runtime code
+   - Why: Hermes doesn't have `console` or `Platform` available until InitializeCore runs
+   - **CRITICAL**: Requires `PLATFORM` env var (`PLATFORM=android` or `PLATFORM=ios`) to generate correct Platform.OS polyfill
    - Status: ✅ Implemented and working
 
 2. **Production Remote Bundles** (REQUIRED)
