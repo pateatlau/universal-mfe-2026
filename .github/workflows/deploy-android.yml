@@ -107,6 +107,9 @@ jobs:
         working-directory: packages/mobile-host/android
         env:
           CI: true
+          # CRITICAL: These env vars are needed for PatchMFConsolePlugin to work correctly
+          PLATFORM: android
+          NODE_ENV: production
           ANDROID_KEYSTORE_FILE: ${{ github.workspace }}/release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -132,6 +135,9 @@ jobs:
         working-directory: packages/mobile-remote-hello/android
         env:
           CI: true
+          # CRITICAL: These env vars are needed for proper platform detection and production bundle generation
+          PLATFORM: android
+          NODE_ENV: production
           ANDROID_KEYSTORE_FILE: ${{ github.workspace }}/release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
