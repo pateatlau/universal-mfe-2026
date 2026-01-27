@@ -235,18 +235,59 @@ This document outlines the step-by-step plan for publishing the Universal Microf
 
 ---
 
-### Task 1.5: Upload Release APK (Android)
+### Task 1.5: Build and Upload Android App Bundle (Android)
 
-**Objective:** Upload the signed release APK to Play Console for production release.
+**Objective:** Build and upload the signed release Android App Bundle (AAB) to Play Console for production release.
+
+**Note:** Google Play requires new apps to use Android App Bundle (AAB) format, not APK. AABs enable Google Play to generate optimized APKs for each device configuration, reducing download sizes.
+
+**Prerequisites:**
+- [ ] Update version information in `packages/mobile-host/android/app/build.gradle`:
+  ```groovy
+  versionCode 1          // Increment for each release
+  versionName "1.0.0"    // Update to match semantic versioning
+  ```
 
 **Steps:**
-- [ ] Download latest release APK from GitHub Releases:
-  - Navigate to repository releases page
-  - Download `mobile-host-release.apk`
+
+#### Step 1: Build Android App Bundle (AAB)
+
+**Option A: Via CI/CD (Recommended)**
+- [ ] Update `.github/workflows/deploy-android.yml` to build AAB:
+  ```yaml
+  - name: Build Android App Bundle (Release)
+    working-directory: packages/mobile-host/android
+    env:
+      ANDROID_KEYSTORE_FILE: ${{ github.workspace }}/release.keystore
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    run: ./gradlew bundleRelease
+
+  - name: Upload AAB artifact
+    uses: actions/upload-artifact@v6
+    with:
+      name: android-release-aab
+      path: packages/mobile-host/android/app/build/outputs/bundle/release/app-release.aab
+      retention-days: 90
+  ```
+- [ ] Push tag to trigger workflow: `git tag v1.0.0 && git push --tags`
+- [ ] Download AAB from GitHub Actions artifacts
+
+**Option B: Build Locally**
+```bash
+cd packages/mobile-host/android
+./gradlew bundleRelease
+# Output: app/build/outputs/bundle/release/app-release.aab
+```
+
+#### Step 2: Upload AAB to Play Console
+
 - [ ] In Play Console, go to: Release → Production → Create new release
-- [ ] Upload APK:
-  - Click "Upload" and select `mobile-host-release.apk`
+- [ ] Upload AAB:
+  - Click "Upload" and select `app-release.aab`
   - Wait for upload and processing to complete
+  - Google Play will analyze the bundle and generate optimized APKs
 - [ ] Add release notes:
   ```
   Initial release v1.0.0
@@ -259,10 +300,12 @@ This document outlines the step-by-step plan for publishing the Universal Microf
   • Offline-capable with embedded bundles
   ```
 - [ ] Review release details:
-  - App version: Should match `versionName` in `build.gradle` (e.g., 1.0.0)
-  - Version code: Should match `versionCode` in `build.gradle`
-  - Minimum SDK: API 26 (Android 8.0)
-  - Target SDK: API 35 (Android 15)
+  - **App version:** Should match `versionName` in `build.gradle` (e.g., 1.0.0)
+  - **Version code:** Should match `versionCode` in `build.gradle` (e.g., 1)
+  - **Minimum SDK:** API 24 (Android 7.0) - matches `minSdkVersion` in `android/build.gradle`
+  - **Target SDK:** API 35 (Android 15) - matches `targetSdkVersion` in `android/build.gradle`
+  - **Supported architectures:** arm64-v8a, armeabi-v7a, x86, x86_64 (optimized per device)
+- [ ] Review app size savings (AAB enables ~15-35% smaller downloads)
 - [ ] Select rollout percentage:
   - Start with 20% rollout for cautious release
   - Or 100% for full release
@@ -273,9 +316,14 @@ This document outlines the step-by-step plan for publishing the Universal Microf
 **Cost:** $0
 
 **Notes:**
-- APK must be signed with release keystore (already configured in CI/CD)
+- AAB must be signed with release keystore (already configured in CI/CD)
 - Version code must increment with each release
 - Cannot upload same version code twice
+- AAB is not installable directly on devices (only via Play Store or `bundletool`)
+- To test locally, generate APKs from AAB using `bundletool`:
+  ```bash
+  bundletool build-apks --bundle=app-release.aab --output=app.apks --mode=universal
+  ```
 
 ---
 
@@ -393,17 +441,28 @@ This document outlines the step-by-step plan for publishing the Universal Microf
   - Paste full contents of JSON key file
 - [ ] Update `.github/workflows/deploy-android.yml`:
   ```yaml
+  # IMPORTANT: Pin to a specific commit SHA to prevent supply chain attacks
+  # Update the SHA when you consciously decide to upgrade the action
+  # Current version: v1.0.19 (commit SHA: 39074761b0a3ec9a5c9e0ad16b8e8c3c1c39d80d)
   - name: Upload to Play Store (Internal Testing)
-    uses: r0adkll/upload-google-play@v1
+    uses: r0adkll/upload-google-play@39074761b0a3ec9a5c9e0ad16b8e8c3c1c39d80d
     with:
       serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
       packageName: com.mobilehosttmp
-      releaseFiles: packages/mobile-host/android/app/build/outputs/apk/release/app-release.apk
+      releaseFiles: packages/mobile-host/android/app/build/outputs/bundle/release/app-release.aab
       track: internal
       status: completed
       inAppUpdatePriority: 2
       whatsNewDirectory: whatsnew/
   ```
+
+  **Security Note:** The action is pinned to a specific commit SHA (not a mutable tag like `v1`) to prevent supply chain attacks. If the action repository is compromised, your workflows won't automatically use the malicious code. Verify the SHA corresponds to the intended version:
+  ```bash
+  # Check the commit for r0adkll/upload-google-play v1.0.19:
+  # https://github.com/r0adkll/upload-google-play/commit/39074761b0a3ec9a5c9e0ad16b8e8c3c1c39d80d
+  ```
+
+  Update the SHA only when you consciously decide to upgrade the action after reviewing the changes.
 - [ ] Test workflow by pushing a tag
 
 **Timeline:** 2-3 hours
@@ -478,7 +537,7 @@ This document outlines the step-by-step plan for publishing the Universal Microf
 - [ ] Configure App ID:
   - **Type:** App
   - **Description:** Universal MFE Host
-  - **Bundle ID:** Explicit - `com.mobilehosttmp` (must match Xcode project)
+  - **Bundle ID:** Explicit - `com.universal.mobilehost` (must match current Xcode project)
   - **Capabilities:** (select as needed)
     - Push Notifications (if using Firebase Cloud Messaging)
     - Sign in with Apple (if implementing Apple Sign-In)
@@ -486,7 +545,17 @@ This document outlines the step-by-step plan for publishing the Universal Microf
 - [ ] Click "Continue" → "Register"
 - [ ] Repeat for standalone app (optional):
   - Description: Universal MFE Remote Standalone
-  - Bundle ID: `com.mobileremotehello`
+  - Bundle ID: `com.universal.mobileremote`
+
+**Note:** The current iOS projects use these bundle identifiers:
+- Host: `com.universal.mobilehost` (see `packages/mobile-host/ios/MobileHostTmp.xcodeproj/project.pbxproj`)
+- Remote: `com.universal.mobileremote` (see `packages/mobile-remote-hello/ios/MobileRemoteHello.xcodeproj/project.pbxproj`)
+
+If you prefer different bundle IDs (e.g., your company domain), update the Xcode projects before continuing:
+1. Open project in Xcode
+2. Select target → General tab
+3. Update Bundle Identifier
+4. Use the new identifier in all subsequent steps
 
 #### Step 2: Create Distribution Certificate
 
@@ -512,12 +581,14 @@ This document outlines the step-by-step plan for publishing the Universal Microf
 - [ ] In Apple Developer Portal, go to: Certificates, Identifiers & Profiles → Profiles
 - [ ] Click "+" to create new profile
 - [ ] Select "App Store" → Continue
-- [ ] Select App ID: `com.mobilehosttmp` → Continue
+- [ ] Select App ID: `com.universal.mobilehost` → Continue
 - [ ] Select certificate created in Step 2 → Continue
 - [ ] Profile Name: `Universal MFE Host App Store`
 - [ ] Click "Generate" → "Download"
 - [ ] Double-click `.mobileprovision` file to install in Xcode
-- [ ] Repeat for standalone app (optional)
+- [ ] Repeat for standalone app (optional):
+  - App ID: `com.universal.mobileremote`
+  - Profile Name: `Universal MFE Remote Standalone App Store`
 
 **Ad Hoc Provisioning Profile** (optional, for internal testing on registered devices):
 - [ ] Register test device UDIDs:
@@ -547,19 +618,26 @@ This document outlines the step-by-step plan for publishing the Universal Microf
 
 **Steps:**
 
-#### Step 1: Update Bundle Identifier and Version
+#### Step 1: Update Display Name and Version
 
 - [ ] Open `packages/mobile-host/ios/MobileHostTmp.xcworkspace` in Xcode
 - [ ] Select project in navigator → Select target "MobileHostTmp"
 - [ ] Go to: General tab
 - [ ] Verify/Update:
   - **Display Name:** Universal MFE Host
-  - **Bundle Identifier:** `com.mobilehosttmp` (must match App ID from Task 2.2)
-  - **Version:** 1.0.0
+  - **Bundle Identifier:** `com.universal.mobilehost` (current value, must match App ID from Task 2.2)
+  - **Version:** 1.0.0 (update from current "1.0")
   - **Build:** 1
 - [ ] Repeat for standalone app (optional):
   - Open `packages/mobile-remote-hello/ios/MobileRemoteHello.xcworkspace`
-  - Bundle ID: `com.mobileremotehello`
+  - Bundle ID: `com.universal.mobileremote` (current value)
+  - Version: 1.0.0 (update from "1.0")
+
+**Note:** The current Xcode projects already use the correct bundle identifiers:
+- Host: `com.universal.mobilehost` (see `PRODUCT_BUNDLE_IDENTIFIER` in project.pbxproj)
+- Remote: `com.universal.mobileremote`
+
+Only the version number needs updating from "1.0" to "1.0.0" for consistency with App Store requirements.
 
 #### Step 2: Configure Signing (Manual)
 
@@ -1015,26 +1093,62 @@ base64 -i app-store-profile.mobileprovision | pbcopy
   - `APP_STORE_CONNECT_API_KEY_BASE64` - Base64-encoded .p8 file
 
 - [ ] Update `.github/workflows/deploy-ios.yml` with upload step:
+
+  **Option A: Using Transporter (Modern, Recommended)**
   ```yaml
-  - name: Upload to App Store Connect
+  - name: Upload to App Store Connect via Transporter
     working-directory: packages/mobile-host/ios
     env:
-      API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-      API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-      API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+    run: |
+      # Create API key file in standard location
+      mkdir -p ~/.appstoreconnect/private_keys
+      echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -d > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+
+      # Upload using iTMSTransporter (replaces deprecated altool)
+      xcrun iTMSTransporter \
+        -m upload \
+        -f build/ipa/mobile-host-release.ipa \
+        -k $APP_STORE_CONNECT_API_KEY_ID \
+        -i $APP_STORE_CONNECT_ISSUER_ID \
+        -p ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+
+      # Clean up API key
+      rm -f ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+  ```
+
+  **Option B: Using Fastlane (CI-Friendly Alternative)**
+  ```yaml
+  - name: Install Fastlane
+    run: gem install fastlane
+
+  - name: Upload to App Store Connect via Fastlane
+    working-directory: packages/mobile-host/ios
+    env:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
     run: |
       # Create API key file
       mkdir -p ~/.appstoreconnect/private_keys
-      echo "$API_KEY_BASE64" | base64 -d > ~/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8
+      echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -d > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
 
-      # Upload using altool
-      xcrun altool \
-        --upload-app \
-        --type ios \
-        --file build/ipa/mobile-host-release.ipa \
-        --apiKey $API_KEY_ID \
-        --apiIssuer $API_ISSUER_ID
+      # Set Fastlane environment variables
+      export APP_STORE_CONNECT_API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+
+      # Upload using Fastlane pilot
+      fastlane pilot upload \
+        --ipa build/ipa/mobile-host-release.ipa \
+        --api_key_path $APP_STORE_CONNECT_API_KEY_PATH \
+        --skip_waiting_for_build_processing
+
+      # Clean up API key
+      rm -f ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
   ```
+
+  **Note:** `xcrun altool` was deprecated by Apple and replaced with `xcrun iTMSTransporter`. Fastlane provides a higher-level, more CI-friendly interface with better error handling and progress reporting.
 
 - [ ] Push tag to trigger workflow
 - [ ] Monitor GitHub Actions for upload status
