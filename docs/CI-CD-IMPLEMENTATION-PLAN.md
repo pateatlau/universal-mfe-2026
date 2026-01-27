@@ -1,6 +1,6 @@
 # CI/CD Implementation Plan
 
-**Status:** Phase 6.7 Complete - iOS Simulator Release Builds Fully Implemented and Tested
+**Status:** Phase 6.7 Complete - iOS Simulator Release Builds + CI/CD Integration
 **Last Updated:** 2026-01-27
 **Target:** POC with minimal costs / free tier options
 
@@ -1015,7 +1015,111 @@ shellScript = "set -e\n\n# Use custom Re.Pack bundling script\nexport NODE_BINAR
 | Remote Loading | ✅ "Load Remote" button works | Loads MF2 remote successfully | ✅ PASS |
 | Theme Switching | ✅ Works in remote | Theme changes apply | ✅ PASS |
 | Platform Parity | ✅ iOS matches Android | Same release build behavior | ✅ PASS |
-| CI/CD Automation | ⏳ Workflow to be updated | Tag push builds and releases | ⏳ PENDING |
+| CI/CD Automation | ✅ Workflow updated | Tag push builds and releases | ✅ PASS |
+
+### Task 6.7.5: CI/CD Workflow Integration ✅ COMPLETE
+
+**Objective:** Update GitHub Actions workflows to use the custom bundling scripts created in Phase 6.7.
+
+**Problem:**
+The `.github/workflows/deploy-ios.yml` workflow was using an outdated approach that:
+- Manually ran `npx rspack build` to create bundles
+- Set `SKIP_BUNDLING=1` to bypass Xcode bundling phase
+- Manually copied bundles into the app after build
+- **Did not use the custom bundling scripts** that contain the Platform polyfill fix
+
+**Solution:**
+Updated the workflow to let Xcode invoke the custom bundling scripts during the build process.
+
+**Changes Made:**
+
+1. **Mobile Host Build (lines 50-107):**
+   - Removed "Build Host iOS Production Bundle" step (manual rspack build)
+   - Removed `SKIP_BUNDLING=1` environment variable
+   - Removed manual bundle copy after Xcode build
+   - Added bundle verification check to ensure script succeeded
+
+2. **Mobile Remote Standalone Build (lines 125-179):**
+   - Removed "Build Standalone iOS Production Bundle" step
+   - Removed `SKIP_BUNDLING=1` environment variable
+   - Removed manual bundle copy after Xcode build
+   - Added bundle verification check
+
+**Workflow Steps Now:**
+```yaml
+# 1. Build shared packages
+- name: Build shared packages
+  run: yarn build:shared
+
+# 2. Build remote MF bundles (for host to consume)
+- name: Build mobile remote for iOS (MF bundles)
+  run: yarn build:mobile:ios
+
+# 3. Generate codegen
+- name: Generate React Native codegen for mobile-host
+  run: yarn react-native codegen
+
+# 4. Install CocoaPods
+- name: Install CocoaPods for Host
+  run: pod install --repo-update
+
+# 5. Build with Xcode (custom script runs automatically)
+- name: Build Host iOS app for Simulator
+  env:
+    NODE_ENV: production
+    PLATFORM: ios
+  run: |
+    xcodebuild \
+      -workspace MobileHostTmp.xcworkspace \
+      -scheme MobileHostTmp \
+      -configuration Release \
+      -sdk iphonesimulator \
+      -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+      -derivedDataPath build \
+      build
+
+    # Verify bundle was created by custom bundling script
+    if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileHostTmp.app/main.jsbundle" ]; then
+      echo "❌ Error: main.jsbundle not found in app bundle"
+      exit 1
+    fi
+    echo "✅ Verified bundle exists in app"
+```
+
+**Benefits:**
+- ✅ Uses Platform polyfill fix from PatchMFConsolePlugin
+- ✅ Follows same build process as local development
+- ✅ Eliminates manual bundle path management
+- ✅ Ensures consistency between local and CI builds
+- ✅ Reduces workflow complexity (26 fewer lines, 8 fewer steps)
+
+**Verification:**
+When the workflow runs on next tag push, expect to see in logs:
+```
+🔧 Custom Re.Pack bundling script for iOS
+📂 Project root: /Users/runner/work/.../packages/mobile-host
+📦 Configuration: Release
+🎯 Platform: iphonesimulator
+🏗️  Building production bundle with Re.Pack...
+✅ Bundle created: /Users/runner/work/.../packages/mobile-host/ios/main.jsbundle
+✅ Bundle copied to: ...
+✨ Re.Pack bundling complete!
+✅ Verified bundle exists in app
+```
+
+**Other Workflows:**
+- `ci.yml` - No changes needed (builds Debug configuration, uses dev server)
+- `e2e-mobile.yml` - No changes needed (builds Debug configuration)
+- `deploy-mobile-remote-bundles.yml` - No changes needed (only deploys MF bundles)
+
+**Files Modified:**
+- `.github/workflows/deploy-ios.yml` - Updated to use custom bundling scripts
+
+**Documentation:**
+- [x] Update this document (CI-CD-IMPLEMENTATION-PLAN.md)
+- [x] Mark CI/CD Automation as complete in success criteria table
+
+**Cost:** $0
 
 ### Benefits of Phase 6.7
 
@@ -1024,7 +1128,8 @@ shellScript = "set -e\n\n# Use custom Re.Pack bundling script\nexport NODE_BINAR
 3. **Production Testing:** Verify production bundles before investing in Apple Developer account
 4. **Documentation Complete:** Full iOS release process documented
 5. **Foundation for Physical Devices:** When Apple account is acquired, just add code signing
-6. **Cost:** $0 - Complete iOS release testing infrastructure at zero cost
+6. **CI/CD Integration:** Automated iOS release builds via GitHub Actions
+7. **Cost:** $0 - Complete iOS release testing infrastructure at zero cost
 
 ### Known Limitations
 

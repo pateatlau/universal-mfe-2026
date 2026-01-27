@@ -59,14 +59,6 @@ jobs:
           mkdir -p ios/build/generated
           cp -R build/generated/ios ios/build/generated/
 
-      - name: Build Host iOS Production Bundle
-        working-directory: packages/mobile-host
-        run: |
-          NODE_ENV=production PLATFORM=ios npx rspack build --config ./rspack.config.mjs
-          # Copy bundle to Xcode's build directory
-          mkdir -p ios/build/Build/Products/Release-iphonesimulator
-          cp dist/index.bundle ios/build/Build/Products/Release-iphonesimulator/main.jsbundle
-
       - name: Install CocoaPods for Host
         working-directory: packages/mobile-host/ios
         run: |
@@ -77,7 +69,6 @@ jobs:
       - name: Build Host iOS app for Simulator
         working-directory: packages/mobile-host/ios
         env:
-          SKIP_BUNDLING: 1
           NODE_ENV: production
           PLATFORM: ios
         run: |
@@ -92,10 +83,6 @@ jobs:
             build \
             2>&1 | tee build.log
 
-          # Copy the bundle into the app
-          cp build/Build/Products/Release-iphonesimulator/main.jsbundle \
-             build/Build/Products/Release-iphonesimulator/MobileHostTmp.app/
-
           BUILD_EXIT_CODE=${PIPESTATUS[0]}
           if [ $BUILD_EXIT_CODE -ne 0 ]; then
             echo "=== Build failed with exit code $BUILD_EXIT_CODE ==="
@@ -105,6 +92,15 @@ jobs:
           fi
 
           echo "=== Host build completed successfully ==="
+
+          # Verify bundle was created by custom bundling script
+          if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileHostTmp.app/main.jsbundle" ]; then
+            echo "❌ Error: main.jsbundle not found in app bundle"
+            echo "Custom bundling script may have failed"
+            exit 1
+          fi
+
+          echo "✅ Verified bundle exists in app"
 
       - name: Zip Host iOS app bundle
         working-directory: packages/mobile-host/ios
@@ -131,14 +127,6 @@ jobs:
           mkdir -p ios/build/generated
           cp -R build/generated/ios ios/build/generated/
 
-      - name: Build Standalone iOS Production Bundle
-        working-directory: packages/mobile-remote-hello
-        run: |
-          NODE_ENV=production PLATFORM=ios yarn build:standalone
-          # Copy bundle to Xcode's build directory
-          mkdir -p ios/build/Build/Products/Release-iphonesimulator
-          cp dist/standalone/ios/index.bundle ios/build/Build/Products/Release-iphonesimulator/main.jsbundle
-
       - name: Install CocoaPods for Standalone
         working-directory: packages/mobile-remote-hello/ios
         run: |
@@ -149,7 +137,6 @@ jobs:
       - name: Build Standalone iOS app for Simulator
         working-directory: packages/mobile-remote-hello/ios
         env:
-          SKIP_BUNDLING: 1
           NODE_ENV: production
           PLATFORM: ios
         run: |
@@ -164,10 +151,6 @@ jobs:
             build \
             2>&1 | tee build.log
 
-          # Copy the bundle into the app
-          cp build/Build/Products/Release-iphonesimulator/main.jsbundle \
-             build/Build/Products/Release-iphonesimulator/MobileRemoteHello.app/
-
           BUILD_EXIT_CODE=${PIPESTATUS[0]}
           if [ $BUILD_EXIT_CODE -ne 0 ]; then
             echo "=== Build failed with exit code $BUILD_EXIT_CODE ==="
@@ -177,6 +160,15 @@ jobs:
           fi
 
           echo "=== Standalone build completed successfully ==="
+
+          # Verify bundle was created by custom bundling script
+          if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileRemoteHello.app/main.jsbundle" ]; then
+            echo "❌ Error: main.jsbundle not found in app bundle"
+            echo "Custom bundling script may have failed"
+            exit 1
+          fi
+
+          echo "✅ Verified bundle exists in app"
 
       - name: Zip Standalone iOS app bundle
         working-directory: packages/mobile-remote-hello/ios
