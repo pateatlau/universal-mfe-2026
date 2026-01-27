@@ -525,6 +525,244 @@ Playwright tests run automatically on merge to main/develop via `.github/workflo
 
 ---
 
+## Release Builds (Mobile)
+
+Production-ready builds for mobile platforms that run standalone without Metro bundler.
+
+### Prerequisites
+
+```bash
+# Install dependencies and build shared packages (run once from root)
+yarn install
+yarn build:shared
+```
+
+### Android Release Builds
+
+#### Host App (MobileHostTmp)
+
+**Step 1: Build the Release APK**
+
+```bash
+cd packages/mobile-host
+
+# Build production bundle
+NODE_ENV=production PLATFORM=android yarn build:android
+
+# Generate React Native codegen (required for release builds)
+cd android
+./gradlew generateCodegenArtifactsFromSchema --no-daemon
+
+# Build release APK
+./gradlew assembleRelease --no-daemon --stacktrace
+```
+
+**Step 2: Install on Emulator or Device**
+
+```bash
+# For emulator (ensure one is running)
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+
+# Launch the app
+adb shell am start -n com.mobilehosttmp/.MainActivity
+```
+
+**Expected Behavior:**
+- ✅ App launches without Metro bundler
+- ✅ Production bundles embedded
+- ✅ Loads remote from `https://universal-mfe.web.app`
+- ✅ Standalone operation confirmed
+
+**APK Location:** `android/app/build/outputs/apk/release/app-release.apk`
+
+#### Standalone Remote App (MobileRemoteHello)
+
+```bash
+cd packages/mobile-remote-hello
+
+# Build production standalone bundle
+NODE_ENV=production PLATFORM=android yarn build:standalone
+
+# Generate codegen and build APK
+cd android
+./gradlew generateCodegenArtifactsFromSchema --no-daemon
+./gradlew assembleRelease --no-daemon --stacktrace
+
+# Install on device/emulator
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+```
+
+**APK Location:** `android/app/build/outputs/apk/release/app-release.apk`
+
+### iOS Release Builds
+
+#### Host App (MobileHostTmp)
+
+**Step 1: Build Production Bundle**
+
+```bash
+cd packages/mobile-host
+
+# Build iOS production bundle
+NODE_ENV=production yarn build:ios
+```
+
+**Step 2: Build Release Configuration in Xcode**
+
+```bash
+cd ios
+
+# Build for simulator (Release configuration)
+xcodebuild -workspace MobileHostTmp.xcworkspace \
+  -scheme MobileHostTmp \
+  -configuration Release \
+  -sdk iphonesimulator \
+  clean build
+
+# Or build via CLI with custom script (automatic bundle integration)
+xcodebuild -workspace MobileHostTmp.xcworkspace \
+  -scheme MobileHostTmp \
+  -configuration Release \
+  -sdk iphonesimulator \
+  -derivedDataPath ./build \
+  build
+```
+
+**Step 3: Install on Simulator**
+
+```bash
+# Get app bundle path (from DerivedData)
+APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/MobileHostTmp-*/Build/Products/Release-iphonesimulator -name "MobileHostTmp.app" | head -1)
+
+# Boot simulator if needed
+xcrun simctl boot "iPhone 15"
+
+# Install app
+xcrun simctl install booted "$APP_PATH"
+
+# Launch app
+xcrun simctl launch booted com.universal.mobilehost
+```
+
+**Expected Behavior:**
+- ✅ App launches without Metro bundler
+- ✅ Production bundles embedded via custom Xcode script
+- ✅ No blank white screen
+- ✅ "Load Remote Component" button works
+- ✅ Loads remote from `https://universal-mfe.web.app`
+- ✅ Module Federation v2 verified working
+- ✅ Theme switching functional
+
+**App Location:** `~/Library/Developer/Xcode/DerivedData/MobileHostTmp-.../Build/Products/Release-iphonesimulator/MobileHostTmp.app`
+
+#### Standalone Remote App (MobileRemoteHello)
+
+```bash
+cd packages/mobile-remote-hello
+
+# Build iOS production standalone bundle
+PLATFORM=ios NODE_ENV=production yarn build:standalone
+
+# Build Release configuration
+cd ios
+xcodebuild -workspace MobileRemoteHello.xcworkspace \
+  -scheme MobileRemoteHello \
+  -configuration Release \
+  -sdk iphonesimulator \
+  -derivedDataPath ./build \
+  build
+
+# Install on simulator (use different device than host)
+APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/MobileRemoteHello-*/Build/Products/Release-iphonesimulator -name "MobileRemoteHello.app" | head -1)
+xcrun simctl boot "iPhone 15 Pro"
+xcrun simctl install booted "$APP_PATH"
+xcrun simctl launch booted com.universal.mobileremote
+```
+
+**Testing Configuration:**
+- Host app: iPhone 15 simulator
+- Remote app: iPhone 15 Pro simulator (separate device)
+- Both apps run standalone simultaneously
+
+### Release Build Verification Checklist
+
+#### Android
+- [ ] Host APK builds successfully
+- [ ] Host app launches without Metro
+- [ ] Host app loads UI correctly
+- [ ] "Load Remote" button works
+- [ ] Remote loads from Firebase Hosting
+- [ ] Theme switching works
+- [ ] Standalone remote APK builds successfully
+- [ ] Standalone remote app launches
+
+#### iOS
+- [ ] Host bundle builds (1.2MB production bundle)
+- [ ] Xcode build succeeds (Release configuration)
+- [ ] Host app installs on simulator
+- [ ] Host app launches without Metro
+- [ ] Host app displays UI (no blank white screen)
+- [ ] "Load Remote Component" button works
+- [ ] Remote loads from Firebase Hosting
+- [ ] Module Federation v2 loading works
+- [ ] Theme switching functional
+- [ ] Standalone remote app builds successfully
+- [ ] Standalone remote app launches on separate simulator
+
+### Key Implementation Details
+
+#### Platform Polyfill (iOS-Critical)
+iOS Release builds require extended polyfills in `PatchMFConsolePlugin.mjs`:
+- Console polyfill (Android + iOS)
+- Platform polyfill (iOS-critical, handles `Platform.constants`, `.isTesting`, `.OS`, `.Version`, `.select()`)
+- Prevents crashes during React Native initialization
+
+#### Custom Xcode Bundling Script
+Both iOS apps use custom bundling scripts:
+- Location: `ios/scripts/bundle-repack.sh`
+- Integrates with Xcode build process
+- Handles Debug vs Release configurations
+- Properly manages code signing
+
+#### Build Mode Strategy
+Both platforms use **Option B approach**:
+- Rspack `mode: 'development'` (preserves React Native runtime)
+- Dev support disabled at native level:
+  - Android: `BuildConfig.DEBUG` flag
+  - iOS: Absence of `DEBUG` preprocessor flag (automatically sets `RCT_DEV=0`)
+
+### Troubleshooting Release Builds
+
+**Android: DNS Resolution Issues (Emulators Only)**
+```bash
+# Restart emulator with explicit DNS
+adb devices | grep emulator | cut -f1 | xargs -I {} adb -s {} emu kill
+emulator -avd Pixel_8_Pro_API_35 -dns-server 8.8.8.8,8.8.4.4 -wipe-data
+```
+
+**Android: Codegen Missing**
+```bash
+cd packages/mobile-host/android
+./gradlew generateCodegenArtifactsFromSchema --no-daemon
+```
+
+**iOS: Blank White Screen**
+- Verify Platform polyfill is in PatchMFConsolePlugin.mjs
+- Check Xcode build logs for custom script output
+- Ensure bundle exists: `ls -lh ios/main.jsbundle`
+
+**iOS: Code Signing Invalid**
+```bash
+# Verify signature
+codesign -vv path/to/MobileHostTmp.app
+
+# If invalid, rebuild completely
+cd ios
+xcodebuild -workspace MobileHostTmp.xcworkspace -scheme MobileHostTmp -configuration Release -sdk iphonesimulator clean build
+```
+
+---
+
 ## E2E Tests (Mobile) - Maestro
 
 End-to-end tests for mobile platforms using Maestro.

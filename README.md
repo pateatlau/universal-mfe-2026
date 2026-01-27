@@ -8,9 +8,9 @@ A production-ready microfrontend architecture enabling code sharing across Web, 
 |----------|-----|
 | Web Shell | https://universal-mfe-2026-shell.vercel.app/ |
 | Web Remote | https://universal-mfe-2026-remote.vercel.app/ |
-| Android APK (Host) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-host-debug.apk` |
-| Android APK (Standalone) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-remote-standalone-debug.apk` |
-| iOS Simulator (Host) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-host-simulator.zip` |
+| Android APK (Host) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-host-release.apk` |
+| Android APK (Standalone) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-remote-standalone-release.apk` |
+| iOS Simulator (Host) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-host-simulator-release.zip` |
 | iOS Simulator (Standalone) | [GitHub Releases](https://github.com/pateatlau/universal-mfe-2026/releases) - `mobile-remote-standalone-simulator.zip` |
 
 ## Platform Status
@@ -21,9 +21,21 @@ A production-ready microfrontend architecture enabling code sharing across Web, 
 | Android | ✅ Working | ✅ Working (Firebase Hosting) | Re.Pack 5.2.0 | MF V2 |
 | iOS | ✅ Working | ✅ Working (Simulator, Firebase Hosting) | Re.Pack 5.2.0 | MF V2 |
 
-**Mobile Release Build Status**: Production release builds fully functional for both Android and iOS with remote module loading from Firebase Hosting. See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for technical details.
+**Mobile Release Build Status**: ✅ **Production release builds fully verified and working** for both Android and iOS with remote module loading from Firebase Hosting.
 
-**Platform Parity Achieved**: iOS simulator release builds now match Android release build capabilities (standalone operation, production bundles, Module Federation v2).
+**Platform Parity Achieved**: iOS simulator release builds now match Android release build capabilities:
+- ✅ Standalone operation (no Metro bundler required)
+- ✅ Production bundles embedded in app
+- ✅ Module Federation v2 dynamic remote loading verified
+- ✅ Custom Xcode bundling script integration
+- ✅ Platform polyfill handles iOS-specific initialization
+
+**Key Technical Achievements**:
+- Extended PatchMFConsolePlugin with Platform polyfill (iOS-critical)
+- Custom iOS bundling scripts for Xcode integration
+- Verified on iPhone 15 (host) and iPhone 15 Pro (remote standalone) simulators
+
+See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for comprehensive technical details.
 
 ## Architecture
 
@@ -222,7 +234,7 @@ git push --tags
 | **Standalone Debug** | `mobile-remote-standalone-debug.apk` | ✅ Yes (port 8083/8084) | Remote testing in isolation |
 | **Standalone Release** | `mobile-remote-standalone-release.apk` | ❌ No | Super app deployment |
 
-**Android Release Builds**: Now fully functional with Firebase Hosting remote loading. See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for critical fixes required.
+**Mobile Release Builds**: Both Android and iOS release builds are fully functional with Firebase Hosting remote loading. iOS implementation includes critical Platform polyfill and custom Xcode bundling scripts. See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for comprehensive technical details.
 
 ## Documentation
 

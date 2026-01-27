@@ -1,8 +1,8 @@
 # PatchMFConsolePlugin Guide
 
-## A Custom Rspack/Webpack Plugin Solving Hermes + Module Federation v2 Console Initialization
+## A Custom Rspack/Webpack Plugin Solving Hermes + Module Federation v2 Runtime Initialization
 
-> **TL;DR**: This plugin solves a critical crash in React Native release builds using Hermes and Module Federation v2 by prepending a console polyfill before webpack runtime code executes.
+> **TL;DR**: This plugin solves critical crashes in React Native release builds using Hermes and Module Federation v2 by prepending console and Platform polyfills before webpack runtime and React Native code execute. Essential for both Android and iOS release builds, with Platform polyfill being critical for iOS.
 
 ---
 
@@ -24,37 +24,56 @@
 
 ## The Problem
 
-### Symptom
+### Symptoms
 
-React Native apps using **Hermes** and **Module Federation v2** crash immediately on launch in **release builds** with this error:
+React Native apps using **Hermes** and **Module Federation v2** crash immediately on launch in **release builds** with these errors:
 
+**Android & iOS**:
 ```text
 [runtime not ready]: ReferenceError: Property 'console' doesn't exist
 ```
 
-### Root Cause
+**iOS-specific** (additional crash):
+```text
+TypeError: Cannot read property 'constants' of undefined
+TypeError: Cannot read property 'isTesting' of undefined
+```
+
+### Root Causes
 
 **Execution Order in Hermes Release Builds**:
 
 ```text
 1. Hermes loads and executes bundle.js
 2. Webpack runtime initializes → 💥 CRASH (console doesn't exist yet)
-3. (Never reaches) React Native's InitializeCore
-4. (Never reaches) console global setup
+3. React Native code tries to access Platform → 💥 CRASH (Platform doesn't exist yet)
+4. (Never reaches) React Native's InitializeCore
+5. (Never reaches) console and Platform global setup
 ```
 
 **Why This Happens**:
+
+**Console Issue (Android & iOS)**:
 - Module Federation v2's runtime includes `console.warn()` and `console.error()` calls
 - These execute during bundle initialization
 - In Hermes release builds, `console` is **undefined** until React Native's `InitializeCore` runs
 - `InitializeCore` is loaded as a webpack module, so it runs **after** webpack runtime
 - Result: **Immediate crash before your app code ever runs**
 
+**Platform Issue (iOS-Critical)**:
+- React Native code accesses `Platform.constants.reactNativeVersion` at module load time
+- Also accesses `Platform.isTesting`, `.OS`, `.Version`, and `.select()` during initialization
+- In iOS Release builds, these accesses happen before React Native's Platform module is ready
+- Android is more forgiving, but iOS crashes immediately
+- Result: **iOS-specific crash in Release builds**
+
 ### Why Debug Builds Don't Crash
 
 - Chrome DevTools provides the `console` object
 - Metro dev server handles initialization differently
+- Development mode has different initialization order
 - Issue **only manifests in Hermes release builds**
+- Platform issue **primarily affects iOS Release builds**
 
 ---
 
@@ -63,9 +82,13 @@ React Native apps using **Hermes** and **Module Federation v2** crash immediatel
 **PatchMFConsolePlugin** is a custom Rspack/Webpack plugin that:
 
 1. **Prepends a console polyfill** at the very start of the bundle (before webpack runtime)
-2. **Patches Module Federation console calls** as additional safety
+2. **Prepends a Platform polyfill** to handle React Native initialization (iOS-critical)
+3. **Patches Module Federation console calls** as additional safety
+4. **Patches Platform.default accesses** to use the polyfill
 
-**Key Innovation**: The polyfill is **raw JavaScript prepended to the bundle**, not imported as a module. This ensures `console` exists before **any** webpack code runs.
+**Key Innovation**: The polyfills are **raw JavaScript prepended to the bundle**, not imported as modules. This ensures `console` and `Platform` exist before **any** webpack code or React Native initialization runs.
+
+**Platform Support**: Works identically on both Android and iOS, with the Platform polyfill being critical for iOS Release builds.
 
 ---
 
@@ -76,12 +99,14 @@ React Native apps using **Hermes** and **Module Federation v2** crash immediatel
 ```text
 ✅ 1. Hermes loads and executes bundle.js
 ✅ 2. Console polyfill executes (console now exists as no-op)
-✅ 3. Webpack runtime initializes (console.warn works)
-✅ 4. InitializeCore runs (replaces polyfill with real console)
-✅ 5. Your app code executes
+✅ 3. Platform polyfill executes (Platform API now available)
+✅ 4. Webpack runtime initializes (console.warn works)
+✅ 5. React Native code runs (Platform.constants.reactNativeVersion works)
+✅ 6. InitializeCore runs (replaces polyfills with real implementations)
+✅ 7. Your app code executes
 ```
 
-### The Polyfill
+### The Console Polyfill
 
 ```javascript
 if (typeof console === 'undefined') {
@@ -111,6 +136,59 @@ if (typeof console === 'undefined') {
 - The polyfill is temporary - React Native's real `console` replaces it
 - No-ops prevent crashes without side effects
 - Keeps bundle size small
+
+### The Platform Polyfill (iOS-Critical)
+
+```javascript
+if (typeof __PLATFORM_POLYFILL__ === 'undefined') {
+  globalThis.__PLATFORM_POLYFILL__ = true;
+
+  // Temporary Platform polyfill until real Platform loads
+  var _realPlatform = null;
+
+  globalThis.__rn_platform_polyfill__ = {
+    get constants() {
+      if (_realPlatform !== null) return _realPlatform.constants;
+      return {
+        reactNativeVersion: { major: 0, minor: 80, patch: 0 },
+        isTesting: false
+      };
+    },
+    get isTesting() {
+      if (_realPlatform !== null) return _realPlatform.isTesting;
+      return false;
+    },
+    get OS() {
+      if (_realPlatform !== null) return _realPlatform.OS;
+      return 'ios';  // or 'android' based on platform
+    },
+    get Version() {
+      if (_realPlatform !== null) return _realPlatform.Version;
+      return '';
+    },
+    select: function(obj) {
+      if (_realPlatform !== null) return _realPlatform.select(obj);
+      return obj.ios !== undefined ? obj.ios : obj.default;
+    },
+    __setRealPlatform: function(platform) {
+      _realPlatform = platform;
+    }
+  };
+}
+
+// Replace all Platform.default accesses with polyfill
+source = source.replace(
+  /(_Platform\.default)/g,
+  '(__rn_platform_polyfill__)'
+);
+```
+
+**Why This is Critical for iOS**:
+- iOS Release builds crash with `TypeError: Cannot read property 'constants' of undefined`
+- React Native code accesses `Platform.constants.reactNativeVersion` at module load time
+- Also accesses `Platform.isTesting`, `.OS`, `.Version`, and `.select()` early
+- Polyfill provides these immediately, delegates to real Platform once loaded
+- **Platform-agnostic**: Works on Android too (harmless), critical on iOS
 
 ---
 

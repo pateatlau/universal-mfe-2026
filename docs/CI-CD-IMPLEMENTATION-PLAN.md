@@ -1,7 +1,7 @@
 # CI/CD Implementation Plan
 
-**Status:** Phase 6.7 Complete - iOS Simulator Release Builds Added
-**Last Updated:** 2026-01-26
+**Status:** Phase 6.7 Complete - iOS Simulator Release Builds Fully Implemented and Tested
+**Last Updated:** 2026-01-27
 **Target:** POC with minimal costs / free tier options
 
 ---
@@ -894,29 +894,83 @@ jobs:
 
 **Cost:** $0 (no Apple account required)
 
-### Task 6.7.3: Verify PatchMFConsolePlugin on iOS ✅ COMPLETE
+### Task 6.7.3: Verify and Extend PatchMFConsolePlugin for iOS ✅ COMPLETE
 
-**Objective:** Confirm that PatchMFConsolePlugin works on iOS release builds, preventing console-related crashes.
+**Objective:** Confirm and extend PatchMFConsolePlugin to handle iOS-specific initialization issues.
 
-**Steps:**
-- [x] Review PatchMFConsolePlugin in `packages/mobile-host/scripts/PatchMFConsolePlugin.mjs`
-- [x] Verify it's included in iOS build (same Rspack config as Android)
-- [x] Platform-agnostic implementation works identically for iOS and Android
-- [x] Hermes console behavior is consistent across platforms
+**iOS-Specific Issue Discovered:**
+iOS Release builds crash with `TypeError: Cannot read property 'constants' of undefined` because React Native code accesses `Platform.constants.reactNativeVersion` and `Platform.isTesting` during module initialization, before React Native's runtime is ready.
 
-- [ ] Compare with Android behavior:
-  - [ ] Same console polyfill prepended
-  - [ ] Same Module Federation console patching
-  - [ ] Same production bundle loading
+**Solution Implemented:**
+- [x] Extended PatchMFConsolePlugin with comprehensive Platform polyfill
+- [x] Polyfill provides `Platform.constants`, `.isTesting`, `.OS`, `.Version`, `.select()`
+- [x] Polyfill persists until real Platform module loads, then delegates to it
+- [x] Applied via source replacement: `_Platform.default` → `__rn_platform_polyfill__`
 
-**Expected Result:**
-- iOS release builds work exactly like Android release builds
-- No "console is not defined" errors
-- Standalone operation verified
+**Platform Polyfill Code:**
+```javascript
+// Temporary Platform polyfill until real Platform loads
+globalThis.__rn_platform_polyfill__ = {
+  get constants() {
+    return _realPlatform !== null ? _realPlatform.constants : {
+      reactNativeVersion: { major: 0, minor: 80, patch: 0 },
+      isTesting: false
+    };
+  },
+  get isTesting() { /* ... */ },
+  get OS() { /* ... */ },
+  get Version() { /* ... */ },
+  select: function(obj) { /* ... */ },
+  __setRealPlatform: function(platform) { _realPlatform = platform; }
+};
+```
+
+**iOS-Specific Xcode Integration:**
+- [x] Created custom bundling script: `ios/scripts/bundle-repack.sh`
+- [x] Modified Xcode project to use custom script instead of standard React Native bundler
+- [x] Script properly integrates with Xcode's build process and code signing
+- [x] Handles Debug (dev server) vs Release (embedded bundle) configurations
+
+**Custom Bundling Script:**
+```bash
+#!/bin/bash
+# ios/scripts/bundle-repack.sh
+set -e
+
+# For Release builds, create production bundle
+yarn build:ios
+
+# Copy the bundle to Xcode's destination
+cp "$PROJECT_ROOT/ios/main.jsbundle" "$DEST/main.jsbundle"
+```
+
+**Xcode Project Modification:**
+```javascript
+// ios/MobileHostTmp.xcodeproj/project.pbxproj
+shellScript = "set -e\n\n# Use custom Re.Pack bundling script\nexport NODE_BINARY=node\n\"${SRCROOT}/scripts/bundle-repack.sh\"\n";
+```
+
+**Testing Results:**
+- [x] iOS release builds work exactly like Android release builds
+- [x] No "console is not defined" errors
+- [x] No "Platform.constants is undefined" errors
+- [x] Host app (iPhone 15 simulator) - UI loads, remote loading works ✅
+- [x] Remote standalone app (iPhone 15 Pro simulator) - launches successfully ✅
+- [x] Module Federation v2 verified working
+- [x] Theme switching functional
+- [x] Standalone operation confirmed (no Metro bundler)
+
+**Comparison with Android:**
+- ✅ Same console polyfill prepended
+- ✅ Same Module Federation console patching
+- ✅ Enhanced Platform polyfill (iOS-critical, harmless on Android)
+- ✅ Same production bundle loading
+- ✅ Platform-agnostic implementation
 
 **Documentation:**
-- Update `docs/MOBILE-RELEASE-BUILD-FIXES.md` with iOS verification results
-- Note any iOS-specific differences or issues
+- [x] Updated `docs/MOBILE-RELEASE-BUILD-FIXES.md` with iOS implementation details
+- [x] Added Platform polyfill documentation
+- [x] Documented custom Xcode bundling script approach
 
 **Cost:** $0
 
@@ -945,16 +999,23 @@ jobs:
 
 ### Success Criteria for Phase 6.7
 
-| Metric | Target | Verification |
-|--------|--------|--------------|
-| iOS Host Release Build | ✅ Compiles successfully | `xcodebuild` succeeds with `-configuration Release` |
-| iOS Standalone Release Build | ✅ Compiles successfully | `xcodebuild` succeeds with `-configuration Release` |
-| PatchMFConsolePlugin on iOS | ✅ Works correctly | No console crashes, polyfill prepended |
-| Standalone Operation | ✅ No Metro required | App runs completely offline |
-| Production Bundles | ✅ Loads from Firebase | Fetches from `https://universal-mfe.web.app` |
-| Module Federation | ✅ Remote loads correctly | Dynamic chunks resolve |
-| Platform Parity | ✅ iOS matches Android | Same release build behavior |
-| CI/CD Automation | ✅ Workflow updated | Tag push builds and releases |
+| Metric | Target | Verification | Status |
+|--------|--------|--------------|--------|
+| iOS Host Release Build | ✅ Compiles successfully | `xcodebuild` succeeds with `-configuration Release` | ✅ PASS |
+| iOS Standalone Release Build | ✅ Compiles successfully | `xcodebuild` succeeds with `-configuration Release` | ✅ PASS |
+| PatchMFConsolePlugin on iOS | ✅ Works correctly | No console crashes, polyfill prepended | ✅ PASS |
+| Platform Polyfill | ✅ Handles iOS initialization | No Platform.constants crashes | ✅ PASS |
+| Custom Xcode Script | ✅ Integrates correctly | Bundle builds and copies to app | ✅ PASS |
+| Code Signing | ✅ Valid signature | App installs on simulator | ✅ PASS |
+| Standalone Operation | ✅ No Metro required | App runs completely offline | ✅ PASS |
+| Production Bundles | ✅ Loads from Firebase | Fetches from `https://universal-mfe.web.app` | ✅ PASS |
+| Module Federation | ✅ Remote loads correctly | Dynamic chunks resolve | ✅ PASS |
+| Host App UI | ✅ Renders correctly | iPhone 15 simulator | ✅ PASS |
+| Remote App UI | ✅ Renders correctly | iPhone 15 Pro simulator | ✅ PASS |
+| Remote Loading | ✅ "Load Remote" button works | Loads MF2 remote successfully | ✅ PASS |
+| Theme Switching | ✅ Works in remote | Theme changes apply | ✅ PASS |
+| Platform Parity | ✅ iOS matches Android | Same release build behavior | ✅ PASS |
+| CI/CD Automation | ⏳ Workflow to be updated | Tag push builds and releases | ⏳ PENDING |
 
 ### Benefits of Phase 6.7
 
