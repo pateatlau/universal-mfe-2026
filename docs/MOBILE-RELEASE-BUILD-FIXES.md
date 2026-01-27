@@ -543,8 +543,8 @@ select: function(obj) {
 **Key Points**:
 - `PLATFORM=android` for Android builds
 - `PLATFORM=ios` for iOS builds
-- Must be set **before** `NODE_ENV` and the bundle command
-- Also applies to `mobile-remote-hello` and any other mobile packages using `PatchMFConsolePlugin`
+- Set both `PLATFORM` and `NODE_ENV` before running the bundle command
+- Also applies to `mobile-remote-hello` and any other mobile packages that need platform-specific configuration
 
 ### CI/CD Integration
 
