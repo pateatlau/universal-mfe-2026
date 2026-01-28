@@ -1950,9 +1950,10 @@ function App() {
 - [x] Firebase app initializes without errors on Android
 - [x] Firebase app initializes without errors on iOS
 - [x] App loads and existing functionality works on both platforms
-- [ ] **Manual**: Add SHA-1 fingerprint to Firebase Console (required for Google Sign-In)
+- [x] **Manual**: SHA-1 fingerprint added to Firebase Console (debug: `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`)
+- [x] **Manual**: Updated `google-services.json` downloaded and placed in `android/app/`
 - [ ] **Manual**: Email sign-in works on both platforms (requires Phase 5 UI)
-- [ ] **Manual**: Google sign-in works on both platforms (requires Phase 5 UI + Firebase Console setup)
+- [ ] **Manual**: Google sign-in works on both platforms (requires Phase 5 UI)
 
 ---
 
