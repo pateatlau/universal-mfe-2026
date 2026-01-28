@@ -97,27 +97,41 @@ export const firebaseAuthService: AuthService = {
   // ===========================================================================
 
   async signInWithGoogle(): Promise<User> {
-    // Check if device supports Google Play Services (Android only, no-op on iOS)
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    try {
+      // Check if device supports Google Play Services (Android only, no-op on iOS)
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-    // Get the user's ID token from Google
-    const signInResult = await GoogleSignin.signIn();
-    const idToken = signInResult.data?.idToken;
+      // Get the user's ID token from Google
+      const signInResult = await GoogleSignin.signIn();
+      const idToken = signInResult.data?.idToken;
 
-    if (!idToken) {
-      throw new Error('Google Sign-In failed - no ID token returned');
+      if (!idToken) {
+        throw new Error('Google Sign-In failed - no ID token returned');
+      }
+
+      // Create a Firebase credential with the Google ID token
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+
+      // Sign in to Firebase with the Google credential
+      const result = await auth().signInWithCredential(googleCredential);
+      if (!result.user) {
+        throw new Error('Google Sign-In failed - no Firebase user returned');
+      }
+
+      return mapFirebaseUser(result.user);
+    } catch (error) {
+      // Handle account exists with different credential error
+      const firebaseError = error as FirebaseAuthTypes.NativeFirebaseAuthError;
+      if (firebaseError.code === 'auth/account-exists-with-different-credential') {
+        // If the user already has an account with a different provider,
+        // they need to sign in with their original method first and then link
+        throw new Error(
+          'An account already exists with this email using a different sign-in method. ' +
+          'Please sign in with your original method first, then link this provider in settings.'
+        );
+      }
+      throw error;
     }
-
-    // Create a Firebase credential with the Google ID token
-    const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-
-    // Sign in to Firebase with the Google credential
-    const result = await auth().signInWithCredential(googleCredential);
-    if (!result.user) {
-      throw new Error('Google Sign-In failed - no Firebase user returned');
-    }
-
-    return mapFirebaseUser(result.user);
   },
 
   // ===========================================================================

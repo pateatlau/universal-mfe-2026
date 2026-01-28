@@ -108,3 +108,4 @@ GoogleService-Info.plist
 
 # Mobile test packages
 test-packages/
+temp-downloads/

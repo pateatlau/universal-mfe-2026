@@ -21,7 +21,9 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   updateProfile,
+  linkWithCredential,
   type User as FirebaseUser,
+  type AuthError,
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import type { AuthService, User } from '@universal/shared-auth-store';
@@ -35,6 +37,27 @@ const githubProvider = new GithubAuthProvider();
 googleProvider.addScope('profile');
 googleProvider.addScope('email');
 githubProvider.addScope('user:email');
+
+/**
+ * Handle account-exists-with-different-credential error.
+ *
+ * Firebase doesn't allow automatic account linking for security reasons.
+ * When this error occurs, the user must sign in with their original method first,
+ * then link the new provider manually.
+ *
+ * @param error - The Firebase AuthError
+ * @param providerName - Name of the provider that was attempted (for error message)
+ */
+function handleAccountExistsError(error: AuthError, providerName: string): never {
+  // Extract email from the error if available
+  const email = (error as AuthError & { customData?: { email?: string } }).customData?.email;
+
+  const emailPart = email ? ` (${email})` : '';
+  throw new Error(
+    `An account already exists with this email${emailPart} using a different sign-in method. ` +
+    'Please sign in with your original method first, then link this provider in account settings.'
+  );
+}
 
 /**
  * Map Firebase user to our User type
@@ -98,13 +121,29 @@ export const firebaseAuthService: AuthService = {
   // ===========================================================================
 
   async signInWithGoogle(): Promise<User> {
-    const result = await signInWithPopup(auth, googleProvider);
-    return mapFirebaseUser(result.user);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      return mapFirebaseUser(result.user);
+    } catch (error) {
+      const authError = error as AuthError;
+      if (authError.code === 'auth/account-exists-with-different-credential') {
+        handleAccountExistsError(authError, 'Google');
+      }
+      throw error;
+    }
   },
 
   async signInWithGitHub(): Promise<User> {
-    const result = await signInWithPopup(auth, githubProvider);
-    return mapFirebaseUser(result.user);
+    try {
+      const result = await signInWithPopup(auth, githubProvider);
+      return mapFirebaseUser(result.user);
+    } catch (error) {
+      const authError = error as AuthError;
+      if (authError.code === 'auth/account-exists-with-different-credential') {
+        handleAccountExistsError(authError, 'GitHub');
+      }
+      throw error;
+    }
   },
 
   // ===========================================================================
