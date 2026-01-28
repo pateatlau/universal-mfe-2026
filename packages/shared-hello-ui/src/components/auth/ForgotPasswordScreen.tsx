@@ -130,7 +130,7 @@ export function ForgotPasswordScreen({
             </Text>
             <Text style={styles.emailSentTo}>
               {t('forgotPassword.sentTo', {
-                defaultValue: `We sent a reset link to ${email}`,
+                defaultValue: 'We sent a reset link to {{email}}',
                 params: { email },
               })}
             </Text>

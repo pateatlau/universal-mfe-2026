@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  DimensionValue,
   ViewStyle,
   TextStyle,
 } from 'react-native';
@@ -183,6 +184,19 @@ export function SignUpScreen({
     }
   }, [passwordStrength, theme]);
 
+  // Calculate password strength bar width based on strength level
+  const passwordStrengthWidth = useMemo((): DimensionValue => {
+    switch (passwordStrength) {
+      case 'strong':
+        return '100%';
+      case 'medium':
+        return '66%';
+      case 'weak':
+      default:
+        return '33%';
+    }
+  }, [passwordStrength]);
+
   return (
     <KeyboardAvoidingView
       style={styles.keyboardAvoid}
@@ -241,7 +255,7 @@ export function SignUpScreen({
               <View
                 style={[
                   styles.strengthBar,
-                  { backgroundColor: passwordStrengthColor, width: passwordStrength === 'strong' ? '100%' : passwordStrength === 'medium' ? '66%' : '33%' },
+                  { backgroundColor: passwordStrengthColor, width: passwordStrengthWidth },
                 ]}
               />
               <Text style={[styles.strengthText, { color: passwordStrengthColor }]}>

@@ -13,6 +13,7 @@ import {
   Text,
   Pressable,
   StyleSheet,
+  ActivityIndicator,
   ViewStyle,
   TextStyle,
 } from 'react-native';
@@ -312,10 +313,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useIsAuthenticated();
   const isInitialized = useIsAuthInitialized();
   const location = useLocation();
+  const { theme } = useTheme();
 
-  // Wait for auth to initialize
+  // Wait for auth to initialize - show loading spinner
   if (!isInitialized) {
-    return null; // Or a loading spinner
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface.background }}>
+        <ActivityIndicator size="large" color={theme.colors.interactive.primary} />
+      </View>
+    );
   }
 
   if (!isAuthenticated) {
@@ -334,10 +340,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AuthRedirect() {
   const isAuthenticated = useIsAuthenticated();
   const isInitialized = useIsAuthInitialized();
+  const { theme } = useTheme();
 
-  // Wait for auth to initialize
+  // Wait for auth to initialize - show loading spinner
   if (!isInitialized) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface.background }}>
+        <ActivityIndicator size="large" color={theme.colors.interactive.primary} />
+      </View>
+    );
   }
 
   if (isAuthenticated) {

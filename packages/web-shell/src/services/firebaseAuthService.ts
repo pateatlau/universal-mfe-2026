@@ -24,7 +24,6 @@ import {
   linkWithCredential,
   type User as FirebaseUser,
   type AuthError,
-  OAuthCredential,
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import type { AuthService, User } from '@universal/shared-auth-store';
@@ -38,6 +37,27 @@ const githubProvider = new GithubAuthProvider();
 googleProvider.addScope('profile');
 googleProvider.addScope('email');
 githubProvider.addScope('user:email');
+
+/**
+ * Handle account-exists-with-different-credential error.
+ *
+ * Firebase doesn't allow automatic account linking for security reasons.
+ * When this error occurs, the user must sign in with their original method first,
+ * then link the new provider manually.
+ *
+ * @param error - The Firebase AuthError
+ * @param providerName - Name of the provider that was attempted (for error message)
+ */
+function handleAccountExistsError(error: AuthError, providerName: string): never {
+  // Extract email from the error if available
+  const email = (error as AuthError & { customData?: { email?: string } }).customData?.email;
+
+  const emailPart = email ? ` (${email})` : '';
+  throw new Error(
+    `An account already exists with this email${emailPart} using a different sign-in method. ` +
+    'Please sign in with your original method first, then link this provider in account settings.'
+  );
+}
 
 /**
  * Map Firebase user to our User type
@@ -106,25 +126,8 @@ export const firebaseAuthService: AuthService = {
       return mapFirebaseUser(result.user);
     } catch (error) {
       const authError = error as AuthError;
-      // Handle account exists with different credential error
       if (authError.code === 'auth/account-exists-with-different-credential') {
-        // Get the pending credential from the error
-        const credential = OAuthCredential.fromJSON(
-          (authError as AuthError & { customData?: { _tokenResponse?: { oauthAccessToken?: string } } })
-            .customData?._tokenResponse || {}
-        );
-
-        // If we have a current user, try to link the credential
-        if (auth.currentUser && credential) {
-          const linkedResult = await linkWithCredential(auth.currentUser, credential);
-          return mapFirebaseUser(linkedResult.user);
-        }
-
-        // Re-throw with a more helpful message
-        throw new Error(
-          'An account already exists with this email using a different sign-in method. ' +
-          'Please sign in with your original method first, then link this provider in settings.'
-        );
+        handleAccountExistsError(authError, 'Google');
       }
       throw error;
     }
@@ -136,25 +139,8 @@ export const firebaseAuthService: AuthService = {
       return mapFirebaseUser(result.user);
     } catch (error) {
       const authError = error as AuthError;
-      // Handle account exists with different credential error
       if (authError.code === 'auth/account-exists-with-different-credential') {
-        // Get the pending credential from the error
-        const credential = OAuthCredential.fromJSON(
-          (authError as AuthError & { customData?: { _tokenResponse?: { oauthAccessToken?: string } } })
-            .customData?._tokenResponse || {}
-        );
-
-        // If we have a current user, try to link the credential
-        if (auth.currentUser && credential) {
-          const linkedResult = await linkWithCredential(auth.currentUser, credential);
-          return mapFirebaseUser(linkedResult.user);
-        }
-
-        // Re-throw with a more helpful message
-        throw new Error(
-          'An account already exists with this email using a different sign-in method. ' +
-          'Please sign in with your original method first, then link this provider in settings.'
-        );
+        handleAccountExistsError(authError, 'GitHub');
       }
       throw error;
     }

@@ -8,8 +8,8 @@
  */
 
 import React, { useMemo, useEffect, useCallback, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform, ViewStyle, TextStyle } from 'react-native';
-import { NativeRouter, Routes as RouterRoutes, Route, Link, Navigate } from 'react-router-native';
+import { View, Text, Pressable, StyleSheet, Platform, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { NativeRouter, Routes as RouterRoutes, Route, Link, Navigate, useLocation } from 'react-router-native';
 import { ScriptManager } from '@callstack/repack/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider, useTheme, Theme } from '@universal/shared-theme-context';
@@ -344,14 +344,21 @@ function AuthInitializer() {
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useIsAuthenticated();
   const isInitialized = useIsAuthInitialized();
+  const { theme } = useTheme();
+  const location = useLocation();
 
-  // Wait for auth to initialize
+  // Wait for auth to initialize - show loading spinner
   if (!isInitialized) {
-    return null; // Or a loading spinner
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface.background }}>
+        <ActivityIndicator size="large" color={theme.colors.interactive.primary} />
+      </View>
+    );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to={`/${Routes.LOGIN}`} replace />;
+    // Redirect to login, saving the intended destination
+    return <Navigate to={`/${Routes.LOGIN}`} state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
@@ -365,10 +372,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AuthRedirect() {
   const isAuthenticated = useIsAuthenticated();
   const isInitialized = useIsAuthInitialized();
+  const { theme } = useTheme();
 
-  // Wait for auth to initialize
+  // Wait for auth to initialize - show loading spinner
   if (!isInitialized) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface.background }}>
+        <ActivityIndicator size="large" color={theme.colors.interactive.primary} />
+      </View>
+    );
   }
 
   if (isAuthenticated) {
