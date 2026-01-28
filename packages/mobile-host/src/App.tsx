@@ -7,23 +7,12 @@
  * Hermes is required for execution.
  */
 
-import React, { useMemo, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Platform,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform, ViewStyle, TextStyle } from 'react-native';
 import { NativeRouter, Routes as RouterRoutes, Route, Link } from 'react-router-native';
 import { ScriptManager } from '@callstack/repack/client';
-import {
-  ThemeProvider,
-  useTheme,
-  Theme,
-} from '@universal/shared-theme-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThemeProvider, useTheme, Theme } from '@universal/shared-theme-context';
 import {
   I18nProvider,
   useTranslation,
@@ -38,10 +27,23 @@ import {
   createEventLogger,
   ThemeEventTypes,
   LocaleEventTypes,
+  AuthEventTypes,
   type AppEvents,
+  type AuthEvents,
 } from '@universal/shared-event-bus';
 import { QueryProvider } from '@universal/shared-data-layer';
 import { Routes } from '@universal/shared-router';
+import {
+  configureStorage,
+  createMobileStorage,
+  isStorageConfigured,
+} from '@universal/shared-utils';
+import {
+  configureAuthService,
+  configureAuthEventEmitter,
+  useAuthStore,
+} from '@universal/shared-auth-store';
+import { firebaseAuthService } from './services/firebaseAuthService';
 
 // Page components
 import Home from './pages/Home';
@@ -240,6 +242,63 @@ function EventLogger() {
 }
 
 /**
+ * AuthInitializer component - configures storage, auth service, and initializes auth.
+ * Must be rendered inside EventBusProvider to access the event bus.
+ *
+ * Configuration happens inside useEffect to ensure React Native runtime is ready,
+ * as Firebase SDK and AsyncStorage require native modules to be initialized.
+ */
+function AuthInitializer() {
+  const bus = useEventBus<AppEvents>();
+  const initializeAuth = useAuthStore((state) => state.initializeAuth);
+  const isConfigured = useRef(false);
+
+  useEffect(() => {
+    // Configure storage, auth service, and event emitter (only once)
+    if (!isConfigured.current) {
+      // Configure storage with AsyncStorage
+      if (!isStorageConfigured()) {
+        configureStorage(createMobileStorage(AsyncStorage));
+      }
+
+      // Configure auth service with Firebase
+      configureAuthService(firebaseAuthService);
+
+      // Configure event emitter for cross-MFE auth sync
+      configureAuthEventEmitter((type, payload) => {
+        // Map auth store event types to event bus types
+        // The auth store emits: USER_LOGGED_IN, USER_LOGGED_OUT, AUTH_ERROR
+        const eventType = type as AuthEvents['type'];
+        bus.emit<AuthEvents>(eventType, payload as AuthEvents['payload']);
+      });
+
+      isConfigured.current = true;
+    }
+
+    // Initialize auth and get the unsubscribe function
+    let unsubscribe: (() => void) | undefined;
+
+    initializeAuth()
+      .then((unsub) => {
+        unsubscribe = unsub;
+        if (__DEV__) {
+          console.log('[MobileHost] Auth initialized successfully');
+        }
+      })
+      .catch((error) => {
+        console.error('[MobileHost] Auth initialization failed:', error);
+      });
+
+    // Cleanup: unsubscribe from auth state changes
+    return () => {
+      unsubscribe?.();
+    };
+  }, [bus, initializeAuth]);
+
+  return null;
+}
+
+/**
  * Header component with navigation and controls.
  */
 function Header() {
@@ -302,9 +361,7 @@ function Header() {
           </Text>
         </Pressable>
         <Pressable style={styles.langToggle} onPress={cycleLocale}>
-          <Text style={styles.langToggleText}>
-            🌐 {getLocaleDisplayName(locale)}
-          </Text>
+          <Text style={styles.langToggleText}>🌐 {getLocaleDisplayName(locale)}</Text>
         </Pressable>
       </View>
       <Text style={styles.subtitle}>{t('subtitleMobile')}</Text>
@@ -357,12 +414,16 @@ function AppLayout() {
  * 3. EventBusProvider - Event bus for inter-MFE communication
  * 4. I18nProvider - Internationalization
  * 5. ThemeProvider - Theming
+ *
+ * Auth initialization happens inside EventBusProvider via AuthInitializer
+ * to ensure the event bus is available for auth events.
  */
 function App() {
   return (
     <NativeRouter>
       <QueryProvider>
         <EventBusProvider options={{ debug: __DEV__, name: 'MobileHost' }}>
+          <AuthInitializer />
           <I18nProvider translations={locales} initialLocale="en">
             <ThemeProvider>
               <EventLogger />
