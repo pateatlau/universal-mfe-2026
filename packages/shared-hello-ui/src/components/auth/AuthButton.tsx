@@ -83,8 +83,12 @@ export function AuthButton({
       google: styles.googleText,
       github: styles.githubText,
     };
-    return [styles.buttonText, variantTextStyles[variant]];
-  }, [styles, variant]);
+    return [
+      styles.buttonText,
+      variantTextStyles[variant],
+      isDisabled && styles.disabledText,
+    ];
+  }, [styles, variant, isDisabled]);
 
   const loadingColor = useMemo(() => {
     switch (variant) {
@@ -134,6 +138,7 @@ interface Styles {
   secondaryText: TextStyle;
   googleText: TextStyle;
   githubText: TextStyle;
+  disabledText: TextStyle;
 }
 
 function createStyles(theme: Theme, isDark: boolean): Styles {
@@ -189,6 +194,11 @@ function createStyles(theme: Theme, isDark: boolean): Styles {
     },
     githubText: {
       color: '#FFFFFF',
+    },
+    disabledText: {
+      // Disabled text should have sufficient contrast on disabled background
+      // WCAG AA requires 4.5:1 for normal text
+      color: theme.colors.text.disabled,
     },
   });
 }
