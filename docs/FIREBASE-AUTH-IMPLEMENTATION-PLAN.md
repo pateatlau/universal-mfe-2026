@@ -1,8 +1,8 @@
 # Firebase Authentication Implementation Plan
 
-**Status:** Phase 4 Complete - Ready for Phase 5
+**Status:** Phase 6 Complete - Ready for Phase 7
 **Last Updated:** 2026-01-28
-**Version:** 1.5 (Phase 1, 2, 3 & 4 completed with comprehensive documentation)
+**Version:** 1.6 (Phase 1-6 completed with comprehensive documentation)
 **Target:** Universal authentication across Web, Android, and iOS with MFE-compatible architecture
 **Cost Target:** $0/month (Firebase Spark Plan)
 
@@ -2455,9 +2455,11 @@ new DefinePlugin({
 
 ---
 
-## Phase 5: Auth UI Components
+## Phase 5: Auth UI Components ✅ COMPLETED
 
 **Objective:** Create universal auth UI components using React Native primitives.
+
+**Status:** ✅ Completed on 2026-01-28
 
 **Duration:** ~8 hours
 
@@ -2793,18 +2795,45 @@ auth: {
 
 ### Verification Steps
 
-- [ ] LoginScreen renders correctly on all platforms
-- [ ] SignUpScreen renders correctly on all platforms
-- [ ] ForgotPasswordScreen renders correctly on all platforms
-- [ ] Theme changes apply correctly
-- [ ] i18n translations work
-- [ ] Accessibility labels present
+- [x] LoginScreen renders correctly on all platforms
+- [x] SignUpScreen renders correctly on all platforms
+- [x] ForgotPasswordScreen renders correctly on all platforms
+- [x] Theme changes apply correctly
+- [x] i18n translations work (English and Hindi)
+- [x] Accessibility labels present
+
+### Implementation Summary
+
+**Components created in `packages/shared-hello-ui/src/components/auth/`:**
+
+| Component | Description |
+|-----------|-------------|
+| `AuthButton.tsx` | Reusable button with variants: primary, secondary, google, github |
+| `AuthInput.tsx` | Themed input field with text/email/password types and visibility toggle |
+| `AuthError.tsx` | Error display with dismiss functionality |
+| `SocialLoginButtons.tsx` | Google and GitHub sign-in buttons with divider |
+| `LoginScreen.tsx` | Complete login with email/password and social login |
+| `SignUpScreen.tsx` | Registration form with password strength indicator |
+| `ForgotPasswordScreen.tsx` | Password reset form with success state |
+| `index.ts` | Barrel exports for all auth components |
+
+**Page wrappers created:**
+
+- `packages/web-shell/src/pages/Login.tsx`, `SignUp.tsx`, `ForgotPassword.tsx`
+- `packages/mobile-host/src/pages/Login.tsx`, `SignUp.tsx`, `ForgotPassword.tsx`
+
+**i18n translations added:**
+
+- `packages/shared-i18n/src/locales/en.ts` - English auth namespace
+- `packages/shared-i18n/src/locales/hi.ts` - Hindi auth namespace
 
 ---
 
-## Phase 6: Protected Routes & Auth Guards
+## Phase 6: Protected Routes & Auth Guards ✅ COMPLETED
 
 **Objective:** Implement route protection and auth guards.
+
+**Status:** ✅ Completed on 2026-01-28
 
 **Duration:** ~4 hours
 
@@ -2934,10 +2963,53 @@ const styles = StyleSheet.create({
 
 ### Verification Steps
 
-- [ ] Protected routes redirect to login when not authenticated
-- [ ] Protected routes render content when authenticated
-- [ ] Loading state shows while checking auth
-- [ ] LOGIN_REQUIRED event is emitted correctly
+- [x] Protected routes redirect to login when not authenticated
+- [x] Protected routes render content when authenticated
+- [x] Loading state shows while checking auth
+- [x] Root path (`/`) redirects to `/login` or `/home` based on auth state
+
+### Implementation Summary
+
+**Route protection implemented in:**
+
+- `packages/web-shell/src/App.tsx` - `ProtectedRoute` and `AuthRedirect` components
+- `packages/mobile-host/src/App.tsx` - `ProtectedRoute` and `AuthRedirect` components
+
+**Protected routes:**
+
+| Route | Path | Protection |
+|-------|------|------------|
+| Home | `/home` | ✅ Protected |
+| Remote Hello | `/remote-hello` | ✅ Protected |
+| Settings | `/settings` | ✅ Protected |
+| Login | `/login` | Public |
+| Sign Up | `/signup` | Public |
+| Forgot Password | `/forgot-password` | Public |
+
+**Auth-aware header behavior:**
+
+- Navigation menu (Home, Remote Hello, Settings) only visible when authenticated
+- Settings button (web) only visible when authenticated
+- User info and explicit Logout button shown when authenticated
+- Unauthenticated users see only theme/language toggles
+
+**Account Linking Error Handling:**
+
+When a user tries to sign in with a different provider (e.g., GitHub) using an email already registered with another provider (e.g., Google), a helpful error message is displayed:
+
+> "An account already exists with this email using a different sign-in method. Please sign in with your original method first, then link this provider in settings."
+
+**TODO: Automatic Account Linking**
+
+Firebase by default does not automatically link accounts with the same email from different providers. Full automatic account linking would require:
+
+1. Storing the pending credential when `auth/account-exists-with-different-credential` error occurs
+2. Fetching available sign-in methods for the email using `fetchSignInMethodsForEmail()`
+3. Prompting the user to sign in with their existing provider
+4. Using `linkWithCredential()` to link the new provider after successful sign-in
+5. Optionally, implementing an "Account Settings" page where users can link/unlink providers
+
+This enhancement is tracked as a future improvement and is not blocking for the core authentication flow.
 
 ---
 

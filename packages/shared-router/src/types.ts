@@ -27,7 +27,10 @@ export type RouteId =
   | 'settings'
   | 'profile'
   | 'remote-hello'
-  | 'remote-detail';
+  | 'remote-detail'
+  | 'login'
+  | 'signup'
+  | 'forgot-password';
 
 /**
  * Parameters that can be passed with navigation intents.
@@ -39,6 +42,9 @@ export interface RouteParams {
   profile: { userId?: string };
   'remote-hello': undefined;
   'remote-detail': { id: string };
+  login: undefined;
+  signup: undefined;
+  'forgot-password': undefined;
 }
 
 /**

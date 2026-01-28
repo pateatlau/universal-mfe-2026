@@ -40,6 +40,10 @@ export const Routes = {
   PROFILE: 'profile' as const,
   REMOTE_HELLO: 'remote-hello' as const,
   REMOTE_DETAIL: 'remote-detail' as const,
+  // Auth routes
+  LOGIN: 'login' as const,
+  SIGNUP: 'signup' as const,
+  FORGOT_PASSWORD: 'forgot-password' as const,
 } satisfies Record<string, RouteId>;
 
 /**
@@ -94,6 +98,28 @@ export const routeMetadata: Record<RouteId, RouteMetadata> = {
     id: Routes.REMOTE_DETAIL,
     labelKey: 'navigation.remoteDetail',
     icon: 'file',
+    showInNav: false,
+    requiresAuth: false,
+  },
+  // Auth routes
+  [Routes.LOGIN]: {
+    id: Routes.LOGIN,
+    labelKey: 'navigation.login',
+    icon: 'login',
+    showInNav: false,
+    requiresAuth: false,
+  },
+  [Routes.SIGNUP]: {
+    id: Routes.SIGNUP,
+    labelKey: 'navigation.signUp',
+    icon: 'user-plus',
+    showInNav: false,
+    requiresAuth: false,
+  },
+  [Routes.FORGOT_PASSWORD]: {
+    id: Routes.FORGOT_PASSWORD,
+    labelKey: 'navigation.forgotPassword',
+    icon: 'key',
     showInNav: false,
     requiresAuth: false,
   },

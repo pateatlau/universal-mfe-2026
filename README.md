@@ -149,6 +149,7 @@ Host and standalone apps can run simultaneously on different emulators/simulator
 | Feature | Package | Description |
 |---------|---------|-------------|
 | Build Orchestration | Turborepo | Intelligent caching, task orchestration |
+| **Authentication** | `shared-auth-store` | **Firebase Auth with Email, Google, GitHub (Web + Mobile)** |
 | Design Tokens | `shared-design-tokens` | Two-tier token system (primitive/semantic) |
 | Theming | `shared-theme-context` | Light/dark mode with persistence |
 | Accessibility | `shared-a11y` | WCAG 2.1 AA compliant utilities |
@@ -160,6 +161,27 @@ Host and standalone apps can run simultaneously on different emulators/simulator
 | Unit Testing | Jest + Testing Library | React Native component testing |
 | Integration Testing | Jest | Provider composition, routing |
 | E2E Testing | Playwright + Maestro | Web and mobile automation |
+
+### Authentication
+
+The platform includes complete Firebase Authentication with:
+
+| Feature | Web | Android | iOS |
+|---------|-----|---------|-----|
+| Email/Password | ✅ | ✅ | ✅ |
+| Google Sign-In | ✅ | ✅ | ✅ |
+| GitHub Sign-In | ✅ | ❌ (requires react-native-app-auth) | ❌ (requires react-native-app-auth) |
+| Protected Routes | ✅ | ✅ | ✅ |
+| Session Persistence | ✅ | ✅ | ✅ |
+| Cross-MFE Auth Sync | ✅ | ✅ | ✅ |
+
+**Auth UI Components** (in `shared-hello-ui`):
+- `LoginScreen` - Email/password + social login
+- `SignUpScreen` - Registration with password strength indicator
+- `ForgotPasswordScreen` - Password reset flow
+- Reusable: `AuthButton`, `AuthInput`, `AuthError`, `SocialLoginButtons`
+
+See [Firebase Auth Implementation Plan](docs/FIREBASE-AUTH-IMPLEMENTATION-PLAN.md) for detailed documentation.
 
 ### Localization (India-First)
 
@@ -241,6 +263,7 @@ git push --tags
 | Document | Description |
 |----------|-------------|
 | [Enterprise Enhancements](docs/ENTERPRISE-ENHANCEMENTS.md) | Overview of all enterprise features |
+| [**Firebase Auth Implementation**](docs/FIREBASE-AUTH-IMPLEMENTATION-PLAN.md) | **Firebase Authentication setup and architecture** |
 | [Testing Guide](docs/universal-mfe-all-platforms-testing-guide.md) | Running apps and testing guide |
 | [**Git Flow Workflow**](docs/GIT-FLOW-WORKFLOW.md) | **Branch strategy, PR process, release workflow** |
 | [CI/CD Implementation](docs/CI-CD-IMPLEMENTATION-PLAN.md) | CI/CD workflows and deployment guide |

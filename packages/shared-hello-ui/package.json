@@ -15,7 +15,8 @@
     "@universal/shared-utils": "*",
     "@universal/shared-theme-context": "*",
     "@universal/shared-a11y": "*",
-    "@universal/shared-i18n": "*"
+    "@universal/shared-i18n": "*",
+    "@universal/shared-auth-store": "*"
   },
   "devDependencies": {
     "typescript": "5.9.3",

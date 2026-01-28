@@ -1,0 +1,184 @@
+/**
+ * AuthButton - Universal authentication button component
+ *
+ * Uses React Native primitives for cross-platform compatibility.
+ * Supports primary, secondary, and social button variants.
+ */
+
+import React, { useMemo } from 'react';
+import {
+  Pressable,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+} from 'react-native';
+import { useTheme, Theme } from '@universal/shared-theme-context';
+import { A11yRoles, A11Y_MIN_TOUCH_TARGET } from '@universal/shared-a11y';
+
+export type AuthButtonVariant = 'primary' | 'secondary' | 'google' | 'github';
+
+export interface AuthButtonProps {
+  /** Button text */
+  label: string;
+  /** Press handler */
+  onPress: () => void;
+  /** Button variant */
+  variant?: AuthButtonVariant;
+  /** Loading state */
+  isLoading?: boolean;
+  /** Disabled state */
+  disabled?: boolean;
+  /** Accessibility label */
+  accessibilityLabel?: string;
+  /** Accessibility hint */
+  accessibilityHint?: string;
+  /** Test ID for testing */
+  testID?: string;
+}
+
+/**
+ * AuthButton component for authentication screens.
+ *
+ * Supports multiple variants:
+ * - primary: Main action button (sign in, sign up)
+ * - secondary: Secondary action (cancel, back)
+ * - google: Google sign-in button
+ * - github: GitHub sign-in button
+ */
+export function AuthButton({
+  label,
+  onPress,
+  variant = 'primary',
+  isLoading = false,
+  disabled = false,
+  accessibilityLabel,
+  accessibilityHint,
+  testID,
+}: AuthButtonProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const isDisabled = disabled || isLoading;
+
+  const buttonStyle = useMemo(() => {
+    const variantStyles: Record<AuthButtonVariant, ViewStyle> = {
+      primary: styles.primaryButton,
+      secondary: styles.secondaryButton,
+      google: styles.googleButton,
+      github: styles.githubButton,
+    };
+    return [
+      styles.button,
+      variantStyles[variant],
+      isDisabled && styles.disabledButton,
+    ];
+  }, [styles, variant, isDisabled]);
+
+  const textStyle = useMemo(() => {
+    const variantTextStyles: Record<AuthButtonVariant, TextStyle> = {
+      primary: styles.primaryText,
+      secondary: styles.secondaryText,
+      google: styles.googleText,
+      github: styles.githubText,
+    };
+    return [styles.buttonText, variantTextStyles[variant]];
+  }, [styles, variant]);
+
+  const loadingColor = useMemo(() => {
+    switch (variant) {
+      case 'primary':
+      case 'github':
+        return theme.colors.text.inverse;
+      case 'secondary':
+      case 'google':
+        return theme.colors.text.primary;
+      default:
+        return theme.colors.text.inverse;
+    }
+  }, [variant, theme]);
+
+  return (
+    <Pressable
+      style={buttonStyle}
+      onPress={onPress}
+      disabled={isDisabled}
+      accessibilityRole={A11yRoles.BUTTON}
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: isDisabled, busy: isLoading }}
+      testID={testID}
+    >
+      {isLoading ? (
+        <ActivityIndicator color={loadingColor} size="small" />
+      ) : (
+        <Text style={textStyle}>{label}</Text>
+      )}
+    </Pressable>
+  );
+}
+
+interface Styles {
+  button: ViewStyle;
+  primaryButton: ViewStyle;
+  secondaryButton: ViewStyle;
+  googleButton: ViewStyle;
+  githubButton: ViewStyle;
+  disabledButton: ViewStyle;
+  buttonText: TextStyle;
+  primaryText: TextStyle;
+  secondaryText: TextStyle;
+  googleText: TextStyle;
+  githubText: TextStyle;
+}
+
+function createStyles(theme: Theme): Styles {
+  return StyleSheet.create<Styles>({
+    button: {
+      borderRadius: theme.spacing.button.borderRadius,
+      paddingHorizontal: theme.spacing.button.paddingHorizontal,
+      paddingVertical: theme.spacing.button.paddingVertical,
+      minHeight: A11Y_MIN_TOUCH_TARGET,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+    },
+    primaryButton: {
+      backgroundColor: theme.colors.interactive.primary,
+    },
+    secondaryButton: {
+      backgroundColor: theme.colors.interactive.secondary,
+      borderWidth: 1,
+      borderColor: theme.colors.border.default,
+    },
+    googleButton: {
+      backgroundColor: '#FFFFFF',
+      borderWidth: 1,
+      borderColor: theme.colors.border.default,
+    },
+    githubButton: {
+      backgroundColor: '#24292e',
+    },
+    disabledButton: {
+      backgroundColor: theme.colors.interactive.disabled,
+      opacity: 0.6,
+    },
+    buttonText: {
+      fontSize: theme.typography.fontSizes.base,
+      fontWeight: theme.typography.fontWeights.semibold,
+    },
+    primaryText: {
+      color: theme.colors.text.inverse,
+    },
+    secondaryText: {
+      color: theme.colors.text.primary,
+    },
+    googleText: {
+      color: '#1F1F1F',
+    },
+    githubText: {
+      color: '#FFFFFF',
+    },
+  });
+}

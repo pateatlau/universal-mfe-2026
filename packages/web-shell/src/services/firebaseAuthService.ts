@@ -21,7 +21,10 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   updateProfile,
+  linkWithCredential,
   type User as FirebaseUser,
+  type AuthError,
+  OAuthCredential,
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import type { AuthService, User } from '@universal/shared-auth-store';
@@ -98,13 +101,63 @@ export const firebaseAuthService: AuthService = {
   // ===========================================================================
 
   async signInWithGoogle(): Promise<User> {
-    const result = await signInWithPopup(auth, googleProvider);
-    return mapFirebaseUser(result.user);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      return mapFirebaseUser(result.user);
+    } catch (error) {
+      const authError = error as AuthError;
+      // Handle account exists with different credential error
+      if (authError.code === 'auth/account-exists-with-different-credential') {
+        // Get the pending credential from the error
+        const credential = OAuthCredential.fromJSON(
+          (authError as AuthError & { customData?: { _tokenResponse?: { oauthAccessToken?: string } } })
+            .customData?._tokenResponse || {}
+        );
+
+        // If we have a current user, try to link the credential
+        if (auth.currentUser && credential) {
+          const linkedResult = await linkWithCredential(auth.currentUser, credential);
+          return mapFirebaseUser(linkedResult.user);
+        }
+
+        // Re-throw with a more helpful message
+        throw new Error(
+          'An account already exists with this email using a different sign-in method. ' +
+          'Please sign in with your original method first, then link this provider in settings.'
+        );
+      }
+      throw error;
+    }
   },
 
   async signInWithGitHub(): Promise<User> {
-    const result = await signInWithPopup(auth, githubProvider);
-    return mapFirebaseUser(result.user);
+    try {
+      const result = await signInWithPopup(auth, githubProvider);
+      return mapFirebaseUser(result.user);
+    } catch (error) {
+      const authError = error as AuthError;
+      // Handle account exists with different credential error
+      if (authError.code === 'auth/account-exists-with-different-credential') {
+        // Get the pending credential from the error
+        const credential = OAuthCredential.fromJSON(
+          (authError as AuthError & { customData?: { _tokenResponse?: { oauthAccessToken?: string } } })
+            .customData?._tokenResponse || {}
+        );
+
+        // If we have a current user, try to link the credential
+        if (auth.currentUser && credential) {
+          const linkedResult = await linkWithCredential(auth.currentUser, credential);
+          return mapFirebaseUser(linkedResult.user);
+        }
+
+        // Re-throw with a more helpful message
+        throw new Error(
+          'An account already exists with this email using a different sign-in method. ' +
+          'Please sign in with your original method first, then link this provider in settings.'
+        );
+      }
+      throw error;
+    }
   },
 
   // ===========================================================================
