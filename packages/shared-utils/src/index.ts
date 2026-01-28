@@ -1,8 +1,8 @@
 /**
  * @universal/shared-utils
- * 
+ *
  * Pure TypeScript utility library.
- * 
+ *
  * Constraints:
  * - NO React Native imports
  * - NO React Native Web imports
@@ -14,7 +14,7 @@
 /**
  * Generates a greeting message
  */
-export function getGreeting(name: string = "World"): string {
+export function getGreeting(name: string = 'World'): string {
   return `Hello, ${name}!`;
 }
 
@@ -24,4 +24,21 @@ export function getGreeting(name: string = "World"): string {
 export function formatMessage(message: string, prefix?: string): string {
   return prefix ? `${prefix}: ${message}` : message;
 }
+
+// =============================================================================
+// Storage Abstraction
+// =============================================================================
+
+export {
+  type StorageAdapter,
+  configureStorage,
+  getStorage,
+  isStorageConfigured,
+  getJSON,
+  setJSON,
+  removeItem,
+  createWebStorage,
+  createMobileStorage,
+  storage,
+} from './storage';
 

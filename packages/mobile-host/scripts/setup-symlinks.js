@@ -34,13 +34,19 @@ for (const { name, target } of symlinks) {
     continue;
   }
 
-  // Remove existing symlink or directory
-  if (fs.existsSync(linkPath)) {
-    const stat = fs.lstatSync(linkPath);
-    if (stat.isSymbolicLink()) {
+  // Remove existing symlink or broken link
+  try {
+    const linkStat = fs.lstatSync(linkPath);
+    if (linkStat.isSymbolicLink()) {
       fs.unlinkSync(linkPath);
     } else {
       console.log(`Skipping ${name}: not a symlink`);
+      continue;
+    }
+  } catch (err) {
+    // linkPath doesn't exist, which is fine - we'll create it
+    if (err.code !== 'ENOENT') {
+      console.error(`Error checking ${name}:`, err.message);
       continue;
     }
   }
