@@ -8,10 +8,29 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
+# Firebase configuration for React Native 0.80 + New Architecture
+$RNFirebaseAsStaticFramework = true
+
+# Modular headers for Firebase Swift pod dependencies
+pod 'FirebaseAuthInterop', :modular_headers => true
+pod 'FirebaseAppCheckInterop', :modular_headers => true
+pod 'FirebaseCoreInternal', :modular_headers => true
+pod 'GoogleUtilities', :modular_headers => true
+pod 'RecaptchaInterop', :modular_headers => true
+
+# Force Firebase and its dependencies to build as dynamic frameworks for Swift interop
+# while keeping React Native pods as static libraries
+pre_install do |installer|
+  installer.pod_targets.each do |pod|
+    # Firebase pods and their dependencies need dynamic framework for Swift
+    firebase_related = ['Firebase', 'Google', 'GTMSessionFetcher', 'GTMAppAuth',
+                        'AppAuth', 'AppCheckCore', 'PromisesObjC', 'RecaptchaInterop']
+    if firebase_related.any? { |prefix| pod.name.start_with?(prefix) }
+      def pod.build_type
+        Pod::BuildType.dynamic_framework
+      end
+    end
+  end
 end
 
 target 'MobileHostTmp' do

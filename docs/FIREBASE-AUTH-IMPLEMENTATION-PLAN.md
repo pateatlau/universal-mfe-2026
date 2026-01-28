@@ -1,8 +1,8 @@
 # Firebase Authentication Implementation Plan
 
-**Status:** Phase 2 Complete - Implementing Phase 3
+**Status:** Phase 6 Complete - Ready for Phase 7
 **Last Updated:** 2026-01-28
-**Version:** 1.2 (Phase 1 & 2 completed)
+**Version:** 1.6 (Phase 1-6 completed with comprehensive documentation)
 **Target:** Universal authentication across Web, Android, and iOS with MFE-compatible architecture
 **Cost Target:** $0/month (Firebase Spark Plan)
 
@@ -1427,11 +1427,193 @@ export function hasAllRoles(user: User | null, roles: UserRole[]): boolean {
 
 ---
 
-## Phase 3: Firebase SDK Integration (Mobile)
+## Phase 3: Firebase SDK Integration (Mobile) ✅ COMPLETED
 
 **Objective:** Implement Firebase Authentication for React Native (Android + iOS).
 
+**Status:** ✅ Completed on 2026-01-28
+
 **Duration:** ~8 hours
+
+### Summary
+
+Phase 3 integrates the Firebase Authentication SDK into the React Native mobile host app, enabling native authentication flows for both Android and iOS. This phase focuses on the native SDK integration only - UI components with sign-in buttons will be implemented in Phase 5.
+
+### What Was Implemented
+
+1. **Firebase Auth Service** (`packages/mobile-host/src/services/firebaseAuthService.ts`)
+   - Implements the `AuthService` interface from `shared-auth-store`
+   - Supports email/password, Google Sign-In, and GitHub OAuth
+   - Maps Firebase user objects to our unified `User` type
+
+2. **Auth Store Integration** (`packages/mobile-host/src/App.tsx`)
+   - Configures storage, auth service, and event emitter in `useEffect`
+   - Initializes auth listener via `initializeAuth()`
+   - Emits auth events to the event bus for cross-MFE sync
+
+3. **Native Configuration**
+   - Android: `google-services.json`, Gradle configuration
+   - iOS: `GoogleService-Info.plist`, Podfile configuration, AppDelegate changes
+
+### Issues Encountered and Fixes Applied
+
+#### Issue 1: PatchMFConsolePlugin Platform.OS Polyfill (Android & iOS)
+
+**Problem:** The bundler was crashing with errors related to `Platform.OS` being undefined in debug builds.
+
+**Root Cause:** The `PatchMFConsolePlugin` (used to polyfill `console` for Hermes + Module Federation) also generates a `Platform.constants` polyfill. This requires the `PLATFORM` environment variable to be set at bundler startup to determine the correct `Platform.OS` value (`'android'` or `'ios'`).
+
+**Fix:** Updated `packages/mobile-host/package.json` bundler scripts:
+```json
+{
+  "start:bundler:android": "yarn kill:bundler:android && PLATFORM=android react-native start --platform android --port 8081",
+  "start:bundler:ios": "yarn kill:bundler:ios && PLATFORM=ios react-native start --platform ios --port 8082"
+}
+```
+
+**Commit:** `5ef33b8` - fix(mobile): resolve iOS and Android build issues for Firebase Auth
+
+---
+
+#### Issue 2: Firebase Auth Initialization Order (Mobile)
+
+**Problem:** Auth service was being configured at module load time, before React Native runtime was fully initialized, causing `AsyncStorage` and Firebase native modules to fail.
+
+**Root Cause:** The original code called `configureStorage()` and `configureAuthService()` at the top level of `App.tsx`, outside of React lifecycle.
+
+**Fix:** Moved all configuration inside a `useEffect` hook in the `AuthInitializer` component:
+```typescript
+function AuthInitializer() {
+  const isConfigured = useRef(false);
+
+  useEffect(() => {
+    if (!isConfigured.current) {
+      // Configure storage with AsyncStorage
+      if (!isStorageConfigured()) {
+        configureStorage(createMobileStorage(AsyncStorage));
+      }
+      // Configure auth service with Firebase
+      configureAuthService(firebaseAuthService);
+      // Configure event emitter for cross-MFE auth sync
+      configureAuthEventEmitter((type, payload) => {
+        bus.emit<AuthEvents>(eventType, payload);
+      });
+      isConfigured.current = true;
+    }
+    // Initialize auth...
+  }, []);
+}
+```
+
+**Commit:** `5dae160` - fix(mobile-host): defer storage and auth config to useEffect
+
+---
+
+#### Issue 3: iOS Build Failure - FirebaseAuth-Swift.h Not Found
+
+**Problem:** iOS build failed with error:
+```
+error: 'FirebaseAuth/FirebaseAuth-Swift.h' file not found
+```
+
+**Root Cause:** Firebase Auth is a Swift pod that requires framework-based builds for Swift interop. However, using `use_frameworks!` globally breaks React Native 0.80 + New Architecture due to "Multiple commands produce" header conflicts.
+
+**Attempted Solutions That Failed:**
+1. Adding modular headers for Firebase pods only → Still got Swift.h not found
+2. Using `use_frameworks! :linkage => :static` → "Multiple commands produce" header errors from React Native
+3. Using `use_modular_headers!` globally → Module redefinition errors
+4. `BUILD_LIBRARY_FOR_DISTRIBUTION = YES` → Same duplicate headers error
+
+**Final Solution:** Selective dynamic frameworks using `pre_install` hook. This makes Firebase pods build as dynamic frameworks (for Swift interop) while keeping React Native pods as static libraries.
+
+```ruby
+# packages/mobile-host/ios/Podfile
+
+# Firebase configuration for React Native 0.80 + New Architecture
+$RNFirebaseAsStaticFramework = true
+
+# Modular headers for Firebase Swift pod dependencies
+pod 'FirebaseAuthInterop', :modular_headers => true
+pod 'FirebaseAppCheckInterop', :modular_headers => true
+pod 'FirebaseCoreInternal', :modular_headers => true
+pod 'GoogleUtilities', :modular_headers => true
+pod 'RecaptchaInterop', :modular_headers => true
+
+# Force Firebase and its dependencies to build as dynamic frameworks for Swift interop
+# while keeping React Native pods as static libraries
+pre_install do |installer|
+  installer.pod_targets.each do |pod|
+    firebase_related = ['Firebase', 'Google', 'GTMSessionFetcher', 'GTMAppAuth',
+                        'AppAuth', 'AppCheckCore', 'PromisesObjC', 'RecaptchaInterop']
+    if firebase_related.any? { |prefix| pod.name.start_with?(prefix) }
+      def pod.build_type
+        Pod::BuildType.dynamic_framework
+      end
+    end
+  end
+end
+```
+
+**Commit:** `5ef33b8` - fix(mobile): resolve iOS and Android build issues for Firebase Auth
+
+---
+
+#### Issue 4: GoogleService-Info.plist Not Found in App Bundle
+
+**Problem:** After iOS build succeeded, the app showed a red error screen:
+```
+RNGoogleSignin: failed to determine clientID - GoogleService-Info.plist was not found and iosClientId was not provided.
+```
+
+**Root Cause:** The `GoogleService-Info.plist` file existed in the `ios/` directory but was not added to the Xcode project. It needed to be:
+1. Added as a file reference in the project
+2. Added to the MobileHostTmp group
+3. Added to the Resources build phase
+
+**Fix:** Manually added the file to `project.pbxproj`:
+```
+// PBXFileReference section
+A1B2C3D4E5F607890A1B2C3E /* GoogleService-Info.plist */ = {isa = PBXFileReference; ...};
+
+// PBXGroup children
+A1B2C3D4E5F607890A1B2C3E /* GoogleService-Info.plist */,
+
+// PBXResourcesBuildPhase files
+A1B2C3D4E5F607890A1B2C3D /* GoogleService-Info.plist in Resources */,
+```
+
+**Commit:** `6a06c46` - fix(ios): add GoogleService-Info.plist to Xcode project and initialize Firebase
+
+---
+
+#### Issue 5: Firebase Not Initialized on iOS
+
+**Problem:** Even after adding the plist, the app showed:
+```
+[MobileHost] Auth initialization failed: [Error: No Firebase App '[DEFAULT]' has been created - call firebase.initializeApp()]
+```
+
+**Root Cause:** Firebase on iOS requires explicit initialization in the AppDelegate before React Native starts. The `FirebaseApp.configure()` call was missing.
+
+**Fix:** Updated `packages/mobile-host/ios/MobileHostTmp/AppDelegate.swift`:
+```swift
+import FirebaseCore
+
+func application(
+  _ application: UIApplication,
+  didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+) -> Bool {
+  // Initialize Firebase before React Native starts
+  FirebaseApp.configure()
+
+  let delegate = ReactNativeDelegate()
+  // ... rest of initialization
+}
+```
+
+**Commit:** `6a06c46` - fix(ios): add GoogleService-Info.plist to Xcode project and initialize Firebase
+
+---
 
 ### Task 3.1: Install React Native Firebase Dependencies
 
@@ -1485,14 +1667,31 @@ if (file("google-services.json").exists()) {
 
 1. **Download `GoogleService-Info.plist`** from Firebase Console
 
-2. **Add to iOS project**:
+2. **Add to iOS project** (CRITICAL - must be in Xcode project, not just filesystem):
    - Place at `packages/mobile-host/ios/GoogleService-Info.plist`
-   - Add to Xcode project (drag into project navigator)
+   - Open Xcode workspace: `packages/mobile-host/ios/MobileHostTmp.xcworkspace`
+   - Drag `GoogleService-Info.plist` into the MobileHostTmp group in the Project Navigator
    - Ensure "Copy items if needed" is checked
+   - Ensure "Add to targets: MobileHostTmp" is checked
+   - Verify it appears in Build Phases → Copy Bundle Resources
 
-3. **Update `ios/Podfile`** if needed (usually automatic)
+3. **Initialize Firebase in AppDelegate** (CRITICAL):
+   ```swift
+   // packages/mobile-host/ios/MobileHostTmp/AppDelegate.swift
+   import FirebaseCore
 
-4. **Configure URL Schemes** for Google Sign-In:
+   func application(...) -> Bool {
+     FirebaseApp.configure()  // MUST be before React Native initialization
+     // ...
+   }
+   ```
+
+4. **Configure Podfile for Firebase + React Native 0.80**:
+   - Use selective dynamic frameworks (see Issue 3 fix above)
+   - Add modular headers for Firebase Swift dependencies
+   - Run `pod install` after changes
+
+5. **Configure URL Schemes** for Google Sign-In:
    - Open `ios/MobileHostTmp/Info.plist`
    - Add URL scheme from `GoogleService-Info.plist` (REVERSED_CLIENT_ID)
 
@@ -1741,28 +1940,241 @@ function App() {
 
 ### Verification Steps
 
-- [ ] Firebase app initializes without errors on Android
-- [ ] Firebase app initializes without errors on iOS
-- [ ] Email sign-in works on both platforms
-- [ ] Email sign-up works on both platforms
-- [ ] Google sign-in works on both platforms
-- [ ] Sign-out works on both platforms
-- [ ] Auth state persists across app restarts
-- [ ] Event bus receives USER_LOGGED_IN events
+- [x] Dependencies installed (`@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-google-signin/google-signin`, `@react-native-async-storage/async-storage`)
+- [x] iOS URL schemes configured for Google Sign-In
+- [x] iOS pods installed with Firebase modular headers
+- [x] Android SHA-1 fingerprint generated (via `./gradlew signingReport`)
+- [x] Mobile Firebase Auth Service created (`packages/mobile-host/src/services/firebaseAuthService.ts`)
+- [x] Auth initialized in Mobile Host (`App.tsx`)
+- [x] `yarn typecheck` passes
+- [x] Firebase app initializes without errors on Android
+- [x] Firebase app initializes without errors on iOS
+- [x] App loads and existing functionality works on both platforms
+- [x] **Manual**: SHA-1 fingerprint added to Firebase Console
+- [x] **Manual**: Updated `google-services.json` downloaded and placed in `android/app/`
+- [ ] **Manual**: Email sign-in works on both platforms (requires Phase 5 UI)
+- [ ] **Manual**: Google sign-in works on both platforms (requires Phase 5 UI)
 
 ---
 
-## Phase 4: Firebase SDK Integration (Web)
+### Firebase Console Manual Setup Steps
+
+These steps must be completed in the Firebase Console before Google Sign-In will work.
+
+#### Step 1: Access Firebase Console
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Select your project: **universal-mfe**
+
+#### Step 2: Add Android SHA-1 Fingerprint (REQUIRED for Google Sign-In on Android)
+
+Google Sign-In requires the SHA-1 fingerprint of the signing certificate to verify the app's identity.
+
+1. **Get your debug SHA-1 fingerprint:**
+   ```bash
+   cd packages/mobile-host/android
+   ./gradlew signingReport
+   ```
+   Look for the `SHA1:` line under `Variant: debug`. The output will look like:
+   ```
+   SHA1: XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX
+   ```
+   Copy this value for the next step.
+
+2. **Add to Firebase Console:**
+   - Go to **Project Settings** (gear icon) → **General**
+   - Scroll to **Your apps** → **Android apps**
+   - Click on your Android app (`com.mobilehosttmp`)
+   - Click **Add fingerprint**
+   - Paste the SHA-1 fingerprint
+   - Click **Save**
+
+3. **Download updated google-services.json:**
+   - After adding the fingerprint, click **Download google-services.json**
+   - Replace `packages/mobile-host/android/app/google-services.json`
+
+#### Step 3: Configure Google Sign-In in Google Cloud Console
+
+1. **Access Google Cloud Console:**
+   - From Firebase Console → Project Settings → General
+   - Click the link to **Google Cloud Console** for your project
+
+2. **Enable APIs:**
+   - Go to **APIs & Services** → **Enabled APIs & services**
+   - Ensure **Google Sign-In API** is enabled
+   - If not, click **+ ENABLE APIS AND SERVICES** and search for "Google Sign-In"
+
+3. **Configure OAuth Consent Screen** (if not already done):
+   - Go to **APIs & Services** → **OAuth consent screen**
+   - Select **External** (for testing) or **Internal** (for organization)
+   - Fill in required fields:
+     - App name: `Universal MFE`
+     - User support email: Your email
+     - Developer contact email: Your email
+   - Click **Save and Continue**
+   - Skip Scopes (defaults are fine for auth)
+   - Add test users if using External (your email)
+   - Click **Save**
+
+4. **Note your Web Client ID:**
+   - Go to **APIs & Services** → **Credentials**
+   - Find the **Web client (auto created by Google Service)** OAuth 2.0 Client ID
+   - Copy this ID - it's needed for the mobile Google Sign-In configuration
+   - Format: `XXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com`
+
+#### Step 4: Update Mobile Firebase Auth Service with Web Client ID
+
+1. **Update `packages/mobile-host/src/services/firebaseAuthService.ts`:**
+   ```typescript
+   GoogleSignin.configure({
+     webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com', // From Step 3.4
+     offlineAccess: true,
+   });
+   ```
+
+2. **Alternatively, use environment variable** (recommended):
+   - Set `GOOGLE_WEB_CLIENT_ID` in your environment
+   - The code already checks for this: `process.env.GOOGLE_WEB_CLIENT_ID`
+
+#### Step 5: Configure iOS URL Scheme (REQUIRED for Google Sign-In on iOS)
+
+1. **Get REVERSED_CLIENT_ID:**
+   - Open `packages/mobile-host/ios/GoogleService-Info.plist`
+   - Find the `REVERSED_CLIENT_ID` value
+   - Format: `com.googleusercontent.apps.XXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`
+
+2. **Add URL Scheme in Xcode:**
+   - Open `packages/mobile-host/ios/MobileHostTmp.xcworkspace` in Xcode
+   - Select the **MobileHostTmp** project in the navigator
+   - Select the **MobileHostTmp** target
+   - Go to **Info** tab → **URL Types**
+   - Click **+** to add a new URL type
+   - Set **URL Schemes** to your `REVERSED_CLIENT_ID`
+   - Leave other fields empty or set Identifier to `google-signin`
+
+3. **Alternative: Edit Info.plist directly:**
+   ```xml
+   <!-- packages/mobile-host/ios/MobileHostTmp/Info.plist -->
+   <key>CFBundleURLTypes</key>
+   <array>
+     <dict>
+       <key>CFBundleURLSchemes</key>
+       <array>
+         <string>com.googleusercontent.apps.YOUR_CLIENT_ID</string>
+       </array>
+     </dict>
+   </array>
+   ```
+
+#### Step 6: Enable GitHub Authentication (Optional)
+
+1. **Create GitHub OAuth App:**
+   - Go to GitHub → Settings → Developer settings → OAuth Apps → New OAuth App
+   - Application name: `Universal MFE Auth`
+   - Homepage URL: `https://universal-mfe.web.app`
+   - Authorization callback URL: Get from Firebase Console (see below)
+
+2. **Get callback URL from Firebase:**
+   - Go to Firebase Console → Authentication → Sign-in method → GitHub
+   - Copy the **Authorization callback URL** (format: `https://universal-mfe.firebaseapp.com/__/auth/handler`)
+   - Use this as the callback URL in your GitHub OAuth App
+
+3. **Add GitHub credentials to Firebase:**
+   - In Firebase Console → Authentication → Sign-in method → GitHub
+   - Click **Enable**
+   - Enter the **Client ID** and **Client Secret** from your GitHub OAuth App
+   - Click **Save**
+
+#### Step 7: Verify Configuration
+
+Run these checks to verify your setup:
+
+1. **Android:**
+   ```bash
+   cd packages/mobile-host
+   yarn start:bundler:android  # In terminal 1
+   yarn android                 # In terminal 2
+   ```
+   - App should start without Firebase errors
+   - Check Metro bundler output for any auth-related errors
+
+2. **iOS:**
+   ```bash
+   cd packages/mobile-host
+   yarn start:bundler:ios  # In terminal 1
+   yarn ios                # In terminal 2
+   ```
+   - App should start without Firebase errors
+   - Check Xcode console for any auth-related errors
+
+3. **Test Auth State Listener:**
+   - The app should show "[MobileHost] Auth initialization successful" or similar in logs
+   - No more "No Firebase App '[DEFAULT]' has been created" errors
+
+### Current State After Phase 3
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Firebase SDK (Android) | ✅ Integrated | App runs without errors |
+| Firebase SDK (iOS) | ✅ Integrated | App runs without errors |
+| Auth State Listener | ✅ Working | Listens for auth changes |
+| Storage Abstraction | ✅ Working | AsyncStorage configured |
+| Event Bus Integration | ✅ Working | Emits auth events |
+| Google Sign-In (Android) | ⏳ Pending | Needs SHA-1 in Firebase Console + UI |
+| Google Sign-In (iOS) | ⏳ Pending | Needs URL scheme + UI |
+| Sign-In UI | ⏳ Phase 5 | Buttons not yet implemented |
+
+### What's Next
+
+Phase 4 will implement the same Firebase Auth integration for the web platform (`web-shell`), and Phase 5 will create the universal sign-in UI components that will trigger the authentication flows.
+
+---
+
+## Phase 4: Firebase SDK Integration (Web) ✅ COMPLETED
 
 **Objective:** Implement Firebase Authentication for Web using modular Firebase SDK.
 
+**Status:** ✅ Completed on 2026-01-28
+
 **Duration:** ~4 hours
+
+### Summary
+
+Phase 4 integrates the Firebase Authentication SDK into the web shell app using the modular Firebase JS SDK (v11.7.0). This phase implements the same `AuthService` interface as the mobile implementation, enabling consistent auth flows across platforms.
+
+### What Was Implemented
+
+1. **Firebase Configuration** (`packages/web-shell/src/config/firebase.ts`)
+   - Firebase app initialization with environment variable support
+   - Uses `process.env` for configuration (injected via Rspack DefinePlugin)
+   - Hardcoded fallback values for development convenience
+
+2. **Firebase Auth Service** (`packages/web-shell/src/services/firebaseAuthService.ts`)
+   - Implements the `AuthService` interface from `shared-auth-store`
+   - Supports email/password, Google Sign-In (popup), and GitHub Sign-In (popup)
+   - Maps Firebase user objects to our unified `User` type
+
+3. **Auth Store Integration** (`packages/web-shell/src/App.tsx`)
+   - `AuthInitializer` component configures storage, auth service, and event emitter in `useEffect`
+   - Uses `createWebStorage(window.localStorage)` for persistence
+   - Emits auth events to the event bus for cross-MFE sync
+
+4. **Rspack Configuration** (`packages/web-shell/rspack.config.mjs`)
+   - Added `DefinePlugin` to inject environment variables at build time
+   - Firebase config can be overridden via environment variables
+
+5. **Environment Variables** (`packages/web-shell/.env.example`)
+   - Template for Firebase configuration
+   - Uses `FIREBASE_*` prefix (not `VITE_*` since this uses Rspack)
 
 ### Task 4.1: Install Firebase Web SDK
 
 ```bash
-yarn workspace @universal/web-shell add firebase
-yarn workspace @universal/web-remote-hello add firebase
+# Added to packages/web-shell/package.json:
+# - firebase: 11.7.0
+# - @universal/shared-auth-store: "*"
+# - @universal/shared-utils: "*"
+yarn install
 ```
 
 ### Task 4.2: Create Firebase Configuration
@@ -1775,23 +2187,37 @@ yarn workspace @universal/web-remote-hello add firebase
  *
  * These are public API keys - they are safe to commit.
  * Security is enforced through Firebase Security Rules.
+ *
+ * Note: Rspack uses process.env, not import.meta.env like Vite.
+ * The DefinePlugin in rspack.config.mjs handles the replacement.
  */
 
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
 
+// Firebase configuration from environment variables
+// Falls back to hardcoded values for development (these are public API keys)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'YOUR_API_KEY',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'universal-mfe.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'universal-mfe',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'universal-mfe.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || 'YOUR_SENDER_ID',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || 'YOUR_APP_ID',
+  apiKey: process.env.FIREBASE_API_KEY || 'AIzaSyAA2fGYduWsdwXXXDP7KKrIkcaDg3UuS1Q',
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || 'universal-mfe.firebaseapp.com',
+  projectId: process.env.FIREBASE_PROJECT_ID || 'universal-mfe',
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'universal-mfe.firebasestorage.app',
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '489294318656',
+  appId: process.env.FIREBASE_APP_ID || '1:489294318656:web:222b01b55cadc1a0a8a3a5',
+  measurementId: process.env.FIREBASE_MEASUREMENT_ID || 'G-PM1CXVNBED',
 };
 
 // Initialize Firebase (only once)
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
+let app: FirebaseApp;
+let auth: Auth;
+
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
+
+auth = getAuth(app);
 
 export { app, auth, firebaseConfig };
 ```
@@ -1955,30 +2381,85 @@ function App() {
 **Create** `packages/web-shell/.env.example`:
 
 ```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
+# Firebase Configuration for Web Shell
+#
+# Copy this file to .env and fill in your Firebase project credentials.
+# These values can be found in your Firebase Console:
+# Project Settings -> General -> Your apps -> Web app
+#
+# Note: Firebase config values are public API keys - they are safe to expose.
+# Security is enforced through Firebase Security Rules.
+
+# Required Firebase Configuration
+FIREBASE_API_KEY=your_api_key_here
+FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+FIREBASE_APP_ID=your_app_id
+
+# Optional
+FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+```
+
+### Task 4.6: Update Rspack Configuration
+
+**Update** `packages/web-shell/rspack.config.mjs` to inject environment variables:
+
+```javascript
+const { DefinePlugin } = rspack;
+
+// Firebase configuration from environment variables
+const firebaseConfig = {
+  FIREBASE_API_KEY: process.env.FIREBASE_API_KEY || '',
+  FIREBASE_AUTH_DOMAIN: process.env.FIREBASE_AUTH_DOMAIN || '',
+  FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || '',
+  FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET || '',
+  FIREBASE_MESSAGING_SENDER_ID: process.env.FIREBASE_MESSAGING_SENDER_ID || '',
+  FIREBASE_APP_ID: process.env.FIREBASE_APP_ID || '',
+  FIREBASE_MEASUREMENT_ID: process.env.FIREBASE_MEASUREMENT_ID || '',
+};
+
+// In plugins array:
+new DefinePlugin({
+  'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+  'process.env.FIREBASE_API_KEY': JSON.stringify(firebaseConfig.FIREBASE_API_KEY),
+  'process.env.FIREBASE_AUTH_DOMAIN': JSON.stringify(firebaseConfig.FIREBASE_AUTH_DOMAIN),
+  'process.env.FIREBASE_PROJECT_ID': JSON.stringify(firebaseConfig.FIREBASE_PROJECT_ID),
+  'process.env.FIREBASE_STORAGE_BUCKET': JSON.stringify(firebaseConfig.FIREBASE_STORAGE_BUCKET),
+  'process.env.FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(firebaseConfig.FIREBASE_MESSAGING_SENDER_ID),
+  'process.env.FIREBASE_APP_ID': JSON.stringify(firebaseConfig.FIREBASE_APP_ID),
+  'process.env.FIREBASE_MEASUREMENT_ID': JSON.stringify(firebaseConfig.FIREBASE_MEASUREMENT_ID),
+}),
 ```
 
 ### Verification Steps
 
-- [ ] Firebase initializes without errors on web
-- [ ] Email sign-in works
-- [ ] Email sign-up works
-- [ ] Google sign-in popup works
-- [ ] GitHub sign-in popup works
-- [ ] Sign-out works
-- [ ] Auth state persists across page refreshes
-- [ ] Event bus receives USER_LOGGED_IN events
+- [x] Firebase initializes without errors on web (confirmed - dev server starts, no Firebase errors)
+- [x] TypeScript types pass (`yarn workspace @universal/web-shell typecheck` - success)
+- [x] Build succeeds (`yarn workspace @universal/web-shell build` - success with expected warnings)
+- [ ] Email sign-in works (requires UI - Phase 5)
+- [ ] Email sign-up works (requires UI - Phase 5)
+- [ ] Google sign-in popup works (requires UI - Phase 5)
+- [ ] GitHub sign-in popup works (requires UI - Phase 5)
+- [ ] Sign-out works (requires UI - Phase 5)
+- [ ] Auth state persists across page refreshes (requires UI - Phase 5)
+- [ ] Event bus receives USER_LOGGED_IN events (requires UI - Phase 5)
+
+### Key Differences from Implementation Plan
+
+1. **Environment Variables**: Uses `process.env.FIREBASE_*` instead of `import.meta.env.VITE_*` since Rspack uses DefinePlugin, not Vite
+2. **Auth Initialization**: Done in `App.tsx` via `AuthInitializer` component (not `index.tsx`) to ensure React lifecycle is ready
+3. **Firebase SDK Version**: Uses v11.7.0 (latest stable) instead of generic v9+
+4. **web-remote-hello**: Firebase not added to remote - remotes inherit auth state from host via event bus
 
 ---
 
-## Phase 5: Auth UI Components
+## Phase 5: Auth UI Components ✅ COMPLETED
 
 **Objective:** Create universal auth UI components using React Native primitives.
+
+**Status:** ✅ Completed on 2026-01-28
 
 **Duration:** ~8 hours
 
@@ -2314,18 +2795,45 @@ auth: {
 
 ### Verification Steps
 
-- [ ] LoginScreen renders correctly on all platforms
-- [ ] SignUpScreen renders correctly on all platforms
-- [ ] ForgotPasswordScreen renders correctly on all platforms
-- [ ] Theme changes apply correctly
-- [ ] i18n translations work
-- [ ] Accessibility labels present
+- [x] LoginScreen renders correctly on all platforms
+- [x] SignUpScreen renders correctly on all platforms
+- [x] ForgotPasswordScreen renders correctly on all platforms
+- [x] Theme changes apply correctly
+- [x] i18n translations work (English and Hindi)
+- [x] Accessibility labels present
+
+### Implementation Summary
+
+**Components created in `packages/shared-hello-ui/src/components/auth/`:**
+
+| Component | Description |
+|-----------|-------------|
+| `AuthButton.tsx` | Reusable button with variants: primary, secondary, google, github |
+| `AuthInput.tsx` | Themed input field with text/email/password types and visibility toggle |
+| `AuthError.tsx` | Error display with dismiss functionality |
+| `SocialLoginButtons.tsx` | Google and GitHub sign-in buttons with divider |
+| `LoginScreen.tsx` | Complete login with email/password and social login |
+| `SignUpScreen.tsx` | Registration form with password strength indicator |
+| `ForgotPasswordScreen.tsx` | Password reset form with success state |
+| `index.ts` | Barrel exports for all auth components |
+
+**Page wrappers created:**
+
+- `packages/web-shell/src/pages/Login.tsx`, `SignUp.tsx`, `ForgotPassword.tsx`
+- `packages/mobile-host/src/pages/Login.tsx`, `SignUp.tsx`, `ForgotPassword.tsx`
+
+**i18n translations added:**
+
+- `packages/shared-i18n/src/locales/en.ts` - English auth namespace
+- `packages/shared-i18n/src/locales/hi.ts` - Hindi auth namespace
 
 ---
 
-## Phase 6: Protected Routes & Auth Guards
+## Phase 6: Protected Routes & Auth Guards ✅ COMPLETED
 
 **Objective:** Implement route protection and auth guards.
+
+**Status:** ✅ Completed on 2026-01-28
 
 **Duration:** ~4 hours
 
@@ -2455,10 +2963,53 @@ const styles = StyleSheet.create({
 
 ### Verification Steps
 
-- [ ] Protected routes redirect to login when not authenticated
-- [ ] Protected routes render content when authenticated
-- [ ] Loading state shows while checking auth
-- [ ] LOGIN_REQUIRED event is emitted correctly
+- [x] Protected routes redirect to login when not authenticated
+- [x] Protected routes render content when authenticated
+- [x] Loading state shows while checking auth
+- [x] Root path (`/`) redirects to `/login` or `/home` based on auth state
+
+### Implementation Summary
+
+**Route protection implemented in:**
+
+- `packages/web-shell/src/App.tsx` - `ProtectedRoute` and `AuthRedirect` components
+- `packages/mobile-host/src/App.tsx` - `ProtectedRoute` and `AuthRedirect` components
+
+**Protected routes:**
+
+| Route | Path | Protection |
+|-------|------|------------|
+| Home | `/home` | ✅ Protected |
+| Remote Hello | `/remote-hello` | ✅ Protected |
+| Settings | `/settings` | ✅ Protected |
+| Login | `/login` | Public |
+| Sign Up | `/signup` | Public |
+| Forgot Password | `/forgot-password` | Public |
+
+**Auth-aware header behavior:**
+
+- Navigation menu (Home, Remote Hello, Settings) only visible when authenticated
+- Settings button (web) only visible when authenticated
+- User info and explicit Logout button shown when authenticated
+- Unauthenticated users see only theme/language toggles
+
+**Account Linking Error Handling:**
+
+When a user tries to sign in with a different provider (e.g., GitHub) using an email already registered with another provider (e.g., Google), a helpful error message is displayed:
+
+> "An account already exists with this email using a different sign-in method. Please sign in with your original method first, then link this provider in settings."
+
+**TODO: Automatic Account Linking**
+
+Firebase by default does not automatically link accounts with the same email from different providers. Full automatic account linking would require:
+
+1. Storing the pending credential when `auth/account-exists-with-different-credential` error occurs
+2. Fetching available sign-in methods for the email using `fetchSignInMethodsForEmail()`
+3. Prompting the user to sign in with their existing provider
+4. Using `linkWithCredential()` to link the new provider after successful sign-in
+5. Optionally, implementing an "Account Settings" page where users can link/unlink providers
+
+This enhancement is tracked as a future improvement and is not blocking for the core authentication flow.
 
 ---
 
@@ -2499,10 +3050,14 @@ const styles = StyleSheet.create({
 
 ```yaml
 env:
-  VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
-  VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_WEB_AUTH_DOMAIN }}
-  VITE_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_WEB_PROJECT_ID }}
-  VITE_FIREBASE_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
+  # Note: Uses FIREBASE_* prefix (not VITE_*) since web-shell uses Rspack's DefinePlugin
+  FIREBASE_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+  FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_WEB_AUTH_DOMAIN }}
+  FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_WEB_PROJECT_ID }}
+  FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_WEB_STORAGE_BUCKET }}
+  FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_WEB_MESSAGING_SENDER_ID }}
+  FIREBASE_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
+  FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_WEB_MEASUREMENT_ID }}
 ```
 
 ### Verification Steps

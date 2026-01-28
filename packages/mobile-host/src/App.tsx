@@ -7,23 +7,12 @@
  * Hermes is required for execution.
  */
 
-import React, { useMemo, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Platform,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
-import { NativeRouter, Routes as RouterRoutes, Route, Link } from 'react-router-native';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { NativeRouter, Routes as RouterRoutes, Route, Link, Navigate, useLocation } from 'react-router-native';
 import { ScriptManager } from '@callstack/repack/client';
-import {
-  ThemeProvider,
-  useTheme,
-  Theme,
-} from '@universal/shared-theme-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThemeProvider, useTheme, Theme } from '@universal/shared-theme-context';
 import {
   I18nProvider,
   useTranslation,
@@ -38,15 +27,34 @@ import {
   createEventLogger,
   ThemeEventTypes,
   LocaleEventTypes,
+  AuthEventTypes,
   type AppEvents,
+  type AuthEvents,
 } from '@universal/shared-event-bus';
 import { QueryProvider } from '@universal/shared-data-layer';
 import { Routes } from '@universal/shared-router';
+import {
+  configureStorage,
+  createMobileStorage,
+  isStorageConfigured,
+} from '@universal/shared-utils';
+import {
+  configureAuthService,
+  configureAuthEventEmitter,
+  useAuthStore,
+  useIsAuthenticated,
+  useIsAuthInitialized,
+  useUser,
+} from '@universal/shared-auth-store';
+import { firebaseAuthService } from './services/firebaseAuthService';
 
 // Page components
 import Home from './pages/Home';
 import Remote from './pages/Remote';
 import Settings from './pages/Settings';
+import Login from './pages/Login';
+import SignUp from './pages/SignUp';
+import ForgotPassword from './pages/ForgotPassword';
 
 // Import remote configuration
 import { getRemoteHost } from './config/remoteConfig';
@@ -116,6 +124,11 @@ interface HeaderStyles {
   navLinkText: TextStyle;
   navLinkActive: ViewStyle;
   navLinkTextActive: TextStyle;
+  userRow: ViewStyle;
+  userInfo: ViewStyle;
+  userInfoText: TextStyle;
+  logoutButton: ViewStyle;
+  logoutButtonText: TextStyle;
 }
 
 function createHeaderStyles(theme: Theme): HeaderStyles {
@@ -197,6 +210,35 @@ function createHeaderStyles(theme: Theme): HeaderStyles {
       color: theme.colors.interactive.primary,
       fontWeight: theme.typography.fontWeights.semibold,
     },
+    userRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.element.gap,
+      marginTop: theme.spacing.element.gap,
+    },
+    userInfo: {
+      backgroundColor: theme.colors.surface.tertiary,
+      paddingHorizontal: theme.spacing.component.padding,
+      paddingVertical: theme.spacing.element.gap,
+      borderRadius: theme.spacing.component.borderRadius,
+    },
+    userInfoText: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.text.primary,
+      fontWeight: theme.typography.fontWeights.medium,
+    },
+    logoutButton: {
+      backgroundColor: theme.colors.status.error,
+      paddingHorizontal: theme.spacing.component.padding,
+      paddingVertical: theme.spacing.element.gap,
+      borderRadius: theme.spacing.component.borderRadius,
+    },
+    logoutButtonText: {
+      fontSize: theme.typography.fontSizes.sm,
+      color: theme.colors.text.inverse,
+      fontWeight: theme.typography.fontWeights.medium,
+    },
   });
 }
 
@@ -240,6 +282,115 @@ function EventLogger() {
 }
 
 /**
+ * AuthInitializer component - configures storage, auth service, and initializes auth.
+ * Must be rendered inside EventBusProvider to access the event bus.
+ *
+ * Configuration happens inside useEffect to ensure React Native runtime is ready,
+ * as Firebase SDK and AsyncStorage require native modules to be initialized.
+ */
+function AuthInitializer() {
+  const bus = useEventBus<AppEvents>();
+  const initializeAuth = useAuthStore((state) => state.initializeAuth);
+  const isConfigured = useRef(false);
+
+  useEffect(() => {
+    // Configure storage, auth service, and event emitter (only once)
+    if (!isConfigured.current) {
+      // Configure storage with AsyncStorage
+      if (!isStorageConfigured()) {
+        configureStorage(createMobileStorage(AsyncStorage));
+      }
+
+      // Configure auth service with Firebase
+      configureAuthService(firebaseAuthService);
+
+      // Configure event emitter for cross-MFE auth sync
+      configureAuthEventEmitter((type, payload) => {
+        // Map auth store event types to event bus types
+        // The auth store emits: USER_LOGGED_IN, USER_LOGGED_OUT, AUTH_ERROR
+        const eventType = type as AuthEvents['type'];
+        bus.emit<AuthEvents>(eventType, payload as AuthEvents['payload']);
+      });
+
+      isConfigured.current = true;
+    }
+
+    // Initialize auth and get the unsubscribe function
+    let unsubscribe: (() => void) | undefined;
+
+    initializeAuth()
+      .then((unsub) => {
+        unsubscribe = unsub;
+        if (__DEV__) {
+          console.log('[MobileHost] Auth initialized successfully');
+        }
+      })
+      .catch((error) => {
+        console.error('[MobileHost] Auth initialization failed:', error);
+      });
+
+    // Cleanup: unsubscribe from auth state changes
+    return () => {
+      unsubscribe?.();
+    };
+  }, [bus, initializeAuth]);
+
+  return null;
+}
+
+/**
+ * ProtectedRoute component - redirects to login if not authenticated.
+ */
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useIsAuthenticated();
+  const isInitialized = useIsAuthInitialized();
+  const { theme } = useTheme();
+  const location = useLocation();
+
+  // Wait for auth to initialize - show loading spinner
+  if (!isInitialized) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface.background }}>
+        <ActivityIndicator size="large" color={theme.colors.interactive.primary} />
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    // Redirect to login, saving the intended destination
+    return <Navigate to={`/${Routes.LOGIN}`} state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * AuthRedirect component - redirects based on auth state.
+ * If authenticated: go to /home
+ * If not authenticated: go to /login
+ */
+function AuthRedirect() {
+  const isAuthenticated = useIsAuthenticated();
+  const isInitialized = useIsAuthInitialized();
+  const { theme } = useTheme();
+
+  // Wait for auth to initialize - show loading spinner
+  if (!isInitialized) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface.background }}>
+        <ActivityIndicator size="large" color={theme.colors.interactive.primary} />
+      </View>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to={`/${Routes.HOME}`} replace />;
+  }
+
+  return <Navigate to={`/${Routes.LOGIN}`} replace />;
+}
+
+/**
  * Header component with navigation and controls.
  */
 function Header() {
@@ -248,6 +399,11 @@ function Header() {
   const { t } = useTranslation('common');
   const styles = useMemo(() => createHeaderStyles(theme), [theme]);
   const bus = useEventBus<AppEvents>();
+
+  // Auth state
+  const isAuthenticated = useIsAuthenticated();
+  const user = useUser();
+  const signOut = useAuthStore((state) => state.signOut);
 
   // Emit THEME_CHANGED event when theme changes
   const handleThemeToggle = useCallback(() => {
@@ -290,6 +446,24 @@ function Header() {
     handleLocaleChange(availableLocales[nextIndex]);
   }, [locale, handleLocaleChange]);
 
+  // Get the next locale to show what clicking will switch to
+  const nextLocale = useMemo(() => {
+    const currentIndex = availableLocales.indexOf(locale);
+    const nextIndex = (currentIndex + 1) % availableLocales.length;
+    return availableLocales[nextIndex];
+  }, [locale]);
+
+  // Sign out handler
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      if (__DEV__) {
+        console.error('[MobileHost] Sign out error:', error);
+      }
+    }
+  }, [signOut]);
+
   return (
     <View style={styles.header}>
       <View style={styles.headerRow}>
@@ -298,33 +472,45 @@ function Header() {
       <View style={styles.controlsRow}>
         <Pressable style={styles.themeToggle} onPress={handleThemeToggle}>
           <Text style={styles.themeToggleText}>
-            {isDark ? `🌙 ${t('theme.dark')}` : `☀️ ${t('theme.light')}`}
+            {isDark ? `☀️ ${t('theme.light')}` : `🌙 ${t('theme.dark')}`}
           </Text>
         </Pressable>
         <Pressable style={styles.langToggle} onPress={cycleLocale}>
-          <Text style={styles.langToggleText}>
-            🌐 {getLocaleDisplayName(locale)}
-          </Text>
+          <Text style={styles.langToggleText}>🌐 {getLocaleDisplayName(nextLocale)}</Text>
         </Pressable>
       </View>
       <Text style={styles.subtitle}>{t('subtitleMobile')}</Text>
-      <View style={styles.navRow}>
-        <Link to={`/${Routes.HOME}`} underlayColor="transparent">
-          <View style={styles.navLink}>
-            <Text style={styles.navLinkText}>{t('navigation.home')}</Text>
+      {isAuthenticated && (
+        <>
+          <View style={styles.navRow}>
+            <Link to={`/${Routes.HOME}`} underlayColor="transparent">
+              <View style={styles.navLink}>
+                <Text style={styles.navLinkText}>{t('navigation.home')}</Text>
+              </View>
+            </Link>
+            <Link to={`/${Routes.REMOTE_HELLO}`} underlayColor="transparent">
+              <View style={styles.navLink}>
+                <Text style={styles.navLinkText}>{t('navigation.remoteHello')}</Text>
+              </View>
+            </Link>
+            <Link to={`/${Routes.SETTINGS}`} underlayColor="transparent">
+              <View style={styles.navLink}>
+                <Text style={styles.navLinkText}>{t('navigation.settings')}</Text>
+              </View>
+            </Link>
           </View>
-        </Link>
-        <Link to={`/${Routes.REMOTE_HELLO}`} underlayColor="transparent">
-          <View style={styles.navLink}>
-            <Text style={styles.navLinkText}>{t('navigation.remoteHello')}</Text>
+          <View style={styles.userRow}>
+            <View style={styles.userInfo}>
+              <Text style={styles.userInfoText}>
+                👤 {user?.displayName || user?.email}
+              </Text>
+            </View>
+            <Pressable style={styles.logoutButton} onPress={handleSignOut}>
+              <Text style={styles.logoutButtonText}>{t('navigation.logout')}</Text>
+            </Pressable>
           </View>
-        </Link>
-        <Link to={`/${Routes.SETTINGS}`} underlayColor="transparent">
-          <View style={styles.navLink}>
-            <Text style={styles.navLinkText}>{t('navigation.settings')}</Text>
-          </View>
-        </Link>
-      </View>
+        </>
+      )}
     </View>
   );
 }
@@ -340,10 +526,16 @@ function AppLayout() {
     <View style={styles.container}>
       <Header />
       <RouterRoutes>
-        <Route path="/" element={<Home />} />
-        <Route path={`/${Routes.HOME}`} element={<Home />} />
-        <Route path={`/${Routes.REMOTE_HELLO}`} element={<Remote />} />
-        <Route path={`/${Routes.SETTINGS}`} element={<Settings />} />
+        {/* Root redirects based on auth state */}
+        <Route path="/" element={<AuthRedirect />} />
+        {/* Protected routes - require authentication */}
+        <Route path={`/${Routes.HOME}`} element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path={`/${Routes.REMOTE_HELLO}`} element={<ProtectedRoute><Remote /></ProtectedRoute>} />
+        <Route path={`/${Routes.SETTINGS}`} element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        {/* Auth routes - public */}
+        <Route path={`/${Routes.LOGIN}`} element={<Login />} />
+        <Route path={`/${Routes.SIGNUP}`} element={<SignUp />} />
+        <Route path={`/${Routes.FORGOT_PASSWORD}`} element={<ForgotPassword />} />
       </RouterRoutes>
     </View>
   );
@@ -357,12 +549,16 @@ function AppLayout() {
  * 3. EventBusProvider - Event bus for inter-MFE communication
  * 4. I18nProvider - Internationalization
  * 5. ThemeProvider - Theming
+ *
+ * Auth initialization happens inside EventBusProvider via AuthInitializer
+ * to ensure the event bus is available for auth events.
  */
 function App() {
   return (
     <NativeRouter>
       <QueryProvider>
         <EventBusProvider options={{ debug: __DEV__, name: 'MobileHost' }}>
+          <AuthInitializer />
           <I18nProvider translations={locales} initialLocale="en">
             <ThemeProvider>
               <EventLogger />

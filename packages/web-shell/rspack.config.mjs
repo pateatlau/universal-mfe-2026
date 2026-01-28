@@ -1,6 +1,6 @@
 import rspack from '@rspack/core';
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
-const { HtmlRspackPlugin } = rspack;
+const { HtmlRspackPlugin, DefinePlugin } = rspack;
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +14,18 @@ const enableLogging =
 
 // Remote URL configuration - use environment variable for production, localhost for development
 const remoteHelloUrl = process.env.REMOTE_HELLO_URL || 'http://localhost:9003';
+
+// Firebase configuration from environment variables
+// These are safe to expose - security is enforced via Firebase Security Rules
+const firebaseConfig = {
+  FIREBASE_API_KEY: process.env.FIREBASE_API_KEY || '',
+  FIREBASE_AUTH_DOMAIN: process.env.FIREBASE_AUTH_DOMAIN || '',
+  FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || '',
+  FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET || '',
+  FIREBASE_MESSAGING_SENDER_ID: process.env.FIREBASE_MESSAGING_SENDER_ID || '',
+  FIREBASE_APP_ID: process.env.FIREBASE_APP_ID || '',
+  FIREBASE_MEASUREMENT_ID: process.env.FIREBASE_MEASUREMENT_ID || '',
+};
 
 export default {
   entry: './src/index.tsx',
@@ -69,6 +81,17 @@ export default {
     ],
   },
   plugins: [
+    // Define environment variables for Firebase configuration
+    new DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      'process.env.FIREBASE_API_KEY': JSON.stringify(firebaseConfig.FIREBASE_API_KEY),
+      'process.env.FIREBASE_AUTH_DOMAIN': JSON.stringify(firebaseConfig.FIREBASE_AUTH_DOMAIN),
+      'process.env.FIREBASE_PROJECT_ID': JSON.stringify(firebaseConfig.FIREBASE_PROJECT_ID),
+      'process.env.FIREBASE_STORAGE_BUCKET': JSON.stringify(firebaseConfig.FIREBASE_STORAGE_BUCKET),
+      'process.env.FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(firebaseConfig.FIREBASE_MESSAGING_SENDER_ID),
+      'process.env.FIREBASE_APP_ID': JSON.stringify(firebaseConfig.FIREBASE_APP_ID),
+      'process.env.FIREBASE_MEASUREMENT_ID': JSON.stringify(firebaseConfig.FIREBASE_MEASUREMENT_ID),
+    }),
     new ModuleFederationPlugin({
       name: 'web_shell',
       remotes: {
