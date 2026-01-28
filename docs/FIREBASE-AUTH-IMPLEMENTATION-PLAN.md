@@ -1943,14 +1943,14 @@ function App() {
 - [x] Dependencies installed (`@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-google-signin/google-signin`, `@react-native-async-storage/async-storage`)
 - [x] iOS URL schemes configured for Google Sign-In
 - [x] iOS pods installed with Firebase modular headers
-- [x] Android SHA-1 fingerprint generated: `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
+- [x] Android SHA-1 fingerprint generated (via `./gradlew signingReport`)
 - [x] Mobile Firebase Auth Service created (`packages/mobile-host/src/services/firebaseAuthService.ts`)
 - [x] Auth initialized in Mobile Host (`App.tsx`)
 - [x] `yarn typecheck` passes
 - [x] Firebase app initializes without errors on Android
 - [x] Firebase app initializes without errors on iOS
 - [x] App loads and existing functionality works on both platforms
-- [x] **Manual**: SHA-1 fingerprint added to Firebase Console (debug: `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`)
+- [x] **Manual**: SHA-1 fingerprint added to Firebase Console
 - [x] **Manual**: Updated `google-services.json` downloaded and placed in `android/app/`
 - [ ] **Manual**: Email sign-in works on both platforms (requires Phase 5 UI)
 - [ ] **Manual**: Google sign-in works on both platforms (requires Phase 5 UI)
@@ -1975,9 +1975,11 @@ Google Sign-In requires the SHA-1 fingerprint of the signing certificate to veri
    cd packages/mobile-host/android
    ./gradlew signingReport
    ```
-   Look for the `SHA1:` line under `Variant: debug`.
-
-   Current debug SHA-1: `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
+   Look for the `SHA1:` line under `Variant: debug`. The output will look like:
+   ```
+   SHA1: XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX
+   ```
+   Copy this value for the next step.
 
 2. **Add to Firebase Console:**
    - Go to **Project Settings** (gear icon) → **General**

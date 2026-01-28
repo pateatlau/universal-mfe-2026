@@ -33,6 +33,9 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<!-- Google Sign-In URL Scheme - REQUIRED for OAuth redirect -->
+	<!-- Replace REVERSED_CLIENT_ID with value from your GoogleService-Info.plist -->
+	<!-- Format: com.googleusercontent.apps.YOUR_CLIENT_ID -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -40,7 +43,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.489294318656-k124i5br55773hgu36alrh05r17542va</string>
+				<string>com.googleusercontent.apps.REPLACE_WITH_REVERSED_CLIENT_ID</string>
 			</array>
 		</dict>
 	</array>
