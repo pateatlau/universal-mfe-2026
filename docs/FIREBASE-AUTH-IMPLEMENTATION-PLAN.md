@@ -1,8 +1,8 @@
 # Firebase Authentication Implementation Plan
 
-**Status:** Phase 3 Complete - Ready for Phase 4
+**Status:** Phase 4 Complete - Ready for Phase 5
 **Last Updated:** 2026-01-28
-**Version:** 1.4 (Phase 1, 2 & 3 completed with comprehensive documentation)
+**Version:** 1.5 (Phase 1, 2, 3 & 4 completed with comprehensive documentation)
 **Target:** Universal authentication across Web, Android, and iOS with MFE-compatible architecture
 **Cost Target:** $0/month (Firebase Spark Plan)
 
@@ -2130,17 +2130,51 @@ Phase 4 will implement the same Firebase Auth integration for the web platform (
 
 ---
 
-## Phase 4: Firebase SDK Integration (Web)
+## Phase 4: Firebase SDK Integration (Web) ✅ COMPLETED
 
 **Objective:** Implement Firebase Authentication for Web using modular Firebase SDK.
 
+**Status:** ✅ Completed on 2026-01-28
+
 **Duration:** ~4 hours
+
+### Summary
+
+Phase 4 integrates the Firebase Authentication SDK into the web shell app using the modular Firebase JS SDK (v11.7.0). This phase implements the same `AuthService` interface as the mobile implementation, enabling consistent auth flows across platforms.
+
+### What Was Implemented
+
+1. **Firebase Configuration** (`packages/web-shell/src/config/firebase.ts`)
+   - Firebase app initialization with environment variable support
+   - Uses `process.env` for configuration (injected via Rspack DefinePlugin)
+   - Hardcoded fallback values for development convenience
+
+2. **Firebase Auth Service** (`packages/web-shell/src/services/firebaseAuthService.ts`)
+   - Implements the `AuthService` interface from `shared-auth-store`
+   - Supports email/password, Google Sign-In (popup), and GitHub Sign-In (popup)
+   - Maps Firebase user objects to our unified `User` type
+
+3. **Auth Store Integration** (`packages/web-shell/src/App.tsx`)
+   - `AuthInitializer` component configures storage, auth service, and event emitter in `useEffect`
+   - Uses `createWebStorage(window.localStorage)` for persistence
+   - Emits auth events to the event bus for cross-MFE sync
+
+4. **Rspack Configuration** (`packages/web-shell/rspack.config.mjs`)
+   - Added `DefinePlugin` to inject environment variables at build time
+   - Firebase config can be overridden via environment variables
+
+5. **Environment Variables** (`packages/web-shell/.env.example`)
+   - Template for Firebase configuration
+   - Uses `FIREBASE_*` prefix (not `VITE_*` since this uses Rspack)
 
 ### Task 4.1: Install Firebase Web SDK
 
 ```bash
-yarn workspace @universal/web-shell add firebase
-yarn workspace @universal/web-remote-hello add firebase
+# Added to packages/web-shell/package.json:
+# - firebase: 11.7.0
+# - @universal/shared-auth-store: "*"
+# - @universal/shared-utils: "*"
+yarn install
 ```
 
 ### Task 4.2: Create Firebase Configuration
@@ -2153,23 +2187,37 @@ yarn workspace @universal/web-remote-hello add firebase
  *
  * These are public API keys - they are safe to commit.
  * Security is enforced through Firebase Security Rules.
+ *
+ * Note: Rspack uses process.env, not import.meta.env like Vite.
+ * The DefinePlugin in rspack.config.mjs handles the replacement.
  */
 
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
 
+// Firebase configuration from environment variables
+// Falls back to hardcoded values for development (these are public API keys)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'YOUR_API_KEY',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'universal-mfe.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'universal-mfe',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'universal-mfe.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || 'YOUR_SENDER_ID',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || 'YOUR_APP_ID',
+  apiKey: process.env.FIREBASE_API_KEY || 'AIzaSyAA2fGYduWsdwXXXDP7KKrIkcaDg3UuS1Q',
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || 'universal-mfe.firebaseapp.com',
+  projectId: process.env.FIREBASE_PROJECT_ID || 'universal-mfe',
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'universal-mfe.firebasestorage.app',
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '489294318656',
+  appId: process.env.FIREBASE_APP_ID || '1:489294318656:web:222b01b55cadc1a0a8a3a5',
+  measurementId: process.env.FIREBASE_MEASUREMENT_ID || 'G-PM1CXVNBED',
 };
 
 // Initialize Firebase (only once)
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
+let app: FirebaseApp;
+let auth: Auth;
+
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
+
+auth = getAuth(app);
 
 export { app, auth, firebaseConfig };
 ```
@@ -2333,24 +2381,77 @@ function App() {
 **Create** `packages/web-shell/.env.example`:
 
 ```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
+# Firebase Configuration for Web Shell
+#
+# Copy this file to .env and fill in your Firebase project credentials.
+# These values can be found in your Firebase Console:
+# Project Settings -> General -> Your apps -> Web app
+#
+# Note: Firebase config values are public API keys - they are safe to expose.
+# Security is enforced through Firebase Security Rules.
+
+# Required Firebase Configuration
+FIREBASE_API_KEY=your_api_key_here
+FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+FIREBASE_APP_ID=your_app_id
+
+# Optional
+FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+```
+
+### Task 4.6: Update Rspack Configuration
+
+**Update** `packages/web-shell/rspack.config.mjs` to inject environment variables:
+
+```javascript
+const { DefinePlugin } = rspack;
+
+// Firebase configuration from environment variables
+const firebaseConfig = {
+  FIREBASE_API_KEY: process.env.FIREBASE_API_KEY || '',
+  FIREBASE_AUTH_DOMAIN: process.env.FIREBASE_AUTH_DOMAIN || '',
+  FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || '',
+  FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET || '',
+  FIREBASE_MESSAGING_SENDER_ID: process.env.FIREBASE_MESSAGING_SENDER_ID || '',
+  FIREBASE_APP_ID: process.env.FIREBASE_APP_ID || '',
+  FIREBASE_MEASUREMENT_ID: process.env.FIREBASE_MEASUREMENT_ID || '',
+};
+
+// In plugins array:
+new DefinePlugin({
+  'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+  'process.env.FIREBASE_API_KEY': JSON.stringify(firebaseConfig.FIREBASE_API_KEY),
+  'process.env.FIREBASE_AUTH_DOMAIN': JSON.stringify(firebaseConfig.FIREBASE_AUTH_DOMAIN),
+  'process.env.FIREBASE_PROJECT_ID': JSON.stringify(firebaseConfig.FIREBASE_PROJECT_ID),
+  'process.env.FIREBASE_STORAGE_BUCKET': JSON.stringify(firebaseConfig.FIREBASE_STORAGE_BUCKET),
+  'process.env.FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(firebaseConfig.FIREBASE_MESSAGING_SENDER_ID),
+  'process.env.FIREBASE_APP_ID': JSON.stringify(firebaseConfig.FIREBASE_APP_ID),
+  'process.env.FIREBASE_MEASUREMENT_ID': JSON.stringify(firebaseConfig.FIREBASE_MEASUREMENT_ID),
+}),
 ```
 
 ### Verification Steps
 
-- [ ] Firebase initializes without errors on web
-- [ ] Email sign-in works
-- [ ] Email sign-up works
-- [ ] Google sign-in popup works
-- [ ] GitHub sign-in popup works
-- [ ] Sign-out works
-- [ ] Auth state persists across page refreshes
-- [ ] Event bus receives USER_LOGGED_IN events
+- [x] Firebase initializes without errors on web (confirmed - dev server starts, no Firebase errors)
+- [x] TypeScript types pass (`yarn workspace @universal/web-shell typecheck` - success)
+- [x] Build succeeds (`yarn workspace @universal/web-shell build` - success with expected warnings)
+- [ ] Email sign-in works (requires UI - Phase 5)
+- [ ] Email sign-up works (requires UI - Phase 5)
+- [ ] Google sign-in popup works (requires UI - Phase 5)
+- [ ] GitHub sign-in popup works (requires UI - Phase 5)
+- [ ] Sign-out works (requires UI - Phase 5)
+- [ ] Auth state persists across page refreshes (requires UI - Phase 5)
+- [ ] Event bus receives USER_LOGGED_IN events (requires UI - Phase 5)
+
+### Key Differences from Implementation Plan
+
+1. **Environment Variables**: Uses `process.env.FIREBASE_*` instead of `import.meta.env.VITE_*` since Rspack uses DefinePlugin, not Vite
+2. **Auth Initialization**: Done in `App.tsx` via `AuthInitializer` component (not `index.tsx`) to ensure React lifecycle is ready
+3. **Firebase SDK Version**: Uses v11.7.0 (latest stable) instead of generic v9+
+4. **web-remote-hello**: Firebase not added to remote - remotes inherit auth state from host via event bus
 
 ---
 
@@ -2877,10 +2978,14 @@ const styles = StyleSheet.create({
 
 ```yaml
 env:
-  VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
-  VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_WEB_AUTH_DOMAIN }}
-  VITE_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_WEB_PROJECT_ID }}
-  VITE_FIREBASE_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
+  # Note: Uses FIREBASE_* prefix (not VITE_*) since web-shell uses Rspack's DefinePlugin
+  FIREBASE_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+  FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_WEB_AUTH_DOMAIN }}
+  FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_WEB_PROJECT_ID }}
+  FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_WEB_STORAGE_BUCKET }}
+  FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_WEB_MESSAGING_SENDER_ID }}
+  FIREBASE_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
+  FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_WEB_MEASUREMENT_ID }}
 ```
 
 ### Verification Steps
