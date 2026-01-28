@@ -25,7 +25,7 @@ let storageAdapter: StorageAdapter | null = null;
  * @example
  * // Web host
  * import { configureStorage, createWebStorage } from '@universal/shared-utils';
- * configureStorage(createWebStorage());
+ * configureStorage(createWebStorage(window.localStorage));
  *
  * // Mobile host
  * import { configureStorage, createMobileStorage } from '@universal/shared-utils';
@@ -105,18 +105,25 @@ export async function removeItem(key: string): Promise<void> {
 // =============================================================================
 
 /**
- * Check if localStorage is available.
- * Returns false in SSR contexts, privacy mode, or environments without localStorage.
+ * Web Storage interface (matches browser's Storage interface).
+ * Used for dependency injection in createWebStorage.
  */
-function isLocalStorageAvailable(): boolean {
+export interface WebStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+  clear(): void;
+}
+
+/**
+ * Check if a web storage instance is available and functional.
+ * Tests actual read/write to detect quota/privacy issues.
+ */
+function isWebStorageAvailable(webStorage: WebStorage): boolean {
   try {
-    if (typeof localStorage === 'undefined') {
-      return false;
-    }
-    // Test actual read/write to detect quota/privacy issues
     const testKey = '__storage_test__';
-    localStorage.setItem(testKey, testKey);
-    localStorage.removeItem(testKey);
+    webStorage.setItem(testKey, testKey);
+    webStorage.removeItem(testKey);
     return true;
   } catch {
     return false;
@@ -124,60 +131,75 @@ function isLocalStorageAvailable(): boolean {
 }
 
 /**
- * Create a storage adapter for web (uses localStorage).
- * Returns a no-op adapter if localStorage is unavailable.
+ * Create an in-memory storage adapter (fallback when web storage unavailable).
  */
-export function createWebStorage(): StorageAdapter {
-  const available = isLocalStorageAvailable();
+export function createInMemoryStorage(): StorageAdapter {
+  const memoryStore = new Map<string, string>();
+  return {
+    async getItem(key: string): Promise<string | null> {
+      return memoryStore.get(key) ?? null;
+    },
+    async setItem(key: string, value: string): Promise<void> {
+      memoryStore.set(key, value);
+    },
+    async removeItem(key: string): Promise<void> {
+      memoryStore.delete(key);
+    },
+    async clear(): Promise<void> {
+      memoryStore.clear();
+    },
+  };
+}
 
-  if (!available) {
+/**
+ * Create a storage adapter for web from an injected Storage object.
+ *
+ * This function does NOT reference browser globals directly - the caller
+ * must inject the storage object (e.g., window.localStorage).
+ *
+ * @param webStorage - The web Storage instance to use (e.g., window.localStorage)
+ * @returns A StorageAdapter that wraps the provided storage, or an in-memory
+ *          fallback if the storage is not functional
+ *
+ * @example
+ * // In web host initialization:
+ * import { configureStorage, createWebStorage } from '@universal/shared-utils';
+ * configureStorage(createWebStorage(window.localStorage));
+ */
+export function createWebStorage(webStorage: WebStorage): StorageAdapter {
+  if (!webStorage || !isWebStorageAvailable(webStorage)) {
     console.warn(
-      '[shared-utils] localStorage is not available. Using in-memory fallback. ' +
-        'Data will not persist across page reloads.'
+      '[shared-utils] Provided web storage is not available or not functional. ' +
+        'Using in-memory fallback. Data will not persist across page reloads.'
     );
-    // Return in-memory fallback
-    const memoryStore = new Map<string, string>();
-    return {
-      async getItem(key: string): Promise<string | null> {
-        return memoryStore.get(key) ?? null;
-      },
-      async setItem(key: string, value: string): Promise<void> {
-        memoryStore.set(key, value);
-      },
-      async removeItem(key: string): Promise<void> {
-        memoryStore.delete(key);
-      },
-      async clear(): Promise<void> {
-        memoryStore.clear();
-      },
-    };
+    return createInMemoryStorage();
   }
 
   return {
     async getItem(key: string): Promise<string | null> {
       try {
-        return localStorage.getItem(key);
+        return webStorage.getItem(key);
       } catch {
         return null;
       }
     },
     async setItem(key: string, value: string): Promise<void> {
       try {
-        localStorage.setItem(key, value);
+        webStorage.setItem(key, value);
       } catch (error) {
-        console.warn('[shared-utils] localStorage.setItem failed:', error);
+        console.warn('[shared-utils] webStorage.setItem failed:', error);
       }
     },
     async removeItem(key: string): Promise<void> {
       try {
-        localStorage.removeItem(key);
+        webStorage.removeItem(key);
       } catch {
         // Ignore
       }
     },
     async clear(): Promise<void> {
       try {
-        localStorage.clear();
+        webStorage.clear();
       } catch {
         // Ignore
       }

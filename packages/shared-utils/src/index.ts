@@ -31,6 +31,7 @@ export function formatMessage(message: string, prefix?: string): string {
 
 export {
   type StorageAdapter,
+  type WebStorage,
   configureStorage,
   getStorage,
   isStorageConfigured,
@@ -39,6 +40,7 @@ export {
   removeItem,
   createWebStorage,
   createMobileStorage,
+  createInMemoryStorage,
   storage,
 } from './storage';
 

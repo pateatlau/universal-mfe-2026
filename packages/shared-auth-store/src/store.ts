@@ -22,6 +22,10 @@ let authService: AuthService | null = null;
 // Event emitter will be injected at runtime
 let emitAuthEvent: ((type: string, payload: Record<string, unknown>) => void) | null = null;
 
+// Initialization state for idempotency
+let initPromise: Promise<() => void> | null = null;
+let currentUnsubscribe: (() => void) | null = null;
+
 /**
  * Configure the auth service implementation.
  * Must be called once at app initialization.
@@ -256,78 +260,104 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   // =========================================================================
 
   initializeAuth: async () => {
-    if (get().isInitialized) {
-      return () => {}; // Already initialized
+    // Return cached promise if initialization is already in progress or complete
+    if (initPromise) {
+      return initPromise.then(() => {
+        // Return the current unsubscribe function (or no-op if none)
+        return currentUnsubscribe || (() => {});
+      });
     }
 
-    set({ isLoading: true });
-
-    // Load persisted user for immediate UI feedback
-    if (isStorageConfigured()) {
+    // Create and cache the initialization promise
+    initPromise = (async () => {
       try {
-        const persistedUser = await getJSON<User>(AUTH_STORAGE_KEY);
-        if (persistedUser) {
-          set({ user: persistedUser, isAuthenticated: true });
+        set({ isLoading: true });
+
+        // Load persisted user for immediate UI feedback
+        if (isStorageConfigured()) {
+          try {
+            const persistedUser = await getJSON<User>(AUTH_STORAGE_KEY);
+            if (persistedUser) {
+              set({ user: persistedUser, isAuthenticated: true });
+            }
+          } catch (error) {
+            console.warn('[shared-auth-store] Failed to load persisted user:', error);
+          }
         }
-      } catch (error) {
-        console.warn('[shared-auth-store] Failed to load persisted user:', error);
-      }
-    }
 
-    // Track if we've received the first auth state callback
-    let isFirstCallback = true;
+        // Track if we've received the first auth state callback
+        let isFirstCallback = true;
 
-    // Subscribe to auth state changes
-    const service = getAuthService();
-    const unsubscribe = service.onAuthStateChanged((user) => {
-      // Only set isInitialized on the first callback to avoid race conditions
-      const shouldMarkInitialized = isFirstCallback;
-      isFirstCallback = false;
+        // Unsubscribe from previous listener if exists
+        if (currentUnsubscribe) {
+          currentUnsubscribe();
+          currentUnsubscribe = null;
+        }
 
-      if (user) {
-        set({
-          user,
-          isAuthenticated: true,
-          isLoading: false,
-          ...(shouldMarkInitialized && { isInitialized: true }),
-        });
-        // Handle persistence errors explicitly
-        persistUser(user).catch((err) => {
-          console.warn('[shared-auth-store] Failed to persist user in auth callback:', err);
-        });
-        emitAuthEvent?.('USER_LOGGED_IN', {
-          userId: user.id,
-          email: user.email,
-          displayName: user.displayName,
-          provider: user.provider,
-        });
-      } else {
-        set({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          ...(shouldMarkInitialized && { isInitialized: true }),
-        });
-        // Handle persistence errors explicitly
-        clearPersistedUser().catch((err) => {
-          console.warn('[shared-auth-store] Failed to clear user in auth callback:', err);
-        });
-      }
-    });
+        // Subscribe to auth state changes
+        const service = getAuthService();
+        const unsubscribe = service.onAuthStateChanged((user) => {
+          // Only set isInitialized on the first callback to avoid race conditions
+          const shouldMarkInitialized = isFirstCallback;
+          isFirstCallback = false;
 
-    // If the auth service fires the callback synchronously, isInitialized
-    // will already be set. If not, we set loading to false but wait for
-    // the callback to set isInitialized.
-    if (!get().isInitialized) {
-      // Auth service hasn't fired yet - set a timeout to prevent infinite loading
-      setTimeout(() => {
+          if (user) {
+            set({
+              user,
+              isAuthenticated: true,
+              isLoading: false,
+              ...(shouldMarkInitialized && { isInitialized: true }),
+            });
+            // Handle persistence errors explicitly
+            persistUser(user).catch((err) => {
+              console.warn('[shared-auth-store] Failed to persist user in auth callback:', err);
+            });
+            emitAuthEvent?.('USER_LOGGED_IN', {
+              userId: user.id,
+              email: user.email,
+              displayName: user.displayName,
+              provider: user.provider,
+            });
+          } else {
+            set({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+              ...(shouldMarkInitialized && { isInitialized: true }),
+            });
+            // Handle persistence errors explicitly
+            clearPersistedUser().catch((err) => {
+              console.warn('[shared-auth-store] Failed to clear user in auth callback:', err);
+            });
+          }
+        });
+
+        // Store the unsubscribe handle
+        currentUnsubscribe = unsubscribe;
+
+        // If the auth service fires the callback synchronously, isInitialized
+        // will already be set. If not, we set loading to false but wait for
+        // the callback to set isInitialized.
         if (!get().isInitialized) {
-          set({ isLoading: false, isInitialized: true });
+          // Auth service hasn't fired yet - set a timeout to prevent infinite loading
+          setTimeout(() => {
+            if (!get().isInitialized) {
+              set({ isLoading: false, isInitialized: true });
+            }
+          }, 5000); // 5 second timeout for auth service to respond
         }
-      }, 5000); // 5 second timeout for auth service to respond
-    }
 
-    return unsubscribe;
+        return unsubscribe;
+      } catch (error) {
+        // Clear cached state on error so retry is possible
+        initPromise = null;
+        currentUnsubscribe = null;
+        set({ isLoading: false, error: 'Failed to initialize authentication' });
+        throw error;
+      }
+    })();
+
+    return initPromise;
   },
 }));
 
