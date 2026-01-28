@@ -89,14 +89,16 @@ export function AuthButton({
   const loadingColor = useMemo(() => {
     switch (variant) {
       case 'primary':
+        // Primary button always has blue background, so loading indicator should be white
+        return '#FFFFFF';
       case 'github':
-        return theme.colors.text.inverse;
+        return '#FFFFFF';
       case 'secondary':
         return theme.colors.text.primary;
       case 'google':
         return isDark ? '#FFFFFF' : '#1F1F1F';
       default:
-        return theme.colors.text.inverse;
+        return '#FFFFFF';
     }
   }, [variant, theme, isDark]);
 
@@ -174,7 +176,8 @@ function createStyles(theme: Theme, isDark: boolean): Styles {
       fontWeight: theme.typography.fontWeights.semibold,
     },
     primaryText: {
-      color: theme.colors.text.inverse,
+      // Primary button always has blue background, so text should always be white
+      color: '#FFFFFF',
     },
     secondaryText: {
       color: theme.colors.text.primary,

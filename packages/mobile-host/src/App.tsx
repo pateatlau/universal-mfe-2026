@@ -434,6 +434,13 @@ function Header() {
     handleLocaleChange(availableLocales[nextIndex]);
   }, [locale, handleLocaleChange]);
 
+  // Get the next locale to show what clicking will switch to
+  const nextLocale = useMemo(() => {
+    const currentIndex = availableLocales.indexOf(locale);
+    const nextIndex = (currentIndex + 1) % availableLocales.length;
+    return availableLocales[nextIndex];
+  }, [locale]);
+
   // Sign out handler
   const handleSignOut = useCallback(async () => {
     try {
@@ -457,7 +464,7 @@ function Header() {
           </Text>
         </Pressable>
         <Pressable style={styles.langToggle} onPress={cycleLocale}>
-          <Text style={styles.langToggleText}>🌐 {getLocaleDisplayName(locale)}</Text>
+          <Text style={styles.langToggleText}>🌐 {getLocaleDisplayName(nextLocale)}</Text>
         </Pressable>
       </View>
       <Text style={styles.subtitle}>{t('subtitleMobile')}</Text>
