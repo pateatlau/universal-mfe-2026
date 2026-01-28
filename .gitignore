@@ -105,3 +105,6 @@ GoogleService-Info.plist
 
 # Turborepo
 .turbo/
+
+# Mobile test packages
+test-packages/
