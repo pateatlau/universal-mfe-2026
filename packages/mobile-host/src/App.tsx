@@ -8,23 +8,11 @@
  */
 
 import React, { useMemo, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Platform,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, ViewStyle, TextStyle } from 'react-native';
 import { NativeRouter, Routes as RouterRoutes, Route, Link } from 'react-router-native';
 import { ScriptManager } from '@callstack/repack/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  ThemeProvider,
-  useTheme,
-  Theme,
-} from '@universal/shared-theme-context';
+import { ThemeProvider, useTheme, Theme } from '@universal/shared-theme-context';
 import {
   I18nProvider,
   useTranslation,
@@ -48,6 +36,7 @@ import { Routes } from '@universal/shared-router';
 import {
   configureStorage,
   createMobileStorage,
+  isStorageConfigured,
 } from '@universal/shared-utils';
 import {
   configureAuthService,
@@ -55,16 +44,6 @@ import {
   useAuthStore,
 } from '@universal/shared-auth-store';
 import { firebaseAuthService } from './services/firebaseAuthService';
-
-// =============================================================================
-// Configure Storage (MUST be done before any auth operations)
-// =============================================================================
-configureStorage(createMobileStorage(AsyncStorage));
-
-// =============================================================================
-// Configure Auth Service (MUST be done before initializeAuth is called)
-// =============================================================================
-configureAuthService(firebaseAuthService);
 
 // Page components
 import Home from './pages/Home';
@@ -263,24 +242,37 @@ function EventLogger() {
 }
 
 /**
- * AuthInitializer component - configures the event emitter and initializes auth.
+ * AuthInitializer component - configures storage, auth service, and initializes auth.
  * Must be rendered inside EventBusProvider to access the event bus.
+ *
+ * Configuration happens inside useEffect to ensure React Native runtime is ready,
+ * as Firebase SDK and AsyncStorage require native modules to be initialized.
  */
 function AuthInitializer() {
   const bus = useEventBus<AppEvents>();
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
-  const isEventEmitterConfigured = useRef(false);
+  const isConfigured = useRef(false);
 
   useEffect(() => {
-    // Configure event emitter for cross-MFE auth sync (only once)
-    if (!isEventEmitterConfigured.current) {
+    // Configure storage, auth service, and event emitter (only once)
+    if (!isConfigured.current) {
+      // Configure storage with AsyncStorage
+      if (!isStorageConfigured()) {
+        configureStorage(createMobileStorage(AsyncStorage));
+      }
+
+      // Configure auth service with Firebase
+      configureAuthService(firebaseAuthService);
+
+      // Configure event emitter for cross-MFE auth sync
       configureAuthEventEmitter((type, payload) => {
         // Map auth store event types to event bus types
         // The auth store emits: USER_LOGGED_IN, USER_LOGGED_OUT, AUTH_ERROR
         const eventType = type as AuthEvents['type'];
         bus.emit<AuthEvents>(eventType, payload as AuthEvents['payload']);
       });
-      isEventEmitterConfigured.current = true;
+
+      isConfigured.current = true;
     }
 
     // Initialize auth and get the unsubscribe function
@@ -369,9 +361,7 @@ function Header() {
           </Text>
         </Pressable>
         <Pressable style={styles.langToggle} onPress={cycleLocale}>
-          <Text style={styles.langToggleText}>
-            🌐 {getLocaleDisplayName(locale)}
-          </Text>
+          <Text style={styles.langToggleText}>🌐 {getLocaleDisplayName(locale)}</Text>
         </Pressable>
       </View>
       <Text style={styles.subtitle}>{t('subtitleMobile')}</Text>
