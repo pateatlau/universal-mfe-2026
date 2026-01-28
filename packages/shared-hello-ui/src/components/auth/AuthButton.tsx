@@ -57,8 +57,8 @@ export function AuthButton({
   accessibilityHint,
   testID,
 }: AuthButtonProps) {
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
 
   const isDisabled = disabled || isLoading;
 
@@ -92,12 +92,13 @@ export function AuthButton({
       case 'github':
         return theme.colors.text.inverse;
       case 'secondary':
-      case 'google':
         return theme.colors.text.primary;
+      case 'google':
+        return isDark ? '#FFFFFF' : '#1F1F1F';
       default:
         return theme.colors.text.inverse;
     }
-  }, [variant, theme]);
+  }, [variant, theme, isDark]);
 
   return (
     <Pressable
@@ -133,7 +134,7 @@ interface Styles {
   githubText: TextStyle;
 }
 
-function createStyles(theme: Theme): Styles {
+function createStyles(theme: Theme, isDark: boolean): Styles {
   return StyleSheet.create<Styles>({
     button: {
       borderRadius: theme.spacing.button.borderRadius,
@@ -153,12 +154,16 @@ function createStyles(theme: Theme): Styles {
       borderColor: theme.colors.border.default,
     },
     googleButton: {
-      backgroundColor: '#FFFFFF',
+      // Dark mode: dark background with white text
+      // Light mode: white background with dark text
+      backgroundColor: isDark ? '#131314' : '#FFFFFF',
       borderWidth: 1,
-      borderColor: theme.colors.border.default,
+      borderColor: isDark ? '#8E918F' : theme.colors.border.default,
     },
     githubButton: {
-      backgroundColor: '#24292e',
+      // Dark mode: lighter GitHub color for contrast
+      // Light mode: standard GitHub dark color
+      backgroundColor: isDark ? '#6e7681' : '#24292e',
     },
     disabledButton: {
       backgroundColor: theme.colors.interactive.disabled,
@@ -175,7 +180,9 @@ function createStyles(theme: Theme): Styles {
       color: theme.colors.text.primary,
     },
     googleText: {
-      color: '#1F1F1F',
+      // Dark mode: white text on dark button
+      // Light mode: dark text on white button
+      color: isDark ? '#E3E3E3' : '#1F1F1F',
     },
     githubText: {
       color: '#FFFFFF',

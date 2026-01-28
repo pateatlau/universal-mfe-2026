@@ -12,6 +12,7 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
+  Platform,
   ViewStyle,
   TextStyle,
   TextInputProps,
@@ -100,7 +101,11 @@ export function AuthInput({
       )}
       <View style={inputContainerStyle}>
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            // Remove focus outline on web (outlineStyle is web-only)
+            Platform.OS === 'web' && ({ outlineStyle: 'none' } as unknown as TextStyle),
+          ]}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.text.tertiary}
           value={value}
