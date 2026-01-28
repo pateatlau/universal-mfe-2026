@@ -46,10 +46,10 @@ This document provides actionable recommendations for upgrading the Universal MF
 
 | Component | Current | Latest Stable | Gap | Notes |
 |-----------|---------|---------------|-----|-------|
-| React Native | 0.80.0 | 0.82.x | 2 minor | New Architecture only in 0.82 |
-| React (mobile) | 19.1.0 | 19.1.1 | 1 patch | Full owner stacks in 19.1.1 |
-| Re.Pack | 5.2.0 | 5.2.3 | 3 patches | Bug fixes, stability |
-| Module Federation | 0.21.6 | 0.22.0 | 1 minor | Latest features |
+| React Native | 0.80.0 | 0.83.1 | 3 minor | New Architecture improvements |
+| React (mobile) | 19.1.0 | 19.2.4 | 1 minor + 4 patches | Pinned to 19.1.0 for RN 0.80.0 compatibility |
+| Re.Pack | 5.2.0 | 5.2.0 | Current | Up to date |
+| Module Federation | 0.21.6 | 0.23.0 | 2 minor | Latest features |
 | Rspack | 1.6.5 | 1.6.5 | Current | Up to date |
 | React Native Web | 0.21.2 | 0.21.2 | Current | Up to date |
 
@@ -410,9 +410,9 @@ Run on:
 
 Create RSS/notification alerts for:
 
-1. **Re.Pack Releases:** https://github.com/callstack/repack/releases.atom
-2. **Module Federation Releases:** https://github.com/module-federation/core/releases.atom
-3. **React Native Releases:** https://github.com/facebook/react-native/releases.atom
+1. **Re.Pack Releases:** [GitHub Releases Feed](https://github.com/callstack/repack/releases.atom)
+2. **Module Federation Releases:** [GitHub Releases Feed](https://github.com/module-federation/core/releases.atom)
+3. **React Native Releases:** [GitHub Releases Feed](https://github.com/facebook/react-native/releases.atom)
 
 #### Keywords to Watch For
 

@@ -1509,8 +1509,11 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import type { AuthService, User, UserRole } from '@universal/shared-auth-store';
 
 // Configure Google Sign-In
+// IMPORTANT: Replace with your actual Web Client ID from:
+// Firebase Console → Project Settings → Your apps → Web app → Web Client ID
+// The ID format is: 'XXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com'
 GoogleSignin.configure({
-  webClientId: 'YOUR_WEB_CLIENT_ID', // From Firebase Console
+  webClientId: process.env.GOOGLE_WEB_CLIENT_ID || 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
   offlineAccess: true,
 });
 
@@ -1599,15 +1602,53 @@ export const firebaseAuthService: AuthService = {
   // ===========================================================================
 
   async signInWithGitHub(): Promise<User> {
-    // GitHub OAuth requires a web redirect flow
-    // For mobile, we use Firebase's OAuth redirect
-    const provider = new auth.OAuthProvider('github.com');
-    provider.addScope('user:email');
+    // GitHub OAuth for React Native requires an OAuth library like react-native-app-auth
+    // since signInWithRedirect/signInWithPopup are web-only methods.
+    //
+    // Flow:
+    // 1. Use react-native-app-auth to perform GitHub OAuth and get access token
+    // 2. Create Firebase credential from the GitHub access token
+    // 3. Sign in to Firebase with the credential
+    //
+    // Prerequisites:
+    // - Install: yarn add react-native-app-auth
+    // - Configure GitHub OAuth App in GitHub Developer Settings
+    // - Add redirect URI to your app's URL scheme
 
-    const result = await auth().signInWithRedirect(provider);
-    if (!result.user) throw new Error('GitHub sign in failed');
+    // Import at top of file: import { authorize } from 'react-native-app-auth';
 
-    return mapFirebaseUser(result.user);
+    const githubAuthConfig = {
+      issuer: 'https://github.com',
+      clientId: process.env.GITHUB_CLIENT_ID || 'YOUR_GITHUB_CLIENT_ID',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || 'YOUR_GITHUB_CLIENT_SECRET',
+      redirectUrl: 'your.app.scheme://oauth/github', // Configure in app URL schemes
+      scopes: ['user:email'],
+      serviceConfiguration: {
+        authorizationEndpoint: 'https://github.com/login/oauth/authorize',
+        tokenEndpoint: 'https://github.com/login/oauth/access_token',
+      },
+    };
+
+    // Perform OAuth flow in in-app browser/custom tab
+    // Note: authorize is imported from react-native-app-auth
+    const { authorize } = await import('react-native-app-auth');
+    const authResult = await authorize(githubAuthConfig);
+
+    if (!authResult.accessToken) {
+      throw new Error('GitHub OAuth failed - no access token received');
+    }
+
+    // Create Firebase credential from GitHub access token
+    const githubCredential = auth.GithubAuthProvider.credential(authResult.accessToken);
+
+    // Sign in to Firebase with the GitHub credential
+    const userCredential = await auth().signInWithCredential(githubCredential);
+
+    if (!userCredential.user) {
+      throw new Error('GitHub sign in failed');
+    }
+
+    return mapFirebaseUser(userCredential.user);
   },
 
   // ===========================================================================
