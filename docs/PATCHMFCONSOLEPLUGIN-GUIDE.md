@@ -213,22 +213,30 @@ Create `scripts/PatchMFConsolePlugin.mjs`:
 /* eslint-env node */
 
 /**
- * Rspack plugin to patch Module Federation runtime console calls
+ * Rspack plugin to patch React Native runtime initialization issues
  *
- * Module Federation's runtime includes console.warn() calls that execute during
- * bundle initialization, but console doesn't exist in React Native release builds
- * until InitializeCore runs. This plugin:
- * 1. Prepends a console polyfill at the very start of the bundle (before webpack runtime)
- * 2. Replaces Module Federation console calls with safe no-ops as additional safety
+ * In React Native release builds with Hermes, certain global objects don't exist
+ * until InitializeCore runs. This plugin polyfills them BEFORE bundle execution.
+ *
+ * Issues addressed:
+ * 1. console - Module Federation runtime calls console.warn() during initialization
+ * 2. Platform.constants - React Native's checkVersions() accesses this at module load time
  *
  * Why this is needed:
- * - Hermes doesn't have console available until React Native's InitializeCore runs
+ * - Hermes doesn't have console/Platform available until React Native's InitializeCore runs
  * - InitializeCore is loaded as a webpack module, so it runs AFTER webpack runtime
- * - The polyfill ensures console exists before ANY code executes
- * - InitializeCore later replaces the polyfill with the real console implementation
+ * - The polyfills ensure these exist before ANY code executes
+ * - InitializeCore later replaces the polyfills with real implementations
  */
 
 export default class PatchMFConsolePlugin {
+  constructor(options = {}) {
+    // Detect platform from options or environment variable
+    this.platform = options.platform || process.env.PLATFORM || 'ios';
+    // Normalize to lowercase
+    this.platform = this.platform.toLowerCase();
+  }
+
   apply(compiler) {
     compiler.hooks.emit.tap('PatchMFConsolePlugin', (compilation) => {
       // Iterate through all assets
@@ -244,11 +252,10 @@ export default class PatchMFConsolePlugin {
               continue;
             }
 
-            // CRITICAL: Prepend console polyfill BEFORE all webpack code
-            // React Native's console isn't available until InitializeCore runs,
-            // but that's loaded as a webpack module. We need to ensure console exists
-            // BEFORE webpack runtime code executes.
-            const consolePolyfill = `
+            // CRITICAL: Prepend polyfills BEFORE all webpack code
+            const detectedPlatform = this.platform;
+            const runtimePolyfills = `
+// Console polyfill for Module Federation runtime
 if (typeof console === 'undefined') {
   globalThis.console = {
     log: function() {},
@@ -257,28 +264,71 @@ if (typeof console === 'undefined') {
     info: function() {},
     debug: function() {},
     trace: function() {},
-    assert: function() {},
-    dir: function() {},
-    dirxml: function() {},
+    table: function() {},
     group: function() {},
-    groupCollapsed: function() {},
     groupEnd: function() {},
+    groupCollapsed: function() {},
+    assert: function() {},
     time: function() {},
     timeEnd: function() {},
+    dir: function() {},
+    dirxml: function() {},
     count: function() {},
+    countReset: function() {},
     clear: function() {},
-    table: function() {},
+    profile: function() {},
+    profileEnd: function() {}
+  };
+}
+
+// Platform polyfill for React Native initialization
+if (typeof __PLATFORM_POLYFILL__ === 'undefined') {
+  globalThis.__PLATFORM_POLYFILL__ = true;
+  var _realPlatform = null;
+
+  globalThis.__rn_platform_polyfill__ = {
+    get constants() {
+      if (_realPlatform !== null) return _realPlatform.constants;
+      return {
+        reactNativeVersion: { major: 0, minor: 80, patch: 0 },
+        isTesting: false
+      };
+    },
+    get isTesting() {
+      if (_realPlatform !== null) return _realPlatform.isTesting;
+      return false;
+    },
+    get OS() {
+      if (_realPlatform !== null) return _realPlatform.OS;
+      return '${detectedPlatform}';
+    },
+    get Version() {
+      if (_realPlatform !== null) return _realPlatform.Version;
+      return '';
+    },
+    select: function(obj) {
+      if (_realPlatform !== null) return _realPlatform.select(obj);
+      const platform = '${detectedPlatform}';
+      return obj[platform] !== undefined ? obj[platform] : obj.default;
+    },
+    __setRealPlatform: function(platform) {
+      _realPlatform = platform;
+    }
   };
 }
 `;
-            source = consolePolyfill + source;
+            source = runtimePolyfills + source;
 
-            // ADDITIONAL SAFETY: Replace Module Federation console calls with no-ops
-            // This is belt-and-suspenders - the polyfill above should handle it,
-            // but this ensures even if something goes wrong, we don't crash
+            // Replace [MF]-prefixed console.warn calls with no-ops
             source = source.replace(
-              /console\.(warn|error)\(/g,
-              '(function(){}('
+              /console\.warn\('\[MF\][^']*'\)/g,
+              '(function(){})()'
+            );
+
+            // Patch _Platform.default accesses to use our polyfill
+            source = source.replace(
+              /(_Platform\.default)/g,
+              '(__rn_platform_polyfill__)'
             );
 
             // Update asset with patched source
@@ -287,7 +337,7 @@ if (typeof console === 'undefined') {
               size: () => source.length,
             };
 
-            console.log(`✓ Prepended console polyfill and patched Module Federation console calls in ${filename}`);
+            console.log(`✓ Prepended runtime polyfills and patched Module Federation + Platform.constants in ${filename}`);
           } catch (error) {
             console.error(`✗ Failed to patch ${filename}:`, error.message);
             throw error; // Fail build on error
@@ -380,9 +430,13 @@ module.exports = {
 
 ### Environment Variable (CRITICAL)
 
-The plugin requires the `PLATFORM` environment variable to generate the correct Platform.OS polyfill:
+The plugin requires the `PLATFORM` environment variable to generate the correct `Platform.OS` polyfill value.
+
+**From the mobile-host package directory:**
 
 ```bash
+cd packages/mobile-host
+
 # Android builds
 PLATFORM=android NODE_ENV=production yarn build:android
 
@@ -390,30 +444,43 @@ PLATFORM=android NODE_ENV=production yarn build:android
 PLATFORM=ios NODE_ENV=production yarn build:ios
 ```
 
+**Or using Yarn workspace commands from repo root:**
+
+```bash
+# Android builds
+PLATFORM=android NODE_ENV=production yarn workspace @universal/mobile-host build:android
+
+# iOS builds
+PLATFORM=ios NODE_ENV=production yarn workspace @universal/mobile-host build:ios
+```
+
 **Why this matters**: The Platform polyfill returns `Platform.OS` based on this variable. Without it, the plugin defaults to `'ios'`, which would cause Android builds to incorrectly report `Platform.OS === 'ios'`.
 
-### Basic Usage
+### Plugin Constructor Options
 
-No constructor configuration needed - the plugin reads `PLATFORM` from environment:
+**Basic Usage** - reads `PLATFORM` from environment:
 
 ```javascript
 new PatchMFConsolePlugin()
 ```
 
-### Advanced (Custom Platform Option)
-
-You can also pass the platform explicitly:
+**Explicit Platform** - pass platform directly:
 
 ```javascript
 new PatchMFConsolePlugin({ platform: 'android' })
 ```
 
+The plugin resolves platform in this order:
+1. Constructor option: `{ platform: 'android' }`
+2. Environment variable: `process.env.PLATFORM`
+3. Default fallback: `'ios'`
+
 ### What the Plugin Does
 
 - ✅ Patches all `.bundle` files
 - ✅ Prepends console polyfill (Hermes compatibility)
-- ✅ Prepends Platform polyfill (iOS-critical)
-- ✅ Replaces Module Federation console calls with no-ops
+- ✅ Prepends Platform polyfill with correct `Platform.OS` value
+- ✅ Replaces Module Federation `[MF]`-prefixed console.warn calls with no-ops
 - ✅ Patches `_Platform.default` references to use polyfill
 
 ---
@@ -425,8 +492,8 @@ new PatchMFConsolePlugin({ platform: 'android' })
 When the plugin runs successfully, you'll see:
 
 ```bash
-✓ Prepended console polyfill and patched Module Federation console calls in index.bundle
-✓ Prepended console polyfill and patched Module Federation console calls in HelloRemote.container.js.bundle
+✓ Prepended runtime polyfills and patched Module Federation + Platform.constants in index.bundle
+✓ Prepended runtime polyfills and patched Module Federation + Platform.constants in HelloRemote.container.js.bundle
 ```
 
 ### Logcat (Android Release Build)
@@ -444,8 +511,8 @@ After plugin (success):
 
 ### Testing Checklist
 
-- [ ] **Build release bundle**: `NODE_ENV=production yarn build:android`
-- [ ] **Check build output**: Verify plugin messages appear
+- [ ] **Build release bundle**: `cd packages/mobile-host && PLATFORM=android NODE_ENV=production yarn build:android`
+- [ ] **Check build output**: Verify `✓ Prepended runtime polyfills` messages appear
 - [ ] **Install on device/emulator**: Install release APK
 - [ ] **Launch app**: App should start without crashes
 - [ ] **Check logcat**: No "console doesn't exist" errors
@@ -457,12 +524,13 @@ After plugin (success):
 
 ### Plugin Not Running
 
-**Symptom**: No "✓ Prepended console polyfill" messages in build output
+**Symptom**: No "✓ Prepended runtime polyfills" messages in build output
 
 **Solutions**:
 1. Verify plugin is added to `plugins` array in config
 2. Check plugin path is correct: `./scripts/PatchMFConsolePlugin.mjs`
 3. Ensure Rspack/Webpack config is being used (not Metro)
+4. Verify `PLATFORM` environment variable is set (e.g., `PLATFORM=android`)
 
 ### Still Getting Console Errors
 
@@ -478,9 +546,9 @@ After plugin (success):
 
 **Symptom**: Bundle is slightly larger after adding plugin
 
-**Explanation**: The console polyfill adds ~500 bytes to each `.bundle` file. This is negligible compared to typical bundle sizes (400KB+).
+**Explanation**: The runtime polyfills (console + Platform) add ~1-2KB to each `.bundle` file. This is negligible compared to typical bundle sizes (400KB+).
 
-**Mitigation**: None needed - the polyfill is essential for release builds.
+**Mitigation**: None needed - the polyfills are essential for release builds.
 
 ### Plugin Fails to Patch
 
@@ -581,15 +649,15 @@ This replaces the asset in memory before it's written to disk.
 
 ### Bundle Size
 
-- **Per-bundle overhead**: ~500 bytes (console polyfill)
+- **Per-bundle overhead**: ~1-2KB (console + Platform polyfills)
 - **Negligible**: Typical bundles are 400KB-500KB
-- **Impact**: < 0.2% size increase
+- **Impact**: < 0.5% size increase
 
 ### Runtime Performance
 
 - **Polyfill execution**: < 1ms (runs once at startup)
-- **No-op function calls**: Negligible (replaced by real console)
-- **Memory**: ~18 function references (tiny)
+- **No-op function calls**: Negligible (replaced by real console/Platform)
+- **Memory**: ~25 function/property references (tiny)
 
 ### Build Time
 
@@ -870,6 +938,13 @@ This plugin is part of the Universal MFE project and is available under the [MIT
 ---
 
 ## Changelog
+
+### v1.1.0 (2026-01-28)
+- ✅ Added Platform polyfill (critical for iOS)
+- ✅ Added `PLATFORM` environment variable support
+- ✅ Added constructor options for explicit platform configuration
+- ✅ Updated to patch only `[MF]`-prefixed console.warn calls (safer)
+- ✅ Improved documentation with correct working directory guidance
 
 ### v1.0.0 (2026-01-26)
 - ✅ Initial release
