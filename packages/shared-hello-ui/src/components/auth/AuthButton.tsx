@@ -173,12 +173,9 @@ function createStyles(theme: Theme, isDark: boolean): Styles {
       backgroundColor: isDark ? '#6e7681' : '#24292e',
     },
     disabledButton: {
-      // Use same style as Google button for clear visibility
-      // Light mode: white background with border (like Google button)
-      // Dark mode: dark background with border (like Google button)
-      backgroundColor: isDark ? '#131314' : '#FFFFFF',
-      borderWidth: 1,
-      borderColor: isDark ? '#8E918F' : theme.colors.border.default,
+      // Light mode: darker grey background that contrasts with white page
+      // Dark mode: lighter grey background that contrasts with dark page
+      backgroundColor: isDark ? '#4B5563' : '#6B7280',
     },
     buttonText: {
       fontSize: theme.typography.fontSizes.base,
@@ -200,10 +197,8 @@ function createStyles(theme: Theme, isDark: boolean): Styles {
       color: '#FFFFFF',
     },
     disabledText: {
-      // Use same text style as Google button for clear visibility
-      // Light mode: dark text on white background
-      // Dark mode: light text on dark background
-      color: isDark ? '#E3E3E3' : '#1F1F1F',
+      // White text on grey background for good contrast in both modes
+      color: '#FFFFFF',
     },
   });
 }
