@@ -2373,7 +2373,6 @@ DEPENDENCIES:
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - FirebaseAppCheckInterop
   - FirebaseAuthInterop
-  - FirebaseCore
   - FirebaseCoreInternal
   - fmt (from `../node_modules/react-native/third-party-podspecs/fmt.podspec`)
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
@@ -2727,6 +2726,6 @@ SPEC CHECKSUMS:
   SwiftyRSA: 8c6dd1ea7db1b8dc4fb517a202f88bb1354bc2c6
   Yoga: 0c4b7d2aacc910a1f702694fa86be830386f4ceb
 
-PODFILE CHECKSUM: a178eb9e5b439b19407b504a4fd4bd6a6967dfd4
+PODFILE CHECKSUM: 79d92de16b54f5ad47d5e395c7869b8c8b14c5ae
 
 COCOAPODS: 1.16.2
