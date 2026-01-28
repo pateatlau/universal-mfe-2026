@@ -14,7 +14,7 @@
 import { create } from 'zustand';
 import { getJSON, setJSON, removeItem, isStorageConfigured } from '@universal/shared-utils';
 import type { AuthStore, AuthState, User, UserRole, AuthService } from './types';
-import { AUTH_STORAGE_KEY, getAuthErrorMessage } from './constants';
+import { AUTH_STORAGE_KEY, TOKEN_LIFETIME_MS, getAuthErrorMessage } from './constants';
 
 // Auth service will be injected at runtime
 let authService: AuthService | null = null;
@@ -150,7 +150,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         userId: user.id,
         email: user.email,
         displayName: user.displayName,
-        provider: 'google',
+        provider: user.provider,
       });
     } catch (error) {
       const message = getAuthErrorMessage((error as { code?: string }).code || '');
@@ -173,7 +173,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         userId: user.id,
         email: user.email,
         displayName: user.displayName,
-        provider: 'github',
+        provider: user.provider,
       });
     } catch (error) {
       const message = getAuthErrorMessage((error as { code?: string }).code || '');
@@ -212,7 +212,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       if (token) {
         const { user } = get();
         if (user) {
-          const updatedUser = { ...user, idToken: token, tokenExpiry: Date.now() + 3600000 };
+          const updatedUser = {
+            ...user,
+            idToken: token,
+            tokenExpiry: Date.now() + TOKEN_LIFETIME_MS,
+          };
           set({ user: updatedUser });
           await persistUser(updatedUser);
         }
@@ -258,7 +262,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     set({ isLoading: true });
 
-    // Load persisted user
+    // Load persisted user for immediate UI feedback
     if (isStorageConfigured()) {
       try {
         const persistedUser = await getJSON<User>(AUTH_STORAGE_KEY);
@@ -270,12 +274,27 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
     }
 
+    // Track if we've received the first auth state callback
+    let isFirstCallback = true;
+
     // Subscribe to auth state changes
     const service = getAuthService();
     const unsubscribe = service.onAuthStateChanged((user) => {
+      // Only set isInitialized on the first callback to avoid race conditions
+      const shouldMarkInitialized = isFirstCallback;
+      isFirstCallback = false;
+
       if (user) {
-        set({ user, isAuthenticated: true, isLoading: false, isInitialized: true });
-        persistUser(user);
+        set({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          ...(shouldMarkInitialized && { isInitialized: true }),
+        });
+        // Handle persistence errors explicitly
+        persistUser(user).catch((err) => {
+          console.warn('[shared-auth-store] Failed to persist user in auth callback:', err);
+        });
         emitAuthEvent?.('USER_LOGGED_IN', {
           userId: user.id,
           email: user.email,
@@ -283,12 +302,30 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           provider: user.provider,
         });
       } else {
-        set({ user: null, isAuthenticated: false, isLoading: false, isInitialized: true });
-        clearPersistedUser();
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          ...(shouldMarkInitialized && { isInitialized: true }),
+        });
+        // Handle persistence errors explicitly
+        clearPersistedUser().catch((err) => {
+          console.warn('[shared-auth-store] Failed to clear user in auth callback:', err);
+        });
       }
     });
 
-    set({ isLoading: false, isInitialized: true });
+    // If the auth service fires the callback synchronously, isInitialized
+    // will already be set. If not, we set loading to false but wait for
+    // the callback to set isInitialized.
+    if (!get().isInitialized) {
+      // Auth service hasn't fired yet - set a timeout to prevent infinite loading
+      setTimeout(() => {
+        if (!get().isInitialized) {
+          set({ isLoading: false, isInitialized: true });
+        }
+      }, 5000); // 5 second timeout for auth service to respond
+    }
 
     return unsubscribe;
   },
@@ -301,8 +338,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 async function persistUser(user: User): Promise<void> {
   if (!isStorageConfigured()) return;
   try {
-    // Don't persist sensitive token data
-    const { idToken, ...safeUser } = user;
+    // Don't persist sensitive token data or related metadata
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { idToken, tokenExpiry, ...safeUser } = user;
     await setJSON(AUTH_STORAGE_KEY, safeUser);
   } catch (error) {
     console.warn('[shared-auth-store] Failed to persist user:', error);

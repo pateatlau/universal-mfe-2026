@@ -78,10 +78,18 @@ export async function getJSON<T>(key: string): Promise<T | null> {
 
 /**
  * Set a JSON value in storage.
+ * @throws Error if value cannot be serialized to JSON
  */
 export async function setJSON<T>(key: string, value: T): Promise<void> {
   const storage = getStorage();
-  await storage.setItem(key, JSON.stringify(value));
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`[shared-utils] Failed to serialize value for key "${key}": ${message}`);
+  }
+  await storage.setItem(key, serialized);
 }
 
 /**
@@ -97,9 +105,54 @@ export async function removeItem(key: string): Promise<void> {
 // =============================================================================
 
 /**
+ * Check if localStorage is available.
+ * Returns false in SSR contexts, privacy mode, or environments without localStorage.
+ */
+function isLocalStorageAvailable(): boolean {
+  try {
+    if (typeof localStorage === 'undefined') {
+      return false;
+    }
+    // Test actual read/write to detect quota/privacy issues
+    const testKey = '__storage_test__';
+    localStorage.setItem(testKey, testKey);
+    localStorage.removeItem(testKey);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Create a storage adapter for web (uses localStorage).
+ * Returns a no-op adapter if localStorage is unavailable.
  */
 export function createWebStorage(): StorageAdapter {
+  const available = isLocalStorageAvailable();
+
+  if (!available) {
+    console.warn(
+      '[shared-utils] localStorage is not available. Using in-memory fallback. ' +
+        'Data will not persist across page reloads.'
+    );
+    // Return in-memory fallback
+    const memoryStore = new Map<string, string>();
+    return {
+      async getItem(key: string): Promise<string | null> {
+        return memoryStore.get(key) ?? null;
+      },
+      async setItem(key: string, value: string): Promise<void> {
+        memoryStore.set(key, value);
+      },
+      async removeItem(key: string): Promise<void> {
+        memoryStore.delete(key);
+      },
+      async clear(): Promise<void> {
+        memoryStore.clear();
+      },
+    };
+  }
+
   return {
     async getItem(key: string): Promise<string | null> {
       try {

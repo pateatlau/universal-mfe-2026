@@ -20,6 +20,11 @@ export const AUTH_TOKEN_KEY = '@universal/auth-token';
 export const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
 
 /**
+ * Token lifetime (1 hour) - Firebase ID tokens expire after 1 hour
+ */
+export const TOKEN_LIFETIME_MS = 60 * 60 * 1000;
+
+/**
  * Auth event types (for event bus)
  */
 export const AUTH_EVENTS = {
