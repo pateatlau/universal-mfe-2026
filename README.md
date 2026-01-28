@@ -305,11 +305,12 @@ yarn workspace @universal/mobile-host clean
 
 **CRITICAL**: Mobile production releases (Android + iOS) require specific fixes to work with Module Federation v2 and Hermes:
 
-1. **PatchMFConsolePlugin** - Prepends console polyfill before webpack runtime (platform-agnostic)
-2. **Production remote bundles** - Must be built with `NODE_ENV=production`
-3. **ScriptManager resolver** - Must handle numeric chunk IDs (production mode)
-4. **HTTPS enforcement** - Production remote URLs must use HTTPS
-5. **Release configuration** - iOS/Android must build with Release configuration (not Debug)
+1. **PatchMFConsolePlugin** - Prepends console and Platform polyfills before webpack runtime
+2. **PLATFORM environment variable** - Must set `PLATFORM=android` or `PLATFORM=ios` for correct Platform.OS polyfill
+3. **Production remote bundles** - Must be built with `NODE_ENV=production`
+4. **ScriptManager resolver** - Must handle numeric chunk IDs (production mode)
+5. **HTTPS enforcement** - Production remote URLs must use HTTPS
+6. **Release configuration** - iOS/Android must build with Release configuration (not Debug)
 
 See [Mobile Release Build Fixes](docs/MOBILE-RELEASE-BUILD-FIXES.md) for comprehensive documentation.
 
