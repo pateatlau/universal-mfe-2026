@@ -78,7 +78,7 @@ test.describe('Theming', () => {
       }
 
       // App should still be responsive - check for app title or login form
-      await expect(page.getByText(/Universal MFE|Sign In/)).toBeVisible();
+      await expect(page.getByText(/Universal MFE|Sign In/).first()).toBeVisible();
     });
   });
 
