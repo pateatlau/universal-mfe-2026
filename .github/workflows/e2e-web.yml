@@ -1,0 +1,142 @@
+name: E2E Web Tests
+
+# Triggered when 'ready-to-merge' label is added to a PR
+# This avoids running expensive E2E tests on every push
+on:
+  pull_request:
+    types: [labeled]
+    branches: [main]
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-web:
+    name: E2E Web Tests
+    runs-on: ubuntu-latest
+    # Only run when 'ready-to-merge' label is added
+    if: github.event.label.name == 'ready-to-merge'
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Install Playwright browsers
+        working-directory: packages/web-shell
+        run: |
+          echo "::group::Installing Playwright browsers"
+          npx playwright install --with-deps chromium
+          echo "::endgroup::"
+
+      - name: Build web packages
+        run: |
+          echo "::group::Building web packages"
+          yarn build:web
+          echo "::endgroup::"
+
+      - name: Run Playwright tests
+        working-directory: packages/web-shell
+        run: |
+          echo "::group::Running Playwright E2E tests"
+          npx playwright test --reporter=html
+          echo "::endgroup::"
+        env:
+          CI: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: playwright-report
+          path: packages/web-shell/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: packages/web-shell/test-results/
+          retention-days: 7
+
+      - name: Post E2E result comment
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const status = '${{ job.status }}';
+            const emoji = status === 'success' ? '✅' : '❌';
+            const message = status === 'success'
+              ? 'E2E tests passed! This PR is ready to merge.'
+              : 'E2E tests failed. Please check the test results.';
+
+            const body = `## E2E Test Results ${emoji}
+
+            ${message}
+
+            | Status | Result |
+            |--------|--------|
+            | 🧪 Playwright Tests | ${emoji} ${status} |
+
+            📦 [View test report](${runUrl}#artifacts)
+
+            ---
+            *Report available for 7 days*`;
+
+            // Find existing E2E comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('## E2E Test Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
