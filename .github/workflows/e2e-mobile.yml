@@ -196,6 +196,14 @@ jobs:
           yarn build:shared
           echo "::endgroup::"
 
+      - name: Create GoogleService-Info.plist
+        uses: ./.github/actions/create-google-service-info-plist
+        with:
+          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          allow-placeholder: ${{ secrets.ALLOW_PLACEHOLDER_FIREBASE || 'true' }}
+          working-directory: packages/mobile-host/ios
+          bundle-id: org.reactjs.native.MobileHostTmp
+
       - name: Install CocoaPods dependencies
         working-directory: packages/mobile-host/ios
         run: |
