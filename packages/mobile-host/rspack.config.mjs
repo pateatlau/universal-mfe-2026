@@ -175,8 +175,19 @@ export default {
           eager: true,
           requiredVersion: '0.80.0',
         },
+        // Core shared packages
         '@universal/shared-utils': { singleton: true, eager: true },
         '@universal/shared-hello-ui': { singleton: true, eager: true },
+        // Dependencies used by shared-hello-ui (CRITICAL: must be singletons to avoid
+        // multiple instances of Zustand stores and React contexts in release builds)
+        '@universal/shared-theme-context': { singleton: true, eager: true },
+        '@universal/shared-i18n': { singleton: true, eager: true },
+        '@universal/shared-auth-store': { singleton: true, eager: true },
+        '@universal/shared-a11y': { singleton: true, eager: true },
+        // Additional shared packages used by the host
+        '@universal/shared-event-bus': { singleton: true, eager: true },
+        '@universal/shared-data-layer': { singleton: true, eager: true },
+        '@universal/shared-router': { singleton: true, eager: true },
       },
     }),
   ],
