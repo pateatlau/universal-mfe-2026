@@ -6,9 +6,12 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Determine mode from NODE_ENV
+const isProduction = process.env.NODE_ENV === 'production';
+const isDevelopment = !isProduction;
+
 // Enable logging plugin only in development mode
 // Can be disabled by setting ENABLE_MF_LOGGING=false
-const isDevelopment = process.env.NODE_ENV === 'development';
 const enableLogging =
   process.env.ENABLE_MF_LOGGING !== 'false' && isDevelopment;
 
@@ -29,8 +32,8 @@ const firebaseConfig = {
 
 export default {
   entry: './src/index.tsx',
-  mode: 'development',
-  devtool: 'eval-source-map',
+  mode: isProduction ? 'production' : 'development',
+  devtool: isProduction ? 'source-map' : 'eval-source-map',
   devServer: {
     port: 9001,
     headers: {
@@ -72,6 +75,7 @@ export default {
               transform: {
                 react: {
                   runtime: 'automatic',
+                  development: isDevelopment,
                 },
               },
             },
