@@ -155,8 +155,18 @@ export default {
           eager: false, // Remote defers to host's eager loading
           requiredVersion: '0.80.0',
         },
+        // Core shared packages
         '@universal/shared-utils': { singleton: true, eager: false },
         '@universal/shared-hello-ui': { singleton: true, eager: false },
+        // Dependencies used by shared-hello-ui (must match host's shared config)
+        '@universal/shared-theme-context': { singleton: true, eager: false },
+        '@universal/shared-i18n': { singleton: true, eager: false },
+        '@universal/shared-auth-store': { singleton: true, eager: false },
+        '@universal/shared-a11y': { singleton: true, eager: false },
+        // Additional shared packages
+        '@universal/shared-event-bus': { singleton: true, eager: false },
+        '@universal/shared-data-layer': { singleton: true, eager: false },
+        '@universal/shared-router': { singleton: true, eager: false },
       },
     }),
   ],

@@ -2,14 +2,17 @@
 
 This guide provides step-by-step instructions for testing the complete CI/CD pipeline for the Universal MFE platform.
 
+**Last Updated:** 2026-01-30
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
 2. [Workflow Overview](#workflow-overview)
-3. [Testing Mobile Remote Bundle Deployment](#testing-mobile-remote-bundle-deployment)
-4. [Testing Android Release Deployment](#testing-android-release-deployment)
-5. [Testing on Physical Devices](#testing-on-physical-devices)
-6. [Troubleshooting](#troubleshooting)
+3. [Development Workflow](#development-workflow)
+4. [Testing Mobile Remote Bundle Deployment](#testing-mobile-remote-bundle-deployment)
+5. [Testing Android Release Deployment](#testing-android-release-deployment)
+6. [Testing on Physical Devices](#testing-on-physical-devices)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -48,37 +51,113 @@ firebase --version
 
 ## Workflow Overview
 
-### Complete Deployment Flow
+### Optimized CI/CD Flow (Trunk-Based Development)
 
-```
-1. Feature Development (feature/*)
-   ↓
-2. Merge to develop (CI runs)
-   ↓
-3. PR develop → main (CI runs on PR)
-   ↓
-4. Merge to main
-   ├─→ Deploy Web (Vercel)
-   ├─→ Deploy Mobile Remote Bundles (Firebase Hosting)
-   └─→ E2E Tests (optional)
-   ↓
-5. Create Release Tag (v*)
-   ├─→ Build Release APKs
-   ├─→ Upload to Firebase App Distribution
-   └─→ Create GitHub Release
-   ↓
-6. Testers receive email → Test on physical devices
+The project uses trunk-based development with `main` as the single source of truth. This eliminates redundant CI runs.
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    OPTIMIZED CI/CD WORKFLOW                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  feature-branch                                                  │
+│       │                                                          │
+│       ▼                                                          │
+│  ┌─────────────────┐                                            │
+│  │ PR to main      │◄─── CI (lint, type, test, build)           │
+│  │                 │                                             │
+│  └────────┬────────┘                                            │
+│           │ add label: "ready-to-merge"                          │
+│           ▼                                                      │
+│  ┌─────────────────┐                                            │
+│  │ E2E triggered   │◄─── Web E2E (runs once, blocks merge)      │
+│  │                 │                                             │
+│  └────────┬────────┘                                            │
+│           │ merge (requires CI + E2E pass)                       │
+│           ▼                                                      │
+│  ┌─────────────────┐                                            │
+│  │ main branch     │◄─── Deploy web to Vercel (no CI rerun)     │
+│  └────────┬────────┘                                            │
+│           │ git tag v3.x.x                                       │
+│           ▼                                                      │
+│  ┌─────────────────┐                                            │
+│  │ Release tag     │◄─── Mobile E2E + Deploy to Firebase        │
+│  └─────────────────┘                                            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Workflow Files
 
 | Workflow | File | Trigger |
 |----------|------|---------|
-| CI | `.github/workflows/ci.yml` | Push/PR to main/develop |
-| Deploy Web | `.github/workflows/deploy-web.yml` | Push to main |
-| **Deploy Mobile Bundles** | `.github/workflows/deploy-mobile-remote-bundles.yml` | **Push to main** |
-| **Deploy Android** | `.github/workflows/deploy-android.yml` | **Tag push (v*)** |
+| CI | `.github/workflows/ci.yml` | PR to main |
+| E2E Web | `.github/workflows/e2e-web.yml` | Label `ready-to-merge` on PR |
+| Deploy Web | `.github/workflows/deploy-web.yml` | Push to main (path-filtered) |
+| Deploy Mobile Bundles | `.github/workflows/deploy-mobile-remote-bundles.yml` | Push to main (path-filtered) |
+| Deploy Android | `.github/workflows/deploy-android.yml` | Tag push (v*) |
 | Deploy iOS | `.github/workflows/deploy-ios.yml` | Tag push (v*) |
+
+---
+
+## Development Workflow
+
+### Step 1: Create Feature Branch
+
+```bash
+# Start from main
+git checkout main
+git pull origin main
+
+# Create feature branch
+git checkout -b feature/my-new-feature
+```
+
+### Step 2: Make Changes and Push
+
+```bash
+# Make your changes
+# ...
+
+# Commit and push
+git add .
+git commit -m "feat: add my new feature"
+git push -u origin feature/my-new-feature
+```
+
+### Step 3: Create Pull Request
+
+1. Go to GitHub and create PR from `feature/my-new-feature` → `main`
+2. CI automatically runs (lint, typecheck, test, build)
+3. Wait for CI to pass
+
+### Step 4: Request E2E Tests (When Ready to Merge)
+
+1. Once CI passes and code is reviewed
+2. Add label `ready-to-merge` to the PR
+3. E2E tests automatically run
+4. Wait for E2E to pass
+
+### Step 5: Merge to Main
+
+1. Once CI + E2E pass, merge the PR
+2. Web automatically deploys to Vercel
+3. Mobile remote bundles deploy to Firebase Hosting (if changed)
+
+### Step 6: Create Release (For Mobile)
+
+```bash
+# Create and push release tag
+git checkout main
+git pull origin main
+git tag -a v3.2.0 -m "Release v3.2.0"
+git push origin v3.2.0
+```
+
+This triggers:
+- Mobile E2E tests
+- Android release build + Firebase App Distribution
+- iOS release build + Firebase App Distribution
 
 ---
 
@@ -523,19 +602,21 @@ adb logcat | grep -E "ScriptManager|ReactNativeJS"
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ Developer makes changes                                 │
+│ Developer creates feature branch                        │
 └─────────────────────────────────────────────────────────┘
                        ↓
 ┌─────────────────────────────────────────────────────────┐
-│ Push to develop → CI runs (lint, test, build)          │
+│ PR to main → CI runs (lint, typecheck, test, build)    │
+│   (path-filtered for efficiency)                        │
 └─────────────────────────────────────────────────────────┘
                        ↓
 ┌─────────────────────────────────────────────────────────┐
-│ PR develop → main → CI runs on PR                      │
+│ Add label "ready-to-merge" → E2E tests run             │
+│   (runs once when ready, not on every push)             │
 └─────────────────────────────────────────────────────────┘
                        ↓
 ┌─────────────────────────────────────────────────────────┐
-│ Merge to main → CI + Deploy workflows run              │
+│ Merge to main → Deploy only (no CI rerun)              │
 │   ├─ Deploy Web (Vercel)                               │
 │   └─ Deploy Mobile Remote Bundles (Firebase Hosting)   │
 └─────────────────────────────────────────────────────────┘
@@ -549,8 +630,9 @@ adb logcat | grep -E "ScriptManager|ReactNativeJS"
 └─────────────────────────────────────────────────────────┘
                        ↓
 ┌─────────────────────────────────────────────────────────┐
-│ Deploy Android workflow runs                           │
-│   ├─ Build release APKs                                │
+│ Deploy Android/iOS workflows run                        │
+│   ├─ Run Mobile E2E tests                              │
+│   ├─ Build release APKs/Apps                           │
 │   ├─ Upload to Firebase App Distribution               │
 │   └─ Create GitHub Release                             │
 └─────────────────────────────────────────────────────────┘
@@ -564,20 +646,26 @@ adb logcat | grep -E "ScriptManager|ReactNativeJS"
 └─────────────────────────────────────────────────────────┘
 ```
 
+**Key Optimizations:**
+- CI runs only on PRs (not on merge to main)
+- E2E runs only when `ready-to-merge` label is added
+- Deploy workflows skip CI (already validated in PR)
+- Path-filtering reduces unnecessary builds
+
 ---
 
 ## Next Steps
 
 After successful CI/CD testing:
 
-1. **Update Documentation**: Update `README.md` with tested deployment instructions
+1. **Configure Branch Protection**: Settings → Branches → Add rule for `main`
 2. **Add Monitoring**: Set up error tracking (Sentry, Firebase Crashlytics)
-3. **Automate More**: Add automated E2E tests in CI
-4. **iOS Release**: Apply same process for iOS release builds
-5. **Production Release**: Remove `-test` suffix, deploy to production testers
+3. **Review E2E Coverage**: Ensure critical paths are tested
+4. **iOS Release**: Test iOS release builds on simulator
+5. **Production Release**: Deploy to production testers
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2026-01-26
+**Document Version**: 2.0
+**Last Updated**: 2026-01-30
 **Status**: Ready for Testing

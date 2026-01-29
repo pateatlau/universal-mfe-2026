@@ -87,14 +87,18 @@ export default {
           requiredVersion: '0.21.2',
           eager: true,
         },
-        '@universal/shared-utils': {
-          singleton: true,
-          eager: true,
-        },
-        '@universal/shared-hello-ui': {
-          singleton: true,
-          eager: true,
-        },
+        // Core shared packages
+        '@universal/shared-utils': { singleton: true, eager: true },
+        '@universal/shared-hello-ui': { singleton: true, eager: true },
+        // Dependencies used by shared-hello-ui (must match host's shared config)
+        '@universal/shared-theme-context': { singleton: true, eager: true },
+        '@universal/shared-i18n': { singleton: true, eager: true },
+        '@universal/shared-auth-store': { singleton: true, eager: true },
+        '@universal/shared-a11y': { singleton: true, eager: true },
+        // Additional shared packages
+        '@universal/shared-event-bus': { singleton: true, eager: true },
+        '@universal/shared-data-layer': { singleton: true, eager: true },
+        '@universal/shared-router': { singleton: true, eager: true },
       },
     }),
     new HtmlRspackPlugin({

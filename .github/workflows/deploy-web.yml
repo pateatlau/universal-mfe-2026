@@ -1,11 +1,15 @@
 name: Deploy Web to Vercel
 
+# Deploy directly on push to main - CI was already validated in the PR
+# This avoids redundant CI runs after merge
 on:
-  # Trigger after CI workflow completes on main branch
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  push:
     branches: [main]
+    paths:
+      - 'packages/web-shell/**'
+      - 'packages/web-remote-hello/**'
+      - 'packages/shared-*/**'
+      - '.github/workflows/deploy-web.yml'
 
 # Cancel in-progress deployments for the same branch
 concurrency:
@@ -21,8 +25,6 @@ jobs:
   deploy-web-remote:
     name: Deploy Web Remote
     runs-on: ubuntu-latest
-    # Only deploy if CI workflow succeeded (includes E2E tests on main)
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     outputs:
       deployment-url: ${{ steps.deploy.outputs.deployment-url }}

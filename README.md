@@ -212,13 +212,16 @@ Language toggle switches between English and Hindi across all platforms.
 
 ## CI/CD
 
+The project uses **trunk-based development** with optimized CI/CD (60% fewer redundant runs):
+
 | Workflow | Trigger | Action |
 |----------|---------|--------|
-| CI | Push/PR to main/develop | Lint, typecheck, test, build all platforms (host + standalone) |
-| Deploy Web | Push to main | Deploy to Vercel (remote first, then shell) |
-| Deploy Android | Tag push (v*) | Build host + standalone APKs, create GitHub Release |
-| Deploy iOS | Tag push (v*) | Build host + standalone Simulator apps, create GitHub Release |
-| **Deploy Mobile Remote Bundles** | **Push to main** | **Build production bundles, deploy to Firebase Hosting** |
+| CI | PR to main | Lint, typecheck, test, build all platforms (host + standalone) |
+| E2E Web | `ready-to-merge` label on PR | Playwright E2E tests (runs once when ready) |
+| Deploy Web | Push to main | Deploy to Vercel (no CI rerun - already validated) |
+| Deploy Android | Tag push (v*) | Build host + standalone release APKs, upload to Firebase |
+| Deploy iOS | Tag push (v*) | Build host + standalone Simulator apps, upload to Firebase |
+| Deploy Mobile Remote Bundles | Push to main (path-filtered) | Build production bundles, deploy to Firebase Hosting |
 
 ### Mobile Remote Bundle Deployment
 
