@@ -55,7 +55,7 @@ firebase --version
 
 The project uses trunk-based development with `main` as the single source of truth. This eliminates redundant CI runs.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    OPTIMIZED CI/CD WORKFLOW                      │
 ├─────────────────────────────────────────────────────────────────┤
@@ -64,7 +64,7 @@ The project uses trunk-based development with `main` as the single source of tru
 │       │                                                          │
 │       ▼                                                          │
 │  ┌─────────────────┐                                            │
-│  │ PR to main      │◄─── CI (path-filtered: lint, type, test)   │
+│  │ PR to main      │◄─── CI (lint, type, test, build)           │
 │  │                 │                                             │
 │  └────────┬────────┘                                            │
 │           │ add label: "ready-to-merge"                          │
@@ -91,9 +91,9 @@ The project uses trunk-based development with `main` as the single source of tru
 
 | Workflow | File | Trigger |
 |----------|------|---------|
-| CI | `.github/workflows/ci.yml` | PR to main only |
+| CI | `.github/workflows/ci.yml` | PR to main |
 | E2E Web | `.github/workflows/e2e-web.yml` | Label `ready-to-merge` on PR |
-| Deploy Web | `.github/workflows/deploy-web.yml` | Push to main (no CI) |
+| Deploy Web | `.github/workflows/deploy-web.yml` | Push to main (path-filtered) |
 | Deploy Mobile Bundles | `.github/workflows/deploy-mobile-remote-bundles.yml` | Push to main (path-filtered) |
 | Deploy Android | `.github/workflows/deploy-android.yml` | Tag push (v*) |
 | Deploy iOS | `.github/workflows/deploy-ios.yml` | Tag push (v*) |

@@ -18,7 +18,7 @@ This document outlines the CI/CD implementation plan for the Universal Microfron
 
 The project uses **trunk-based development** with `main` as the single source of truth. This eliminates redundant CI runs and simplifies the branching strategy.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    OPTIMIZED CI/CD WORKFLOW                      │
 ├─────────────────────────────────────────────────────────────────┤
@@ -27,7 +27,7 @@ The project uses **trunk-based development** with `main` as the single source of
 │       │                                                          │
 │       ▼                                                          │
 │  ┌─────────────────┐                                            │
-│  │ PR to main      │◄─── CI (path-filtered: lint, type, test)   │
+│  │ PR to main      │◄─── CI (lint, type, test, build)           │
 │  │                 │                                             │
 │  └────────┬────────┘                                            │
 │           │ add label: "ready-to-merge"                          │
@@ -54,9 +54,9 @@ The project uses **trunk-based development** with `main` as the single source of
 
 | Workflow | Trigger | What Runs |
 |----------|---------|-----------|
-| `ci.yml` | PR to main | Lint, typecheck, test, build (path-filtered) |
+| `ci.yml` | PR to main | Lint, typecheck, test, build |
 | `e2e-web.yml` | Label `ready-to-merge` added to PR | Web E2E tests |
-| `deploy-web.yml` | Push to main | Deploy to Vercel only (no CI rerun) |
+| `deploy-web.yml` | Push to main (path-filtered) | Deploy to Vercel only (no CI rerun) |
 | `deploy-mobile-remote-bundles.yml` | Push to main (path-filtered) | Deploy MF bundles to Firebase Hosting |
 | `deploy-android.yml` | Tag `v*` | Mobile E2E + Deploy to Firebase App Distribution |
 | `deploy-ios.yml` | Tag `v*` | Mobile E2E + Deploy to Firebase App Distribution |
@@ -1378,10 +1378,10 @@ Firebase Authentication will provide secure user authentication with support for
 
 | File | Purpose | Trigger |
 |------|---------|---------|
-| `.github/workflows/ci.yml` | Lint, typecheck, test, build (path-filtered) | PR to main |
+| `.github/workflows/ci.yml` | Lint, typecheck, test, build | PR to main |
 | `.github/workflows/e2e-web.yml` | Web E2E tests (Playwright) | Label `ready-to-merge` on PR |
 | `.github/workflows/codeql.yml` | CodeQL security analysis | PR to main, Weekly |
-| `.github/workflows/deploy-web.yml` | Deploy to Vercel (no CI rerun) | Push to main |
+| `.github/workflows/deploy-web.yml` | Deploy to Vercel (no CI rerun) | Push to main (path-filtered) |
 | `.github/workflows/deploy-mobile-remote-bundles.yml` | Deploy MF bundles to Firebase Hosting | Push to main (path-filtered) |
 | `.github/workflows/deploy-android.yml` | Mobile E2E + Build + Deploy to Firebase | Tag v* |
 | `.github/workflows/deploy-ios.yml` | Mobile E2E + Build + Deploy to Firebase | Tag v* |
