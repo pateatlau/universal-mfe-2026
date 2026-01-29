@@ -84,7 +84,7 @@ runs:
           echo "  2. Base64 encode it: base64 -i GoogleService-Info.plist"
           echo "  3. Add as GitHub secret: GOOGLE_SERVICE_INFO_PLIST_BASE64"
           echo ""
-          echo "Or set ALLOW_PLACEHOLDER_FIREBASE=true to use a placeholder for CI builds"
+          echo "Or pass 'allow-placeholder: true' to this action to use a placeholder for CI builds"
           exit 1
         fi
 
