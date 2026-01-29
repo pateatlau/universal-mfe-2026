@@ -4,6 +4,9 @@
  * Basic tests to verify the web shell loads correctly and core functionality works.
  * These tests do NOT require the remote module server to be running.
  *
+ * NOTE: These tests run without authentication. Unauthenticated users are redirected
+ * to /login, so tests use the login page which has theme/language toggles in the header.
+ *
  * Note: Tests use i18n-aware patterns to match both English and Hindi translations.
  * - Light theme: "Light" (en), "लाइट" (hi)
  * - Dark theme: "Dark" (en), "डार्क" (hi)
@@ -12,94 +15,98 @@
 import { test, expect } from '@playwright/test';
 
 // i18n-aware patterns for theme toggle text
-const LIGHT_THEME_PATTERN = /☀️ (Light|लाइट)/;
+// Toggle shows TARGET state: 🌙 Dark when in light mode, ☀️ Light when in dark mode
 const DARK_THEME_PATTERN = /🌙 (Dark|डार्क)/;
-const THEME_TOGGLE_PATTERN = /☀️ (Light|लाइट)|🌙 (Dark|डार्क)/;
+const ANY_THEME_PATTERN = /☀️ (Light|लाइट)|🌙 (Dark|डार्क)/;
 
 test.describe('Smoke Tests', () => {
   test.describe('Application Boot', () => {
-    test('should load the home page', async ({ page }) => {
+    test('should load and redirect to login for unauthenticated users', async ({ page }) => {
       await page.goto('/');
 
-      // Verify the app title is visible (uses i18n: common.appName)
+      // Should redirect to login page
+      await page.waitForURL(/\/(login)?$/);
+
+      // Verify the app title is visible in header
       await expect(page.getByText('Universal MFE')).toBeVisible();
     });
 
     test('should display the subtitle', async ({ page }) => {
       await page.goto('/');
+      await page.waitForURL(/\/(login)?$/);
 
-      // Verify the subtitle is visible (uses i18n: common.subtitle)
-      // Use first() since text appears in both header and home page
+      // Verify the subtitle is visible in header
       await expect(page.getByText(/Dynamically loading remote/i).first()).toBeVisible();
     });
 
     test('should have a theme toggle button', async ({ page }) => {
       await page.goto('/');
+      await page.waitForURL(/\/(login)?$/);
 
-      // Should have either light or dark mode toggle visible
-      const lightToggle = page.getByText(LIGHT_THEME_PATTERN);
-      const darkToggle = page.getByText(DARK_THEME_PATTERN);
-
-      // One of them should be visible
-      const lightVisible = await lightToggle.isVisible().catch(() => false);
-      const darkVisible = await darkToggle.isVisible().catch(() => false);
-
-      expect(lightVisible || darkVisible).toBe(true);
+      // Should have theme toggle visible (shows target state)
+      await expect(page.getByText(ANY_THEME_PATTERN).first()).toBeVisible();
     });
 
     test('should have a language toggle button', async ({ page }) => {
       await page.goto('/');
+      await page.waitForURL(/\/(login)?$/);
 
-      // Should have language toggle with current locale
+      // Should have language toggle with globe icon
       await expect(page.getByText(/🌐/)).toBeVisible();
     });
 
-    test('should have settings link in header', async ({ page }) => {
+    test('should display login form for unauthenticated users', async ({ page }) => {
       await page.goto('/');
+      await page.waitForURL(/\/(login)?$/);
 
-      // Settings button should be visible in header (first one)
-      await expect(page.getByText('⚙️').first()).toBeVisible();
+      // Login form should be visible (use heading to avoid matching button)
+      await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
     });
   });
 
-  test.describe('Home Page Content', () => {
-    test('should display welcome message', async ({ page }) => {
-      await page.goto('/');
+  test.describe('Login Page Content', () => {
+    test('should display email input', async ({ page }) => {
+      await page.goto('/login');
 
-      // Check for welcome text (uses i18n: common.welcome)
-      await expect(page.getByText(/Welcome/i)).toBeVisible();
+      // Email input should be present
+      await expect(page.getByPlaceholder(/email/i)).toBeVisible();
     });
 
-    test('should display navigation section', async ({ page }) => {
-      await page.goto('/');
+    test('should display password input', async ({ page }) => {
+      await page.goto('/login');
 
-      // Home page should have navigation links to remote and settings
-      // Check for Remote Module link
-      await expect(page.getByText(/Remote Module|🧩/)).toBeVisible();
+      // Password input should be present
+      await expect(page.getByPlaceholder(/password/i)).toBeVisible();
     });
 
-    test('should have link to Remote Module page', async ({ page }) => {
-      await page.goto('/');
+    test('should have sign in button', async ({ page }) => {
+      await page.goto('/login');
 
-      // Check for Remote Module link
-      await expect(page.getByText(/Remote Module|🧩/)).toBeVisible();
+      // Sign in button should be visible
+      await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
     });
 
-    test('should have link to Settings page', async ({ page }) => {
-      await page.goto('/');
+    test('should have link to sign up page', async ({ page }) => {
+      await page.goto('/login');
 
-      // Check for Settings link in navigation section (second one, after header)
-      const settingsLinks = page.getByRole('link').filter({ hasText: /Settings|⚙️/ });
-      await expect(settingsLinks.first()).toBeVisible();
+      // Sign up link should be visible
+      await expect(page.getByText(/Sign Up|Create account|Don't have an account/i)).toBeVisible();
+    });
+
+    test('should have forgot password link', async ({ page }) => {
+      await page.goto('/login');
+
+      // Forgot password link should be visible
+      await expect(page.getByText(/Forgot Password/i)).toBeVisible();
     });
   });
 
   test.describe('Basic Interactions', () => {
     test('should toggle theme when clicking theme button', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/login');
 
       // Get initial theme button text
-      const themeToggle = page.getByText(THEME_TOGGLE_PATTERN).first();
+      const themeToggle = page.getByText(ANY_THEME_PATTERN).first();
       const initialText = await themeToggle.textContent();
 
       // Click theme toggle
@@ -109,14 +116,14 @@ test.describe('Smoke Tests', () => {
       await page.waitForTimeout(100);
 
       // Get new theme button text
-      const newText = await page.getByText(THEME_TOGGLE_PATTERN).first().textContent();
+      const newText = await page.getByText(ANY_THEME_PATTERN).first().textContent();
 
       // Theme button text should have changed (light <-> dark)
       expect(newText).not.toBe(initialText);
     });
 
     test('should cycle language when clicking language button', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/login');
 
       // Get initial language display
       const langToggle = page.getByText(/🌐/).first();
@@ -131,6 +138,26 @@ test.describe('Smoke Tests', () => {
       // Language display should change
       const newLang = await langToggle.textContent();
       expect(newLang).not.toBe(initialLang);
+    });
+
+    test('should navigate to signup page', async ({ page }) => {
+      await page.goto('/login');
+
+      // Click sign up link
+      await page.getByText(/Sign Up|Don't have an account/i).click();
+
+      // Should be on signup page
+      await expect(page).toHaveURL(/.*signup/);
+    });
+
+    test('should navigate to forgot password page', async ({ page }) => {
+      await page.goto('/login');
+
+      // Click forgot password link
+      await page.getByText(/Forgot Password/i).click();
+
+      // Should be on forgot password page
+      await expect(page).toHaveURL(/.*forgot-password/);
     });
   });
 
@@ -148,26 +175,52 @@ test.describe('Smoke Tests', () => {
       expect(loadTime).toBeLessThan(5000);
     });
 
-    test('should not have console errors on load', async ({ page }) => {
-      const consoleErrors: string[] = [];
+    test('should not have critical console errors on load', async ({ page }) => {
+      const criticalErrors: string[] = [];
 
-      page.on('console', (msg) => {
-        if (msg.type() === 'error') {
-          // Ignore known errors that don't affect functionality
-          const text = msg.text();
-          if (!text.includes('favicon') && !text.includes('manifest.json')) {
-            consoleErrors.push(text);
-          }
-        }
+      page.on('pageerror', (error) => {
+        criticalErrors.push(error.message);
       });
 
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
-      // Allow some console errors as long as app functions
-      // (e.g., remote module errors when remote not running)
-      // Critical errors would prevent page load
-      expect(page.locator('body')).toBeTruthy();
+      // Should not have any page-crashing errors
+      expect(criticalErrors.length).toBe(0);
+    });
+  });
+
+  test.describe('Auth Page Navigation', () => {
+    test('should navigate between auth pages', async ({ page }) => {
+      // Start at login
+      await page.goto('/login');
+      await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
+
+      // Go to signup
+      await page.goto('/signup');
+      await expect(page.getByText(/Create|Sign Up/i).first()).toBeVisible();
+
+      // Go to forgot password
+      await page.goto('/forgot-password');
+      await expect(page.getByText(/Reset|Forgot/i).first()).toBeVisible();
+
+      // Go back to login
+      await page.goto('/login');
+      await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
+    });
+
+    test('should maintain header across auth pages', async ({ page }) => {
+      // Check header on login
+      await page.goto('/login');
+      await expect(page.getByText('Universal MFE')).toBeVisible();
+
+      // Check header on signup
+      await page.goto('/signup');
+      await expect(page.getByText('Universal MFE')).toBeVisible();
+
+      // Check header on forgot password
+      await page.goto('/forgot-password');
+      await expect(page.getByText('Universal MFE')).toBeVisible();
     });
   });
 });
