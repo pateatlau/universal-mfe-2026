@@ -157,9 +157,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         provider: user.provider,
       });
     } catch (error) {
-      const message = getAuthErrorMessage((error as { code?: string }).code || '');
+      const errorCode = (error as { code?: string }).code || '';
+      const errorMessage = (error as { message?: string }).message || '';
+      const message = getAuthErrorMessage(errorCode);
+
+      // Log detailed error for debugging OAuth issues
+      console.error('[shared-auth-store] Google sign-in failed:', {
+        code: errorCode,
+        message: errorMessage,
+        fullError: error,
+      });
+
       set({ error: message, isLoading: false });
-      emitAuthEvent?.('AUTH_ERROR', { code: (error as { code?: string }).code, message });
+      emitAuthEvent?.('AUTH_ERROR', { code: errorCode, message });
       throw error;
     }
   },
@@ -180,9 +190,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         provider: user.provider,
       });
     } catch (error) {
-      const message = getAuthErrorMessage((error as { code?: string }).code || '');
+      const errorCode = (error as { code?: string }).code || '';
+      const errorMessage = (error as { message?: string }).message || '';
+      const message = getAuthErrorMessage(errorCode);
+
+      // Log detailed error for debugging OAuth issues
+      console.error('[shared-auth-store] GitHub sign-in failed:', {
+        code: errorCode,
+        message: errorMessage,
+        fullError: error,
+      });
+
       set({ error: message, isLoading: false });
-      emitAuthEvent?.('AUTH_ERROR', { code: (error as { code?: string }).code, message });
+      emitAuthEvent?.('AUTH_ERROR', { code: errorCode, message });
       throw error;
     }
   },
