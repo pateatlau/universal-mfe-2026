@@ -1,0 +1,95 @@
+name: 'Create GoogleService-Info.plist'
+description: 'Creates GoogleService-Info.plist from secret or placeholder for iOS builds'
+
+inputs:
+  google-service-info-plist-base64:
+    description: 'Base64 encoded GoogleService-Info.plist content'
+    required: false
+    default: ''
+  allow-placeholder:
+    description: 'Allow placeholder file when secret is not set (for CI/test builds)'
+    required: false
+    default: 'false'
+  working-directory:
+    description: 'Directory where GoogleService-Info.plist should be created'
+    required: false
+    default: 'packages/mobile-host/ios'
+  bundle-id:
+    description: 'Bundle ID for placeholder plist'
+    required: false
+    default: 'org.reactjs.native.MobileHostTmp'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create GoogleService-Info.plist
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ inputs.google-service-info-plist-base64 }}
+        ALLOW_PLACEHOLDER: ${{ inputs.allow-placeholder }}
+        BUNDLE_ID: ${{ inputs.bundle-id }}
+      run: |
+        echo "::group::Creating GoogleService-Info.plist"
+
+        if [ -n "$GOOGLE_SERVICE_INFO_PLIST_BASE64" ]; then
+          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 -d > GoogleService-Info.plist
+          echo "✅ GoogleService-Info.plist created from secret"
+        elif [ "$ALLOW_PLACEHOLDER" = "true" ]; then
+          echo "⚠️ Warning: GOOGLE_SERVICE_INFO_PLIST_BASE64 secret not set"
+          echo "Creating placeholder GoogleService-Info.plist for CI build"
+          cat > GoogleService-Info.plist << PLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CLIENT_ID</key>
+  <string>placeholder.apps.googleusercontent.com</string>
+  <key>REVERSED_CLIENT_ID</key>
+  <string>com.googleusercontent.apps.placeholder</string>
+  <key>API_KEY</key>
+  <string>placeholder</string>
+  <key>GCM_SENDER_ID</key>
+  <string>000000000000</string>
+  <key>PLIST_VERSION</key>
+  <string>1</string>
+  <key>BUNDLE_ID</key>
+  <string>${BUNDLE_ID}</string>
+  <key>PROJECT_ID</key>
+  <string>placeholder-project</string>
+  <key>STORAGE_BUCKET</key>
+  <string>placeholder-project.appspot.com</string>
+  <key>IS_ADS_ENABLED</key>
+  <false/>
+  <key>IS_ANALYTICS_ENABLED</key>
+  <false/>
+  <key>IS_APPINVITE_ENABLED</key>
+  <true/>
+  <key>IS_GCM_ENABLED</key>
+  <true/>
+  <key>IS_SIGNIN_ENABLED</key>
+  <true/>
+  <key>GOOGLE_APP_ID</key>
+  <string>1:000000000000:ios:placeholder</string>
+</dict>
+</plist>
+PLIST_EOF
+          echo "✅ Placeholder GoogleService-Info.plist created"
+        else
+          echo "❌ Error: GOOGLE_SERVICE_INFO_PLIST_BASE64 secret is not set"
+          echo "To fix this:"
+          echo "  1. Download GoogleService-Info.plist from Firebase Console"
+          echo "  2. Base64 encode it: base64 -i GoogleService-Info.plist"
+          echo "  3. Add as GitHub secret: GOOGLE_SERVICE_INFO_PLIST_BASE64"
+          echo ""
+          echo "Or set ALLOW_PLACEHOLDER_FIREBASE=true to use a placeholder for CI builds"
+          exit 1
+        fi
+
+        # Verify file was created
+        if [ ! -f "GoogleService-Info.plist" ]; then
+          echo "❌ Error: GoogleService-Info.plist was not created"
+          exit 1
+        fi
+
+        echo "::endgroup::"
