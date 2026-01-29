@@ -3,10 +3,13 @@
  *
  * Tests for Module Federation remote module loading, error handling, and interaction.
  *
- * IMPORTANT: These tests require the remote module server to be running:
- *   yarn workspace @universal/web-remote-hello dev
+ * IMPORTANT: These tests require BOTH:
+ * 1. User to be authenticated (currently skipped - no test auth setup)
+ * 2. Remote module server running: yarn workspace @universal/web-remote-hello dev
  *
- * Tests are designed to gracefully handle the case when remote is not available.
+ * Since E2E tests run without authentication and CI doesn't start the remote server,
+ * ALL tests in this file are SKIPPED in CI. They can be run manually in local
+ * development when both requirements are met.
  *
  * Note: Tests use i18n-aware patterns to match both English and Hindi translations.
  * - Light theme: "Light" (en), "लाइट" (hi)
@@ -14,6 +17,10 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+
+// Skip entire file in CI - remote loading requires authentication + remote server
+// Both are unavailable in CI environment
+test.skip(({ }, testInfo) => !!process.env.CI, 'Remote loading tests require authentication and remote server - skipped in CI');
 
 // i18n-aware patterns for theme toggle text
 // Toggle shows CURRENT state: ☀️ Light when in light mode, 🌙 Dark when in dark mode
