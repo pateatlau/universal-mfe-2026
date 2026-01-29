@@ -117,6 +117,16 @@ See [MFE State Management Architecture](#mfe-state-management-architecture) for 
   - [x] Authorization callback URL: From Firebase Console
   - [x] Note Client ID and Client Secret for Firebase
 
+- [ ] **Authorized Domains Configured** (Required for OAuth on deployed sites)
+  - Go to: Firebase Console → Authentication → Settings → Authorized domains
+  - Add ALL domains where your app will be deployed:
+    - `localhost` (for local development)
+    - `universal-mfe.web.app` (Firebase hosting)
+    - `universal-mfe.firebaseapp.com` (Firebase hosting alternate)
+    - `*.vercel.app` (if deploying to Vercel)
+    - Your custom domain (if using one)
+  - **Note:** Google/GitHub sign-in will fail with "unauthorized domain" error if the domain is not listed
+
 ### Configuration Files Required
 
 | File | Platform | Location | Status |
