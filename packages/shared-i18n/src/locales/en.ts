@@ -215,6 +215,7 @@ export const en: Translations = {
       password: 'Password',
       passwordPlaceholder: 'Enter your password',
       signIn: 'Sign In',
+      signingIn: 'Signing in...',
       forgotPassword: 'Forgot Password?',
       or: 'or',
       continueWithGoogle: 'Continue with Google',

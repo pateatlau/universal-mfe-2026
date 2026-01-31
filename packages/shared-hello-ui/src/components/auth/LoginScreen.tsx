@@ -97,6 +97,7 @@ export function LoginScreen({
       onLoginSuccess?.();
     } catch {
       // Error is handled by store
+    } finally {
       setIsGoogleLoading(false);
     }
   }, [signInWithGoogle, onLoginSuccess]);
@@ -109,6 +110,7 @@ export function LoginScreen({
       onLoginSuccess?.();
     } catch {
       // Error is handled by store
+    } finally {
       setIsGitHubLoading(false);
     }
   }, [signInWithGitHub, onLoginSuccess]);
@@ -122,7 +124,7 @@ export function LoginScreen({
       <View style={styles.loadingOverlay}>
         <ActivityIndicator size="large" color={theme.colors.interactive.primary} />
         <Text style={styles.loadingText}>
-          {t('login.signingIn', { defaultValue: 'Signing in...' })}
+          {t('login.signingIn')}
         </Text>
       </View>
     );

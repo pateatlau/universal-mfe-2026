@@ -217,6 +217,7 @@ export const hi: Translations = {
       password: 'पासवर्ड',
       passwordPlaceholder: 'अपना पासवर्ड दर्ज करें',
       signIn: 'साइन इन',
+      signingIn: 'साइन इन हो रहा है...',
       forgotPassword: 'पासवर्ड भूल गए?',
       or: 'या',
       continueWithGoogle: 'Google के साथ जारी रखें',

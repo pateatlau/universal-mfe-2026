@@ -11,12 +11,12 @@
  * 3. Render Navigate immediately when authenticated to trigger redirect
  */
 
-import React, { useCallback, useRef } from 'react';
-import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import React, { useCallback, useMemo, useRef } from 'react';
+import { View, ActivityIndicator, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { useNavigate, Navigate, useLocation } from 'react-router-native';
 import { LoginScreen } from '@universal/shared-hello-ui';
 import { Routes } from '@universal/shared-router';
-import { useTheme } from '@universal/shared-theme-context';
+import { useTheme, Theme } from '@universal/shared-theme-context';
 import { useTranslation } from '@universal/shared-i18n';
 import {
   useIsAuthenticated,
@@ -34,7 +34,9 @@ export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useTheme();
-  const { t } = useTranslation('auth');
+  const { t: tAuth } = useTranslation('auth');
+  const { t: tCommon } = useTranslation('common');
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   // Auth state from store
   const isAuthenticated = useIsAuthenticated();
@@ -43,10 +45,8 @@ export function Login() {
 
   // Use a REF instead of state to track login initiation.
   // Refs persist their value across re-renders without triggering new renders.
-  // This is critical because:
-  // 1. When auth state changes (isAuthenticated: true), component re-renders
-  // 2. useState would be reset if component unmounts/remounts during routing
-  // 3. A ref's .current value persists even during those transitions
+  // This prevents the login form from flashing during the async gap between
+  // when auth state updates and when the router completes navigation.
   const loginInitiatedRef = useRef(false);
 
   // Get the intended destination from location state (set by ProtectedRoute)
@@ -78,12 +78,12 @@ export function Login() {
   // - User is authenticated (shouldn't reach here due to check above, but safety net)
   if (!isInitialized || isAuthLoading || loginInitiatedRef.current || isAuthenticated) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.surface.background }]}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.interactive.primary} />
-        <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
+        <Text style={styles.loadingText}>
           {loginInitiatedRef.current || isAuthLoading
-            ? t('login.signingIn', { defaultValue: 'Signing in...' })
-            : t('common.loading', { defaultValue: 'Loading...' })
+            ? tAuth('login.signingIn')
+            : tCommon('loading')
           }
         </Text>
       </View>
@@ -104,16 +104,25 @@ export function Login() {
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-});
+interface Styles {
+  loadingContainer: ViewStyle;
+  loadingText: TextStyle;
+}
+
+function createStyles(theme: Theme): Styles {
+  return StyleSheet.create<Styles>({
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface.background,
+    },
+    loadingText: {
+      marginTop: theme.spacing.element.gap,
+      fontSize: theme.typography.fontSizes.base,
+      color: theme.colors.text.secondary,
+    },
+  });
+}
 
 export default Login;
