@@ -706,9 +706,7 @@ git push origin feature/my-feature
 ## Related Documentation
 
 - [CI/CD Implementation Plan](./CI-CD-IMPLEMENTATION-PLAN.md) - Automated deployment workflows
-- [CI/CD Testing Guide](./CI-CD-TESTING-GUIDE.md) - Testing deployment pipelines
 - [Mobile Release Build Fixes](./MOBILE-RELEASE-BUILD-FIXES.md) - Production build requirements
-- [Contributing Guidelines](../CONTRIBUTING.md) - Code contribution guidelines (if exists)
 
 ---
 

@@ -709,9 +709,7 @@ The fixes documented here address real problems that exist because:
 
 > These fixes work and are used in this POC successfully. For production, use them with appropriate caution, monitoring, and version pinning.
 
-For a comprehensive analysis, see:
-- [Critical Analysis Document](./CRITICAL-ANALYSIS-OF-UNIVERSAL-MFE.md#11-patchmfconsoleplugin-honest-assessment-of-a-critical-workaround)
-- [PatchMFConsolePlugin Guide - Production Readiness](./PATCHMFCONSOLEPLUGIN-GUIDE.md#production-readiness-assessment)
+For production readiness details, see [PatchMFConsolePlugin Guide - Production Readiness](./PATCHMFCONSOLEPLUGIN-GUIDE.md#production-readiness-assessment).
 
 ---
 
@@ -1027,9 +1025,7 @@ xcrun simctl launch <DEVICE_UUID> com.universal.mobilehost
 
 ### Internal Documentation
 - [PatchMFConsolePlugin Guide](./PATCHMFCONSOLEPLUGIN-GUIDE.md) - Comprehensive guide to the console polyfill plugin
-- [Remote Deployment Guide](./REMOTE-DEPLOYMENT-GUIDE.md) - Firebase Hosting setup and deployment
 - [CI/CD Implementation Plan](./CI-CD-IMPLEMENTATION-PLAN.md) - Automated deployment workflows
-- [CI/CD Testing Guide](./CI-CD-TESTING-GUIDE.md) - Step-by-step testing instructions
 - [Git Flow Workflow](./GIT-FLOW-WORKFLOW.md) - Development and release process
 
 ### External References
