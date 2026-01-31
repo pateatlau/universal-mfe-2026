@@ -794,8 +794,6 @@ This plugin is a **pragmatic workaround** for a gap in the ecosystem, not an off
 >
 > It uses standard build tooling patterns and has zero runtime cost. However, it works around undocumented internals, so **use with appropriate caution and monitoring in production**.
 
-For a comprehensive analysis, see the [Critical Analysis document](./CRITICAL-ANALYSIS-OF-UNIVERSAL-MFE.md#11-patchmfconsoleplugin-honest-assessment-of-a-critical-workaround).
-
 ---
 
 ## Contributing
