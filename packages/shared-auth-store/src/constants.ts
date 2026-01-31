@@ -64,6 +64,15 @@ export const AUTH_ERROR_CODES = {
   AUTH_DOMAIN_CONFIG_REQUIRED: 'auth/auth-domain-config-required',
   OPERATION_NOT_SUPPORTED: 'auth/operation-not-supported-in-this-environment',
 
+  // App/API key errors (common in release builds)
+  APP_NOT_AUTHORIZED: 'auth/app-not-authorized',
+  INVALID_API_KEY: 'auth/invalid-api-key',
+  API_KEY_NOT_VALID: 'auth/api-key-not-valid',
+
+  // Token errors
+  INVALID_USER_TOKEN: 'auth/invalid-user-token',
+  USER_TOKEN_EXPIRED: 'auth/user-token-expired',
+
   // Internal errors
   INTERNAL_ERROR: 'auth/internal-error',
 } as const;
@@ -75,9 +84,25 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
   // Email/Password errors
   [AUTH_ERROR_CODES.INVALID_EMAIL]: 'Please enter a valid email address.',
   [AUTH_ERROR_CODES.USER_DISABLED]: 'This account has been disabled.',
+
+  // App/API key errors (common in release builds)
+  [AUTH_ERROR_CODES.APP_NOT_AUTHORIZED]:
+    'This app is not authorized to use Firebase Authentication. Please verify your app configuration.',
+  [AUTH_ERROR_CODES.INVALID_API_KEY]:
+    'Invalid API key. Please check your Firebase configuration.',
+  [AUTH_ERROR_CODES.API_KEY_NOT_VALID]:
+    'API key is not valid. Please check your Firebase configuration.',
+
+  // Token errors
+  [AUTH_ERROR_CODES.INVALID_USER_TOKEN]:
+    'Your session is invalid. Please sign in again.',
+  [AUTH_ERROR_CODES.USER_TOKEN_EXPIRED]:
+    'Your session has expired. Please sign in again.',
   [AUTH_ERROR_CODES.USER_NOT_FOUND]: 'No account found with this email.',
-  [AUTH_ERROR_CODES.WRONG_PASSWORD]: 'Incorrect password. Please try again.',
-  [AUTH_ERROR_CODES.INVALID_CREDENTIAL]: 'Invalid email or password. Please try again.',
+  [AUTH_ERROR_CODES.WRONG_PASSWORD]:
+    'Incorrect password. If you signed up with Google or GitHub, please use that method instead.',
+  [AUTH_ERROR_CODES.INVALID_CREDENTIAL]:
+    'Invalid email or password. If you previously signed in with Google or GitHub, please use that method instead.',
   [AUTH_ERROR_CODES.EMAIL_ALREADY_IN_USE]: 'An account already exists with this email.',
   [AUTH_ERROR_CODES.WEAK_PASSWORD]: 'Password should be at least 6 characters.',
 
@@ -91,7 +116,7 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
     'Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.',
   [AUTH_ERROR_CODES.CANCELLED]: 'Sign-in was cancelled.',
   [AUTH_ERROR_CODES.ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL]:
-    'An account already exists with this email using a different sign-in method.',
+    'An account already exists with this email using a different sign-in method. Please sign in with your original method (Google, GitHub, or email/password).',
 
   // OAuth configuration errors - these indicate setup issues
   [AUTH_ERROR_CODES.UNAUTHORIZED_DOMAIN]:
@@ -118,9 +143,14 @@ export function getAuthErrorMessage(errorCode: string): string {
     return message;
   }
 
-  // Log unknown error codes for debugging (but don't expose to user)
-  if (errorCode && process.env.NODE_ENV !== 'production') {
-    console.warn(`[shared-auth-store] Unknown auth error code: ${errorCode}`);
+  // Always log unknown error codes to help with debugging
+  // This is safe because error codes don't contain sensitive information
+  if (errorCode) {
+    console.warn(`[shared-auth-store] Unknown auth error code: "${errorCode}"`);
+    // Include the error code in the message for debugging in release builds
+    return `Unable to complete sign-in (${errorCode}). Please try again or use a different sign-in method.`;
+  } else {
+    console.warn('[shared-auth-store] No error code provided to getAuthErrorMessage');
   }
 
   // Provide a more helpful fallback message

@@ -418,6 +418,49 @@ The codebase uses stub files to replace incompatible dependencies:
 6. **Host-Owned Routing** - Hosts define all routes; MFEs are URL-agnostic and request navigation via event bus
 7. **Loose Coupling** - MFEs communicate through typed events, never direct imports
 
+## Current Implementation Status
+
+### Authentication (Firebase) ✅ Complete
+
+Firebase Authentication is fully implemented across all platforms:
+
+| Feature | Web | Android | iOS | Status |
+|---------|-----|---------|-----|--------|
+| Email/Password | ✅ | ✅ | ✅ | Working |
+| Google Sign-In | ✅ | ✅ | ✅ | Working |
+| GitHub Sign-In | ✅ | ✅ | ✅ | Working |
+| Protected Routes | ✅ | ✅ | ✅ | Working |
+| Session Persistence | ✅ | ✅ | ✅ | Working |
+
+**Key files:**
+- `packages/shared-auth-store/` - Zustand auth store with Firebase integration
+- `packages/shared-hello-ui/src/components/auth/` - Universal auth UI components
+- `packages/mobile-host/src/services/firebaseAuthService.ts` - Mobile Firebase service
+- `packages/web-shell/src/services/firebaseAuthService.ts` - Web Firebase service
+- `docs/FIREBASE-AUTH-IMPLEMENTATION-PLAN.md` - Complete implementation guide
+
+**Known Limitations:**
+- Account linking not yet implemented. If a user signs in with Google first, they cannot later sign in with email/password using the same email (Firebase treats these as separate auth methods). A user-friendly error message is shown guiding them to use the original sign-in method.
+
+**TODO - Account Linking Feature:**
+- Implement account linking to allow users to add email/password to an OAuth-created account
+- Two approaches to consider:
+  1. **During failed login**: Detect when user tries email/password but account exists with Google, prompt re-auth with Google, then link password
+  2. **In account settings**: Add "Link Email/Password" option for OAuth users to add a password (simpler approach, requires settings page)
+- Reference: Firebase `user.linkWithCredential()` API
+
+### CI/CD (GitHub Actions) ✅ Complete
+
+Trunk-based development workflow with automated quality gates:
+
+- **PR Checks**: Type checking, linting, architecture validation
+- **Build Validation**: Web and mobile builds on every PR
+- **Deployment**: Automatic deployment to Firebase Hosting on merge to main
+
+**Key files:**
+- `.github/workflows/ci.yml` - Main CI workflow
+- `docs/CI-CD-IMPLEMENTATION-PLAN.md` - CI/CD documentation
+
 ## Enterprise Feature Summary
 
 | Feature | Package | Pattern Doc |
@@ -429,7 +472,7 @@ The codebase uses stub files to replace incompatible dependencies:
 | Event Bus | `shared-event-bus` | `PATTERNS-EVENT-BUS.md` |
 | Data Fetching | `shared-data-layer` | `PATTERNS-DATA-FETCHING.md` |
 | Routing | `shared-router` | `PATTERNS-ROUTING.md` |
-| State Management | `shared-auth-store` | `PATTERNS-STATE-MANAGEMENT.md` |
+| Authentication | `shared-auth-store` | `FIREBASE-AUTH-IMPLEMENTATION-PLAN.md` |
 
 For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 
