@@ -17,30 +17,62 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import type { AuthService, User } from '@universal/shared-auth-store';
 import { UserRole } from '@universal/shared-auth-store';
 
-// Track if Google Sign-In has been configured
+// Track Google Sign-In configuration state
 let googleSignInConfigured = false;
+let googleSignInConfigurationAttempted = false;
+let googleSignInAvailable = false;
 
 /**
  * Configure Google Sign-In lazily.
  * This is deferred to avoid calling native modules at module load time,
  * which can cause issues in Android release builds with Hermes.
+ *
+ * @throws Error if GOOGLE_WEB_CLIENT_ID is not set in environment variables
  */
 function ensureGoogleSignInConfigured(): void {
+  // If already configured successfully, return immediately
   if (googleSignInConfigured) return;
+
+  // If configuration was attempted but failed, throw error to fail fast
+  if (googleSignInConfigurationAttempted && !googleSignInAvailable) {
+    throw new Error(
+      'Google Sign-In is not available. Configuration failed during initialization. ' +
+      'Please check that GOOGLE_WEB_CLIENT_ID is set and native modules are available.'
+    );
+  }
+
+  // Mark that we've attempted configuration
+  googleSignInConfigurationAttempted = true;
+
+  // Validate that GOOGLE_WEB_CLIENT_ID is set
+  const webClientId = process.env.GOOGLE_WEB_CLIENT_ID;
+  if (!webClientId) {
+    console.error(
+      '[firebaseAuthService] GOOGLE_WEB_CLIENT_ID environment variable is not set. ' +
+      'Google Sign-In will be disabled. Set this variable to enable Google authentication.'
+    );
+    throw new Error(
+      'Google Sign-In is not configured. GOOGLE_WEB_CLIENT_ID environment variable is required. ' +
+      'Please set it in your .env file or build configuration.'
+    );
+  }
 
   try {
     GoogleSignin.configure({
-      // Web Client ID from Firebase Console -> Authentication -> Sign-in method -> Google
-      webClientId:
-        process.env.GOOGLE_WEB_CLIENT_ID ||
-        '489294318656-kiq6v10qb0niab2ubi6d1grekfpn99um.apps.googleusercontent.com',
+      webClientId,
       // Request offline access to get a refresh token
       offlineAccess: true,
     });
     googleSignInConfigured = true;
+    googleSignInAvailable = true;
   } catch (error) {
-    // Log but don't throw - Google Sign-In might not be available
-    console.warn('[firebaseAuthService] Failed to configure Google Sign-In:', error);
+    // Configuration failed - log error and mark as unavailable
+    console.error('[firebaseAuthService] Failed to configure Google Sign-In:', error);
+    googleSignInAvailable = false;
+    throw new Error(
+      `Google Sign-In configuration failed: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
+      'Please check that native modules are properly installed and linked.'
+    );
   }
 }
 
@@ -246,21 +278,37 @@ export const firebaseAuthService: AuthService = {
 
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
     try {
-      // Subscribe to Firebase auth state changes
+      // Subscribe to Firebase auth state changes via auth().onAuthStateChanged
       // Wrap callback in try-catch to prevent silent failures
       const unsubscribe = auth().onAuthStateChanged((firebaseUser) => {
         try {
+          // Map Firebase user to our User type and invoke callback
           callback(firebaseUser ? mapFirebaseUser(firebaseUser) : null);
         } catch (callbackError) {
-          console.error('[firebaseAuthService] Error in auth state callback:', callbackError);
-          // Still call with null to allow the app to continue
-          callback(null);
+          console.error(
+            '[firebaseAuthService] Error in auth state callback while mapping Firebase user:',
+            callbackError
+          );
+          // Attempt to call callback with null as fallback, wrapped in its own try-catch
+          // to prevent exceptions from callback(null) from bubbling up and breaking the listener
+          try {
+            callback(null);
+          } catch (fallbackError) {
+            console.error(
+              '[firebaseAuthService] Error in fallback auth state callback (callback(null)):',
+              fallbackError
+            );
+            // If even callback(null) throws, log but don't propagate to avoid breaking
+            // the Firebase listener. The auth state will remain unchanged.
+          }
         }
       });
 
+      // Return the unsubscribe function from auth().onAuthStateChanged
       return unsubscribe;
     } catch (error) {
-      // If Firebase auth fails to initialize, log the error and return a no-op unsubscribe
+      // If Firebase auth().onAuthStateChanged() fails to initialize, log the error
+      // and return a no-op unsubscribe function
       console.error('[firebaseAuthService] Failed to subscribe to auth state changes:', error);
 
       // Call callback with null immediately to indicate no user
@@ -269,11 +317,14 @@ export const firebaseAuthService: AuthService = {
         try {
           callback(null);
         } catch (callbackError) {
-          console.error('[firebaseAuthService] Error in fallback auth state callback:', callbackError);
+          console.error(
+            '[firebaseAuthService] Error in fallback auth state callback (initialization failure):',
+            callbackError
+          );
         }
       }, 0);
 
-      // Return a no-op unsubscribe function
+      // Return a no-op unsubscribe function since we couldn't set up the listener
       return () => {};
     }
   },
