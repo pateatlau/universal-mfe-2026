@@ -1625,6 +1625,84 @@ func application(
 
 ---
 
+#### Issue 6: Google Sign-In Not Working on Mobile (Debug & Release)
+
+**Problem:** Clicking "Continue with Google" showed error message:
+```
+Unable to complete sign-in. Please try again or use a different sign-in method.
+```
+
+**Root Cause:** The `GOOGLE_WEB_CLIENT_ID` environment variable was not being injected into the JavaScript bundle. The mobile `firebaseAuthService.ts` checked for `process.env.GOOGLE_WEB_CLIENT_ID` but it was always `undefined` at runtime.
+
+**Fix:** Added `rspack.DefinePlugin` to inject the Web Client ID from `google-services.json`:
+
+```javascript
+// packages/mobile-host/rspack.config.mjs
+new rspack.DefinePlugin({
+  'process.env.GOOGLE_WEB_CLIENT_ID': JSON.stringify(
+    process.env.GOOGLE_WEB_CLIENT_ID ||
+      '489294318656-kiq6v10qb0niab2ubi6d1grekfpn99um.apps.googleusercontent.com'
+  ),
+}),
+```
+
+The Web Client ID (client_type: 3) is extracted from `google-services.json` and can be overridden via environment variable for different environments.
+
+**Commit:** `c9f8618` - fix(auth): resolve Google Sign-In issues on mobile platforms
+
+---
+
+#### Issue 7: iOS Release Build Tree-Shaking GoogleAuthProvider
+
+**Problem:** Google Sign-In worked in debug builds but failed in iOS release builds with:
+```
+TypeError: undefined is not a function
+```
+
+**Root Cause:** In release builds, the bundler was tree-shaking `GoogleAuthProvider` when accessed as `auth.GoogleAuthProvider.credential()`. The production optimizer removed it because it appeared to be an unused property access.
+
+**Fix:** Import `GoogleAuthProvider` as a named export instead of accessing it via the default export:
+
+```typescript
+// Before (tree-shaken in release):
+import auth from '@react-native-firebase/auth';
+const credential = auth.GoogleAuthProvider.credential(idToken);
+
+// After (preserved in release):
+import auth, { GoogleAuthProvider } from '@react-native-firebase/auth';
+const credential = GoogleAuthProvider.credential(idToken);
+```
+
+**Commit:** `c9f8618` - fix(auth): resolve Google Sign-In issues on mobile platforms
+
+---
+
+#### Issue 8: Module Federation Shared Packages Causing Native Module Initialization Issues
+
+**Problem:** Including `@universal/shared-auth-store`, `@universal/shared-theme-context`, and other shared packages in Module Federation's `shared` config caused native Firebase modules to fail initialization with timing errors in release builds.
+
+**Root Cause:** Module Federation's eager loading of shared packages was causing Firebase native modules to be imported before React Native's runtime was fully initialized.
+
+**Fix:** Removed problematic shared packages from the MF config. These packages are now bundled directly into the host app instead of being shared across the MF boundary:
+
+```javascript
+// packages/mobile-host/rspack.config.mjs
+shared: {
+  react: { singleton: true, eager: true, requiredVersion: '19.1.0' },
+  'react-native': { singleton: true, eager: true, requiredVersion: '0.80.0' },
+  // Only share core packages that don't have native dependencies
+  '@universal/shared-utils': { singleton: true, eager: true },
+  '@universal/shared-hello-ui': { singleton: true, eager: true },
+  // NOTE: Other shared packages (shared-auth-store, shared-theme-context, etc.) are
+  // intentionally NOT in this shared config. Including them caused native Firebase module
+  // initialization timing issues in release builds.
+}
+```
+
+**Commit:** `c9f8618` - fix(auth): resolve Google Sign-In issues on mobile platforms
+
+---
+
 ### Task 3.1: Install React Native Firebase Dependencies
 
 ```bash
@@ -2977,6 +3055,7 @@ const styles = StyleSheet.create({
 - [x] Protected routes render content when authenticated
 - [x] Loading state shows while checking auth
 - [x] Root path (`/`) redirects to `/login` or `/home` based on auth state
+- [x] No login page flash after successful authentication
 
 ### Implementation Summary
 
@@ -3002,6 +3081,39 @@ const styles = StyleSheet.create({
 - Settings button (web) only visible when authenticated
 - User info and explicit Logout button shown when authenticated
 - Unauthenticated users see only theme/language toggles
+
+**Login Page Flash Prevention:**
+
+After successful authentication (especially with OAuth providers like Google), there's a timing gap between when the auth state updates and when the router completes navigation. Without proper handling, the login form briefly flashes before redirecting to the authenticated page.
+
+The fix uses a **ref-based pattern** instead of state to track login initiation:
+
+```typescript
+// packages/mobile-host/src/pages/Login.tsx (same pattern in web-shell)
+const loginInitiatedRef = useRef(false);
+
+const handleLoginSuccess = useCallback(() => {
+  loginInitiatedRef.current = true; // Persists across re-renders
+}, []);
+
+// Priority-based rendering:
+// 1. If authenticated → Navigate immediately
+// 2. If loading/initiated → Show spinner
+// 3. Otherwise → Show login form
+if (isAuthenticated && isInitialized) {
+  return <Navigate to={from} replace />;
+}
+
+if (!isInitialized || isAuthLoading || loginInitiatedRef.current) {
+  return <LoadingSpinner />;
+}
+
+return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+```
+
+**Why `useRef` instead of `useState`:**
+- Refs persist their value across re-renders without triggering new renders
+- This prevents the login form from flashing during the async gap between auth state update and router navigation
 
 **Account Linking Error Handling:**
 
