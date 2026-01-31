@@ -17,17 +17,32 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import type { AuthService, User } from '@universal/shared-auth-store';
 import { UserRole } from '@universal/shared-auth-store';
 
-// Configure Google Sign-In
-// The webClientId is required for Firebase Auth to work with Google Sign-In
-// This is the Web Client ID from Firebase Console, NOT the iOS or Android client IDs
-GoogleSignin.configure({
-  // Web Client ID from Firebase Console -> Authentication -> Sign-in method -> Google
-  webClientId:
-    process.env.GOOGLE_WEB_CLIENT_ID ||
-    '489294318656-kiq6v10qb0niab2ubi6d1grekfpn99um.apps.googleusercontent.com',
-  // Request offline access to get a refresh token
-  offlineAccess: true,
-});
+// Track if Google Sign-In has been configured
+let googleSignInConfigured = false;
+
+/**
+ * Configure Google Sign-In lazily.
+ * This is deferred to avoid calling native modules at module load time,
+ * which can cause issues in Android release builds with Hermes.
+ */
+function ensureGoogleSignInConfigured(): void {
+  if (googleSignInConfigured) return;
+
+  try {
+    GoogleSignin.configure({
+      // Web Client ID from Firebase Console -> Authentication -> Sign-in method -> Google
+      webClientId:
+        process.env.GOOGLE_WEB_CLIENT_ID ||
+        '489294318656-kiq6v10qb0niab2ubi6d1grekfpn99um.apps.googleusercontent.com',
+      // Request offline access to get a refresh token
+      offlineAccess: true,
+    });
+    googleSignInConfigured = true;
+  } catch (error) {
+    // Log but don't throw - Google Sign-In might not be available
+    console.warn('[firebaseAuthService] Failed to configure Google Sign-In:', error);
+  }
+}
 
 /**
  * Map Firebase user to our User type
@@ -98,6 +113,9 @@ export const firebaseAuthService: AuthService = {
 
   async signInWithGoogle(): Promise<User> {
     try {
+      // Ensure Google Sign-In is configured (lazy initialization)
+      ensureGoogleSignInConfigured();
+
       // Check if device supports Google Play Services (Android only, no-op on iOS)
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
@@ -195,6 +213,8 @@ export const firebaseAuthService: AuthService = {
   async signOut(): Promise<void> {
     // Sign out from Google if signed in via Google
     try {
+      // Ensure Google Sign-In is configured before checking sign-in status
+      ensureGoogleSignInConfigured();
       const isSignedIn = await GoogleSignin.hasPreviousSignIn();
       if (isSignedIn) {
         await GoogleSignin.signOut();
@@ -225,11 +245,36 @@ export const firebaseAuthService: AuthService = {
   // ===========================================================================
 
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
-    // Subscribe to Firebase auth state changes
-    const unsubscribe = auth().onAuthStateChanged((firebaseUser) => {
-      callback(firebaseUser ? mapFirebaseUser(firebaseUser) : null);
-    });
+    try {
+      // Subscribe to Firebase auth state changes
+      // Wrap callback in try-catch to prevent silent failures
+      const unsubscribe = auth().onAuthStateChanged((firebaseUser) => {
+        try {
+          callback(firebaseUser ? mapFirebaseUser(firebaseUser) : null);
+        } catch (callbackError) {
+          console.error('[firebaseAuthService] Error in auth state callback:', callbackError);
+          // Still call with null to allow the app to continue
+          callback(null);
+        }
+      });
 
-    return unsubscribe;
+      return unsubscribe;
+    } catch (error) {
+      // If Firebase auth fails to initialize, log the error and return a no-op unsubscribe
+      console.error('[firebaseAuthService] Failed to subscribe to auth state changes:', error);
+
+      // Call callback with null immediately to indicate no user
+      // Use setTimeout to ensure it's async like the normal Firebase behavior
+      setTimeout(() => {
+        try {
+          callback(null);
+        } catch (callbackError) {
+          console.error('[firebaseAuthService] Error in fallback auth state callback:', callbackError);
+        }
+      }, 0);
+
+      // Return a no-op unsubscribe function
+      return () => {};
+    }
   },
 };
