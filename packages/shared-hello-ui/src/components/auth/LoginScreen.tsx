@@ -16,6 +16,7 @@ import {
   StyleSheet,
   ViewStyle,
   TextStyle,
+  ActivityIndicator,
 } from 'react-native';
 import { useTheme, Theme } from '@universal/shared-theme-context';
 import { useTranslation } from '@universal/shared-i18n';
@@ -74,12 +75,14 @@ export function LoginScreen({
   const [password, setPassword] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
+  const [isLoginSuccessful, setIsLoginSuccessful] = useState(false);
 
   const handleEmailLogin = useCallback(async () => {
     if (!email || !password) return;
 
     try {
       await signInWithEmail(email, password);
+      setIsLoginSuccessful(true);
       onLoginSuccess?.();
     } catch {
       // Error is handled by store
@@ -90,10 +93,10 @@ export function LoginScreen({
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
+      setIsLoginSuccessful(true);
       onLoginSuccess?.();
     } catch {
       // Error is handled by store
-    } finally {
       setIsGoogleLoading(false);
     }
   }, [signInWithGoogle, onLoginSuccess]);
@@ -102,16 +105,28 @@ export function LoginScreen({
     setIsGitHubLoading(true);
     try {
       await signInWithGitHub();
+      setIsLoginSuccessful(true);
       onLoginSuccess?.();
     } catch {
       // Error is handled by store
-    } finally {
       setIsGitHubLoading(false);
     }
   }, [signInWithGitHub, onLoginSuccess]);
 
-  const isFormDisabled = isLoading || isGoogleLoading || isGitHubLoading;
+  const isFormDisabled = isLoading || isGoogleLoading || isGitHubLoading || isLoginSuccessful;
   const isEmailLoginDisabled = isFormDisabled || !email || !password;
+
+  // Show full-screen loading overlay after successful login
+  if (isLoginSuccessful) {
+    return (
+      <View style={styles.loadingOverlay}>
+        <ActivityIndicator size="large" color={theme.colors.interactive.primary} />
+        <Text style={styles.loadingText}>
+          {t('login.signingIn', { defaultValue: 'Signing in...' })}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -222,6 +237,8 @@ interface Styles {
   linkTextDisabled: TextStyle;
   signUpContainer: ViewStyle;
   signUpText: TextStyle;
+  loadingOverlay: ViewStyle;
+  loadingText: TextStyle;
 }
 
 function createStyles(theme: Theme): Styles {
@@ -274,6 +291,17 @@ function createStyles(theme: Theme): Styles {
       fontSize: theme.typography.fontSizes.base,
       color: theme.colors.text.link,
       textAlign: 'center',
+    },
+    loadingOverlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface.background,
+    },
+    loadingText: {
+      marginTop: theme.spacing.element.gap,
+      fontSize: theme.typography.fontSizes.base,
+      color: theme.colors.text.secondary,
     },
   });
 }
