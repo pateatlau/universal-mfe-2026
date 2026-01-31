@@ -143,12 +143,9 @@ export function getAuthErrorMessage(errorCode: string): string {
     return message;
   }
 
-  // Always log unknown error codes to help with debugging
-  // This is safe because error codes don't contain sensitive information
+  // Log unknown error codes to help with debugging (codes are not sensitive)
   if (errorCode) {
     console.warn(`[shared-auth-store] Unknown auth error code: "${errorCode}"`);
-    // Include the error code in the message for debugging in release builds
-    return `Unable to complete sign-in (${errorCode}). Please try again or use a different sign-in method.`;
   } else {
     console.warn('[shared-auth-store] No error code provided to getAuthErrorMessage');
   }

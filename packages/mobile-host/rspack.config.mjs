@@ -87,10 +87,12 @@ export default {
     new PatchMFConsolePlugin(),
 
     // Inject environment variables for Firebase/Google Sign-In
-    // The Web Client ID is from google-services.json (client_type: 3)
+    // The Web Client ID from google-services.json (client_type: 3) is used as default
+    // Can be overridden via GOOGLE_WEB_CLIENT_ID environment variable
     new rspack.DefinePlugin({
       'process.env.GOOGLE_WEB_CLIENT_ID': JSON.stringify(
-        '489294318656-kiq6v10qb0niab2ubi6d1grekfpn99um.apps.googleusercontent.com'
+        process.env.GOOGLE_WEB_CLIENT_ID ||
+          '489294318656-kiq6v10qb0niab2ubi6d1grekfpn99um.apps.googleusercontent.com'
       ),
     }),
 
@@ -183,9 +185,13 @@ export default {
           eager: true,
           requiredVersion: '0.80.0',
         },
-        // Core shared packages
+        // Core shared packages for remote MFEs
         '@universal/shared-utils': { singleton: true, eager: true },
         '@universal/shared-hello-ui': { singleton: true, eager: true },
+        // NOTE: Other shared packages (shared-auth-store, shared-theme-context, etc.) are
+        // intentionally NOT in this shared config. Including them caused native Firebase module
+        // initialization timing issues in release builds. These packages are bundled directly
+        // into the host app, which is fine since mobile remotes don't need direct access to them.
       },
     }),
   ],

@@ -157,33 +157,26 @@ export const firebaseAuthService: AuthService = {
       // Get the user's ID token from Google
       const signInResult = await GoogleSignin.signIn();
 
-      // Debug logging for release build issues
-      console.log('[firebaseAuthService] signInResult type:', signInResult?.type);
-
       if (signInResult.type !== 'success') {
         throw new Error('Google Sign-In was cancelled or failed');
       }
 
       const idToken = signInResult.data.idToken;
-      console.log('[firebaseAuthService] idToken present:', !!idToken);
 
       if (!idToken) {
         throw new Error('Google Sign-In failed - no ID token returned');
       }
 
       // Create a Firebase credential with the Google ID token
-      // Use the directly imported GoogleAuthProvider to prevent tree-shaking issues
-      console.log('[firebaseAuthService] GoogleAuthProvider:', typeof GoogleAuthProvider);
-
+      // Use the directly imported GoogleAuthProvider to prevent tree-shaking issues in release builds
       if (!GoogleAuthProvider || typeof GoogleAuthProvider.credential !== 'function') {
         throw new Error(
           'Firebase GoogleAuthProvider is not available. ' +
-          'This may be a build configuration issue.'
+            'This may be a build configuration issue.'
         );
       }
 
       const googleCredential = GoogleAuthProvider.credential(idToken);
-      console.log('[firebaseAuthService] googleCredential created:', !!googleCredential);
 
       // Sign in to Firebase with the Google credential
       const result = await auth().signInWithCredential(googleCredential);
