@@ -31,6 +31,12 @@ packages/mobile-remote-hello/android/.gradle/
 packages/mobile-remote-hello/android/build/
 packages/mobile-remote-hello/android/app/build/
 
+# Android bundled assets (generated during build)
+packages/mobile-host/android/app/src/main/assets/*.bundle
+packages/mobile-host/android/app/src/main/assets/*.bundle.map
+packages/mobile-remote-hello/android/app/src/main/assets/*.bundle
+packages/mobile-remote-hello/android/app/src/main/assets/*.bundle.map
+
 # Android release APKs (build artifacts - ignore all APKs except actual Gradle output)
 *.apk
 !packages/*/android/app/build/outputs/apk/release/*.apk
