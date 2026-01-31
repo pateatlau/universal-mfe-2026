@@ -290,6 +290,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     // Create and cache the initialization promise
     initPromise = (async () => {
+      // CRITICAL: Set up a failsafe timeout FIRST, before any async operations
+      // This ensures we never get stuck on the loading screen even if something
+      // throws synchronously or Firebase never responds (Android release build issue)
+      const failsafeTimeout = setTimeout(() => {
+        if (!get().isInitialized) {
+          console.warn('[shared-auth-store] Auth initialization failsafe timeout triggered');
+          set({ isLoading: false, isInitialized: true });
+        }
+      }, 10000); // 10 second absolute failsafe
+
       try {
         set({ isLoading: true });
 
@@ -317,6 +327,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         // Subscribe to auth state changes
         const service = getAuthService();
         const unsubscribe = service.onAuthStateChanged((user) => {
+          // Clear the failsafe timeout since we got a response
+          clearTimeout(failsafeTimeout);
+
           // Only set isInitialized on the first callback to avoid race conditions
           const shouldMarkInitialized = isFirstCallback;
           isFirstCallback = false;
@@ -359,9 +372,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         // will already be set. If not, we set loading to false but wait for
         // the callback to set isInitialized.
         if (!get().isInitialized) {
-          // Auth service hasn't fired yet - set a timeout to prevent infinite loading
+          // Auth service hasn't fired yet - set a shorter timeout as a first pass
+          // The failsafe timeout above will catch any remaining cases
           setTimeout(() => {
             if (!get().isInitialized) {
+              console.warn('[shared-auth-store] Auth callback timeout - marking as initialized');
               set({ isLoading: false, isInitialized: true });
             }
           }, 5000); // 5 second timeout for auth service to respond
@@ -369,10 +384,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
         return unsubscribe;
       } catch (error) {
+        // Clear the failsafe timeout since we're handling the error
+        clearTimeout(failsafeTimeout);
         // Clear cached state on error so retry is possible
         initPromise = null;
         currentUnsubscribe = null;
-        set({ isLoading: false, error: 'Failed to initialize authentication' });
+        // CRITICAL: Set isInitialized to true even on error to prevent infinite loading
+        // This allows the UI to show an error state or fallback instead of a spinner
+        set({ isLoading: false, isInitialized: true, error: 'Failed to initialize authentication' });
         throw error;
       }
     })();
