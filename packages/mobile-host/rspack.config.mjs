@@ -86,6 +86,14 @@ export default {
     }),
     new PatchMFConsolePlugin(),
 
+    // Inject environment variables for Firebase/Google Sign-In
+    // The Web Client ID is from google-services.json (client_type: 3)
+    new rspack.DefinePlugin({
+      'process.env.GOOGLE_WEB_CLIENT_ID': JSON.stringify(
+        '489294318656-kiq6v10qb0niab2ubi6d1grekfpn99um.apps.googleusercontent.com'
+      ),
+    }),
+
     // Replace React Native dev tools with stub in production builds
     // This prevents dev tools from being loaded while keeping mode='development'
     ...(process.env.NODE_ENV === 'production' ? [
@@ -178,16 +186,6 @@ export default {
         // Core shared packages
         '@universal/shared-utils': { singleton: true, eager: true },
         '@universal/shared-hello-ui': { singleton: true, eager: true },
-        // Dependencies used by shared-hello-ui (CRITICAL: must be singletons to avoid
-        // multiple instances of Zustand stores and React contexts in release builds)
-        '@universal/shared-theme-context': { singleton: true, eager: true },
-        '@universal/shared-i18n': { singleton: true, eager: true },
-        '@universal/shared-auth-store': { singleton: true, eager: true },
-        '@universal/shared-a11y': { singleton: true, eager: true },
-        // Additional shared packages used by the host
-        '@universal/shared-event-bus': { singleton: true, eager: true },
-        '@universal/shared-data-layer': { singleton: true, eager: true },
-        '@universal/shared-router': { singleton: true, eager: true },
       },
     }),
   ],
