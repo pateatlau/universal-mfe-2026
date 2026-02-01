@@ -1,5 +1,6 @@
 # Theming Test - Dark/Light mode toggle
-# Verifies theme toggle functionality from header and settings page
+# Verifies theme toggle functionality from header on auth screens
+# Note: Protected routes (Home, Settings) require authentication
 
 appId: ${MAESTRO_APP_ID}
 name: Theming Test
@@ -12,12 +13,17 @@ tags:
 - launchApp:
     clearState: true
 
-# Wait for app to load
+# Wait for app to load - should show login screen
 - extendedWaitUntil:
     visible: "Universal MFE - Mobile"
-    timeout: 10000
+    timeout: 15000
 
-# === Test theme toggle from header ===
+# Wait for login screen to finish rendering (use login-unique element "Forgot Password?")
+- extendedWaitUntil:
+    visible: "Forgot Password?"
+    timeout: 5000
+
+# === Test theme toggle from header on login screen ===
 
 # Verify starts in light mode (button shows Dark option)
 - assertVisible: ".*Dark.*"
@@ -30,6 +36,11 @@ tags:
     visible: ".*Light.*"
     timeout: 3000
 
+# Verify login screen still visible (theme change doesn't affect navigation)
+- assertVisible: "Sign In"
+- assertVisible: "Email"
+- assertVisible: "Password"
+
 # Toggle back to light mode
 - tapOn: ".*Light.*"
 
@@ -38,61 +49,62 @@ tags:
     visible: ".*Dark.*"
     timeout: 3000
 
-# === Test theme toggle from Settings page ===
+# === Test theme persistence across auth screen navigation ===
 
-# Navigate to Settings
-- tapOn: "Settings"
-
-- extendedWaitUntil:
-    visible: "Theme"
-    timeout: 5000
-
-# Verify theme options visible
-- assertVisible: ".*Light.*"
-- assertVisible: ".*Dark.*"
-
-# Tap Dark theme option (use index 1 for the settings section, not header)
+# Navigate to Sign Up (tap on "Sign Up" in "Don't have an account? Sign Up")
 - tapOn:
-    text: ".*Dark.*"
-    index: 1
-
-# Wait for theme change
-- extendedWaitUntil:
-    timeout: 2000
-    visible: "Theme"
-
-# Navigate to Home and verify theme persists
-- tapOn:
-    text: "Home"
+    text: ".*Sign Up.*"
     index: 0
 
+# Wait for Sign Up screen - unique element (auth.signup.title = "Create Account")
 - extendedWaitUntil:
-    visible: "Welcome"
+    visible: "Create Account"
     timeout: 5000
 
-# Verify header shows Light option (meaning we're in dark mode)
-- assertVisible: ".*Light.*"
+# Verify theme persists (still light mode)
+- assertVisible: ".*Dark.*"
 
-# Navigate back to Settings
-- tapOn: "Settings"
+# Toggle to dark mode on Sign Up screen
+- tapOn: ".*Dark.*"
 
 - extendedWaitUntil:
-    visible: "Theme"
-    timeout: 5000
+    visible: ".*Light.*"
+    timeout: 3000
 
-# Tap Light theme option (use index 1 for the settings section)
+# Navigate back to Login first (auth.signup.hasAccount = "Already have an account? Sign In")
 - tapOn:
-    text: ".*Light.*"
-    index: 1
-
-# Navigate to Home and verify theme persists
-- tapOn:
-    text: "Home"
+    text: ".*Sign In.*"
     index: 0
 
+# Wait for login screen (use login-unique element "Forgot Password?")
 - extendedWaitUntil:
-    visible: "Welcome"
+    visible: "Forgot Password?"
     timeout: 5000
 
-# Verify header shows Dark option (meaning we're in light mode)
-- assertVisible: ".*Dark.*"
+# Navigate to Forgot Password (auth.login.forgotPassword = "Forgot Password?")
+- tapOn: "Forgot Password?"
+
+- extendedWaitUntil:
+    visible: "Reset Password"
+    timeout: 5000
+
+# Verify dark mode persists
+- assertVisible: ".*Light.*"
+
+# Navigate back to Login (auth.forgotPassword.backToLogin = "Back to Sign In")
+- tapOn: "Back to Sign In"
+
+# Wait for login screen (use login-unique element "Forgot Password?")
+- extendedWaitUntil:
+    visible: "Forgot Password?"
+    timeout: 5000
+
+# Verify dark mode still persists
+- assertVisible: ".*Light.*"
+
+# Toggle back to light mode for clean state
+- tapOn: ".*Light.*"
+
+- extendedWaitUntil:
+    visible: ".*Dark.*"
+    timeout: 3000

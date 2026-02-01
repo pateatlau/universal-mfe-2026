@@ -99,13 +99,19 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
+            echo "::group::Running Maestro tests"
+
             # Install APK
             adb install packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk
+
+            # Wait for app to be installed
             sleep 5
 
             # Run core tests (exclude remote tests by default)
-            cd packages/mobile-host
-            MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.mobilehosttmp maestro test .maestro/ --exclude-tags=remote --format=junit --output=maestro-results.xml
+            # Use absolute path to avoid cd issues in emulator-runner script context
+            MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.mobilehosttmp maestro test packages/mobile-host/.maestro/ --exclude-tags=remote --format=junit --output=packages/mobile-host/maestro-results.xml
+
+            echo "::endgroup::"
 
       - name: Upload Maestro results
         uses: actions/upload-artifact@v4
@@ -157,11 +163,12 @@ jobs:
       - name: Build shared packages
         run: yarn build:shared
 
+      # E2E tests can use placeholder Firebase config - we're testing UI, not actual auth
       - name: Create GoogleService-Info.plist
         uses: ./.github/actions/create-google-service-info-plist
         with:
           google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
-          allow-placeholder: 'false'
+          allow-placeholder: 'true'
           working-directory: packages/mobile-host/ios
           bundle-id: org.reactjs.native.MobileHostTmp
 

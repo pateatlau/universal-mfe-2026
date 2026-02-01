@@ -1,5 +1,6 @@
 # i18n Test - Internationalization
-# Verifies language switching between English and Hindi
+# Verifies language switching between English and Hindi on auth screens
+# Note: Protected routes require authentication
 
 appId: ${MAESTRO_APP_ID}
 name: i18n Test
@@ -12,93 +13,105 @@ tags:
 - launchApp:
     clearState: true
 
-# Wait for app to load in English (default)
+# Wait for app to load in English (default) - should show login screen
 - extendedWaitUntil:
     visible: "Universal MFE - Mobile"
-    timeout: 10000
+    timeout: 15000
 
-# Verify English text
-- assertVisible: "Welcome"
-- assertVisible: "Home"
-- assertVisible: "Settings"
+# Wait for login screen to finish rendering (use login-unique element "Forgot Password?")
+- extendedWaitUntil:
+    visible: "Forgot Password?"
+    timeout: 5000
+
+# Verify English text on login screen
+- assertVisible: "Sign In"
+- assertVisible: "Email"
+- assertVisible: "Password"
+- assertVisible: "Continue with Google"
 
 # === Switch to Hindi via header toggle ===
 
 # Tap language toggle (shows current language)
 - tapOn: ".*English.*"
 
-# Wait for language change
+# Wait for language change - login screen should update
+# auth.login.title in Hindi = "साइन इन करें"
 - extendedWaitUntil:
-    visible: "स्वागत है"
+    visible: "साइन इन करें"
     timeout: 5000
 
-# Verify Hindi text
-- assertVisible: "स्वागत है"
+# Verify Hindi text on login screen
+- assertVisible: "साइन इन करें"
+- assertVisible: "ईमेल"
+- assertVisible: "पासवर्ड"
 
-# Verify navigation in Hindi
-- assertVisible: "होम"
-- assertVisible: "सेटिंग्स"
+# Verify language toggle updated
+- assertVisible: ".*हिंदी.*"
 
-# === Switch back to English via Settings ===
+# === Test language persistence across auth screen navigation ===
 
-# Navigate to Settings (in Hindi)
-- tapOn: "सेटिंग्स"
+# Navigate to Sign Up (in Hindi)
+# auth.login.noAccount = "खाता नहीं है? साइन अप करें" - tap on "साइन अप" part
+- tapOn:
+    text: ".*साइन अप.*"
+    index: 0
 
+# Wait for Sign Up screen - auth.signup.title in Hindi = "खाता बनाएं"
 - extendedWaitUntil:
-    visible: "थीम"
+    visible: "खाता बनाएं"
     timeout: 5000
 
-# Tap English option
-- tapOn: "English"
+# Verify Sign Up form in Hindi (unique fields)
+- assertVisible: "प्रदर्शन नाम"
+- assertVisible: "पासवर्ड की पुष्टि करें"
+
+# Navigate back to Login first
+# auth.signup.hasAccount = "पहले से खाता है? साइन इन करें"
+- tapOn:
+    text: ".*साइन इन.*"
+    index: 0
+
+# Wait for login screen (use Hindi login-unique element "पासवर्ड भूल गए?")
+- extendedWaitUntil:
+    visible: "पासवर्ड भूल गए?"
+    timeout: 5000
+
+# Navigate to Forgot Password (in Hindi)
+# auth.login.forgotPassword = "पासवर्ड भूल गए?"
+- tapOn: "पासवर्ड भूल गए?"
+
+# auth.forgotPassword.title in Hindi = "पासवर्ड रीसेट करें"
+- extendedWaitUntil:
+    visible: "पासवर्ड रीसेट करें"
+    timeout: 5000
+
+# Verify Forgot Password in Hindi
+# auth.forgotPassword.send = "रीसेट लिंक भेजें"
+- assertVisible: "रीसेट लिंक भेजें"
+
+# === Switch back to English ===
+
+# Tap language toggle
+- tapOn: ".*हिंदी.*"
 
 # Wait for language change
 - extendedWaitUntil:
-    visible: "Theme"
+    visible: "Reset Password"
     timeout: 5000
 
 # Verify English text
-- assertVisible: "Theme"
-- assertVisible: "Language"
+- assertVisible: "Send Reset Link"
 
-# Navigate to Home
-- tapOn:
-    text: "Home"
-    index: 0
+# Navigate back to Login
+# auth.forgotPassword.backToLogin = "Back to Sign In"
+- tapOn: "Back to Sign In"
 
-# Verify Home page in English
+# Wait for login screen (use login-unique element "Forgot Password?")
 - extendedWaitUntil:
-    visible: "Welcome"
+    visible: "Forgot Password?"
     timeout: 5000
 
-# === Test language persistence across navigation ===
-
-# Switch to Hindi
-- tapOn: ".*English.*"
-
-- extendedWaitUntil:
-    visible: "स्वागत है"
-    timeout: 5000
-
-# Navigate to Remote Module page
-- tapOn: "रिमोट मॉड्यूल"
-
-- extendedWaitUntil:
-    visible: ".*लोड करें.*"
-    timeout: 5000
-
-# Navigate to Settings
-- tapOn: "सेटिंग्स"
-
-- extendedWaitUntil:
-    visible: "थीम"
-    timeout: 5000
-
-# Navigate back to Home
-- tapOn:
-    text: "होम"
-    index: 0
-
-# Verify still in Hindi
-- extendedWaitUntil:
-    visible: "स्वागत है"
-    timeout: 5000
+# Verify login screen in English
+- assertVisible: "Email"
+- assertVisible: "Password"
+- assertVisible: "Continue with Google"

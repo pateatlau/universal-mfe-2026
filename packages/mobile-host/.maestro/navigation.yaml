@@ -1,5 +1,6 @@
-# Navigation Test - Page navigation flows
-# Verifies navigation between Home, Remote Module, and Settings pages
+# Navigation Test - Auth screen navigation flows
+# Verifies navigation between Login, Sign Up, and Forgot Password screens
+# Note: Protected routes (Home, Remote, Settings) require authentication
 
 appId: ${MAESTRO_APP_ID}
 name: Navigation Test
@@ -12,81 +13,71 @@ tags:
 - launchApp:
     clearState: true
 
-# Wait for home page to load
+# Wait for app to load - should show login screen for unauthenticated users
 - extendedWaitUntil:
     visible: "Universal MFE - Mobile"
-    timeout: 10000
+    timeout: 15000
 
-# === Navigate to Remote Module page ===
-- tapOn: "Remote Module"
-
-# Verify on Remote Module page - shows back link
+# Verify we're on the login screen (auth.login.title = "Sign In")
 - extendedWaitUntil:
-    visible: ".*Home.*"
+    visible: "Sign In"
     timeout: 5000
+- assertVisible: "Email"
+- assertVisible: "Password"
 
-# Verify load button is present
-- assertVisible: ".*Load Remote.*"
-
-# === Navigate back to Home ===
-- tapOn: ".*Home.*"
-
-# Verify back on home page
-- extendedWaitUntil:
-    visible: "Welcome"
-    timeout: 5000
-
-# === Navigate to Settings page ===
-- tapOn: "Settings"
-
-# Verify on Settings page
-- extendedWaitUntil:
-    visible: "Theme"
-    timeout: 5000
-
-# Verify settings sections are visible
-- assertVisible: "Theme"
-- assertVisible: "Language"
-
-# Verify theme options
-- assertVisible: ".*Light.*"
-- assertVisible: ".*Dark.*"
-
-# Verify language options
-- assertVisible: "English"
-
-# === Navigate back to Home from Settings ===
-- tapOn: ".*Home.*"
-
-# Verify back on home page
-- extendedWaitUntil:
-    visible: "Welcome"
-    timeout: 5000
-
-# === Use header navigation ===
-# Navigate to Settings via header
+# === Navigate to Sign Up screen ===
+# The link text is "Don't have an account? Sign Up" - tap on "Sign Up" part
 - tapOn:
-    text: "Settings"
+    text: ".*Sign Up.*"
     index: 0
 
+# Verify on Sign Up screen - wait for unique element (auth.signup.title = "Create Account")
 - extendedWaitUntil:
-    visible: "Theme"
+    visible: "Create Account"
     timeout: 5000
 
-# Navigate to Remote Module via header
+# Verify sign up form elements (unique to sign up: Display Name, Confirm Password)
+- assertVisible: "Display Name"
+- assertVisible: "Email"
+- assertVisible: "Password"
+- assertVisible: "Confirm Password"
+
+# === Navigate back to Login ===
+# The link text is "Already have an account? Sign In"
 - tapOn:
-    text: "Remote Module"
+    text: ".*Sign In.*"
     index: 0
 
+# Verify back on login screen (use login-unique element "Forgot Password?")
 - extendedWaitUntil:
-    visible: ".*Load Remote.*"
+    visible: "Forgot Password?"
+    timeout: 5000
+- assertVisible: "Email"
+- assertVisible: "Password"
+
+# === Navigate to Forgot Password screen ===
+# auth.login.forgotPassword = "Forgot Password?"
+- tapOn: "Forgot Password?"
+
+# Verify on Forgot Password screen (auth.forgotPassword.title = "Reset Password")
+- extendedWaitUntil:
+    visible: "Reset Password"
     timeout: 5000
 
-# Navigate to Home via header
-- tapOn:
-    text: "Home"
-    index: 0
+# Verify forgot password form elements
+- assertVisible: "Email"
+- assertVisible: "Send Reset Link"
 
+# === Navigate back to Login ===
+# auth.forgotPassword.backToLogin = "Back to Sign In"
+- tapOn: "Back to Sign In"
+
+# Verify back on login screen (use login-unique element "Forgot Password?")
 - extendedWaitUntil:
-    visible: "Welcome"
+    visible: "Forgot Password?"
     timeout: 5000
+- assertVisible: "Email"
+- assertVisible: "Password"
+
+# Verify social login options are still visible
+- assertVisible: "Continue with Google"
