@@ -534,11 +534,13 @@ These tasks are required for fully standalone mobile apps that work without a de
   - `ANDROID_KEYSTORE_PASSWORD` - Keystore password
   - `ANDROID_KEY_ALIAS` - Key alias
   - `ANDROID_KEY_PASSWORD` - Key password
+  - `GOOGLE_SERVICES_JSON_BASE64` - Base64-encoded google-services.json (required for Firebase Auth)
 - [x] Update `deploy-android.yml` workflow:
   - Decodes keystore from `ANDROID_KEYSTORE_BASE64` secret
+  - Decodes google-services.json from `GOOGLE_SERVICES_JSON_BASE64` secret (required for Firebase Auth)
   - Builds `assembleRelease` instead of `assembleDebug`
   - Outputs `mobile-host-release.apk` and `mobile-remote-standalone-release.apk`
-  - Cleans up keystore file after build for security
+  - Cleans up sensitive files (keystore and google-services.json) after build for security
 - [x] ProGuard/R8 minification configured (controlled by `enableProguardInReleaseBuilds` flag)
 - [ ] Test release APK on physical device (pending first tag push)
 
