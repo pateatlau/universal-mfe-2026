@@ -166,24 +166,33 @@ jobs:
             adb start-server
             sleep 2
 
-            # Wait for device to be online
+            # Wait for device to be online (with explicit timeout to avoid indefinite hang)
             echo "Waiting for device..."
-            adb wait-for-device
+            if ! timeout 120 adb wait-for-device; then
+              echo "❌ adb wait-for-device timed out after 120 seconds"
+              adb devices -l
+              exit 1
+            fi
+            echo "✅ Device online"
 
             # Wait for device to be fully booted (not just connected)
+            # Timeout aligned with emulator-boot-timeout (600s) to avoid premature failures
             echo "Waiting for device to fully boot..."
-            for i in {1..60}; do
+            BOOT_TIMEOUT=300
+            for i in $(seq 1 $BOOT_TIMEOUT); do
               BOOT_STATUS=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
               if [ "$BOOT_STATUS" = "1" ]; then
                 echo "✅ Device fully booted after $i seconds"
                 break
               fi
-              if [ $i -eq 60 ]; then
-                echo "❌ Device boot timeout after 60 seconds"
+              if [ $i -eq $BOOT_TIMEOUT ]; then
+                echo "❌ Device boot timeout after $BOOT_TIMEOUT seconds"
                 adb devices -l
                 exit 1
               fi
-              echo "  Waiting for boot... ($i/60)"
+              if [ $((i % 30)) -eq 0 ]; then
+                echo "  Waiting for boot... ($i/$BOOT_TIMEOUT)"
+              fi
               sleep 1
             done
 
@@ -334,14 +343,20 @@ jobs:
           echo "Waiting for simulator to stabilize..."
           sleep 5
 
-          # Verify simulator is in Booted state
-          SIMULATOR_STATE=$(xcrun simctl list devices | grep "iPhone 16" | head -1)
-          echo "Simulator state: $SIMULATOR_STATE"
-          if ! echo "$SIMULATOR_STATE" | grep -q "Booted"; then
-            echo "❌ Simulator not in Booted state"
+          # Verify simulator is in Booted state using the booted devices list
+          # This avoids false failures when multiple "iPhone 16" devices exist across runtimes
+          echo "Verifying simulator is booted..."
+          BOOTED_DEVICES=$(xcrun simctl list devices booted)
+          echo "Booted devices:"
+          echo "$BOOTED_DEVICES"
+          if echo "$BOOTED_DEVICES" | grep -q "iPhone 16"; then
+            echo "✅ iPhone 16 simulator is booted and ready"
+          else
+            echo "❌ iPhone 16 not found in booted devices list"
+            echo "All devices:"
+            xcrun simctl list devices
             exit 1
           fi
-          echo "✅ Simulator ready"
 
       - name: Install app on Simulator
         run: |
