@@ -58,8 +58,39 @@ The project uses **trunk-based development** with `main` as the single source of
 | `e2e-web.yml` | Label `ready-to-merge` added to PR | Web E2E tests |
 | `deploy-web.yml` | Push to main (path-filtered) | Deploy to Vercel only (no CI rerun) |
 | `deploy-mobile-remote-bundles.yml` | Push to main (path-filtered) | Deploy MF bundles to Firebase Hosting |
-| `deploy-android.yml` | Tag `v*` | Mobile E2E + Deploy to Firebase App Distribution |
-| `deploy-ios.yml` | Tag `v*` | Mobile E2E + Deploy to Firebase App Distribution |
+| `release-mobile.yml` | Tag `v*` | E2E tests first → then Deploy Android & iOS in parallel |
+
+### Mobile Release Flow (Safe Deployment)
+
+The `release-mobile.yml` workflow ensures E2E tests pass **before** any deployment:
+
+```
+Tag Push (v3.5.x)
+       │
+       ▼
+┌─────────────────────────────────┐
+│  E2E Tests (Android & iOS)      │  ◄── Must pass first
+│  - Runs in parallel             │
+└─────────────────────────────────┘
+       │
+       ├── ✅ Both Pass ─────────────────────┐
+       │                                     │
+       ▼                                     ▼
+┌─────────────────┐              ┌─────────────────┐
+│ Deploy Android  │   (parallel) │   Deploy iOS    │
+└─────────────────┘              └─────────────────┘
+       │                                     │
+       └──────────────┬──────────────────────┘
+                      ▼
+            ┌─────────────────┐
+            │ GitHub Release  │  ◄── Only after both deploy
+            └─────────────────┘
+
+       ├── ❌ Any E2E Fails
+       │
+       ▼
+   (No deploys - workflow stops, no broken releases)
+```
 
 ### Benefits of This Strategy
 
@@ -68,6 +99,7 @@ The project uses **trunk-based development** with `main` as the single source of
 3. **Simpler mental model** - One branch (main), short-lived feature branches
 4. **Faster feedback** - No waiting for redundant validations
 5. **Industry standard** - Trunk-based development used by Google, Meta, etc.
+6. **Safe mobile releases** - E2E tests must pass before any mobile deployment
 
 ### Branch Protection Rules (Manual Setup Required)
 
@@ -1385,8 +1417,7 @@ Firebase Authentication will provide secure user authentication with support for
 | `.github/workflows/codeql.yml` | CodeQL security analysis | PR to main, Weekly |
 | `.github/workflows/deploy-web.yml` | Deploy to Vercel (no CI rerun) | Push to main (path-filtered) |
 | `.github/workflows/deploy-mobile-remote-bundles.yml` | Deploy MF bundles to Firebase Hosting | Push to main (path-filtered) |
-| `.github/workflows/deploy-android.yml` | Mobile E2E + Build + Deploy to Firebase | Tag v* |
-| `.github/workflows/deploy-ios.yml` | Mobile E2E + Build + Deploy to Firebase | Tag v* |
+| `.github/workflows/release-mobile.yml` | E2E tests → Deploy Android & iOS | Tag v* |
 
 ---
 
