@@ -48,9 +48,9 @@ tags:
     text: ".*Sign In.*"
     index: 0
 
-# Verify back on login screen
+# Verify back on login screen (use login-unique element "Forgot Password?")
 - extendedWaitUntil:
-    visible: "Sign In"
+    visible: "Forgot Password?"
     timeout: 5000
 - assertVisible: "Email"
 - assertVisible: "Password"
@@ -72,9 +72,9 @@ tags:
 # auth.forgotPassword.backToLogin = "Back to Sign In"
 - tapOn: "Back to Sign In"
 
-# Verify back on login screen
+# Verify back on login screen (use login-unique element "Forgot Password?")
 - extendedWaitUntil:
-    visible: "Sign In"
+    visible: "Forgot Password?"
     timeout: 5000
 - assertVisible: "Email"
 - assertVisible: "Password"

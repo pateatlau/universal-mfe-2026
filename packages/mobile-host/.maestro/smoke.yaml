@@ -27,9 +27,9 @@ tags:
 # Verify language toggle is present
 - assertVisible: ".*English.*"
 
-# Wait for login screen to finish rendering (auth.login.title = "Sign In")
+# Wait for login screen to finish rendering (use login-unique element "Forgot Password?")
 - extendedWaitUntil:
-    visible: "Sign In"
+    visible: "Forgot Password?"
     timeout: 5000
 
 # Since app requires authentication, verify login screen elements

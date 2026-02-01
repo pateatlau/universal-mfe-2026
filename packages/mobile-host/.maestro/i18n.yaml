@@ -18,9 +18,9 @@ tags:
     visible: "Universal MFE - Mobile"
     timeout: 15000
 
-# Wait for login screen to finish rendering (auth.login.title = "Sign In")
+# Wait for login screen to finish rendering (use login-unique element "Forgot Password?")
 - extendedWaitUntil:
-    visible: "Sign In"
+    visible: "Forgot Password?"
     timeout: 5000
 
 # Verify English text on login screen
@@ -71,8 +71,9 @@ tags:
     text: ".*साइन इन.*"
     index: 0
 
+# Wait for login screen (use Hindi login-unique element "पासवर्ड भूल गए?")
 - extendedWaitUntil:
-    visible: "साइन इन करें"
+    visible: "पासवर्ड भूल गए?"
     timeout: 5000
 
 # Navigate to Forgot Password (in Hindi)
@@ -105,8 +106,9 @@ tags:
 # auth.forgotPassword.backToLogin = "Back to Sign In"
 - tapOn: "Back to Sign In"
 
+# Wait for login screen (use login-unique element "Forgot Password?")
 - extendedWaitUntil:
-    visible: "Sign In"
+    visible: "Forgot Password?"
     timeout: 5000
 
 # Verify login screen in English
