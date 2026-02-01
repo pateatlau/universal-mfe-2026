@@ -1,5 +1,6 @@
 # Smoke Test - Basic app launch and visibility
 # Verifies the app launches successfully and shows core UI elements
+# Note: With Firebase Auth, unauthenticated users see the login screen first
 
 appId: ${MAESTRO_APP_ID}
 name: Smoke Test
@@ -15,15 +16,10 @@ tags:
 # Wait for app to fully load (header should be visible)
 - extendedWaitUntil:
     visible: "Universal MFE - Mobile"
-    timeout: 10000
+    timeout: 15000
 
 # Verify main header elements
 - assertVisible: "Universal MFE - Mobile"
-
-# Verify navigation links are present
-- assertVisible: "Home"
-- assertVisible: "Remote Module"
-- assertVisible: "Settings"
 
 # Verify theme toggle is present (light mode default shows Dark option)
 - assertVisible: ".*Dark.*"
@@ -31,5 +27,11 @@ tags:
 # Verify language toggle is present
 - assertVisible: ".*English.*"
 
-# Verify home page content
-- assertVisible: "Welcome"
+# Since app requires authentication, verify login screen elements
+# (unauthenticated users are redirected to login)
+- assertVisible: "Log in"
+- assertVisible: "Email"
+- assertVisible: "Password"
+
+# Verify social login options are visible
+- assertVisible: "Continue with Google"

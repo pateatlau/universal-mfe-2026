@@ -1,5 +1,6 @@
 # i18n Test - Internationalization
-# Verifies language switching between English and Hindi
+# Verifies language switching between English and Hindi on auth screens
+# Note: Protected routes require authentication
 
 appId: ${MAESTRO_APP_ID}
 name: i18n Test
@@ -12,93 +13,79 @@ tags:
 - launchApp:
     clearState: true
 
-# Wait for app to load in English (default)
+# Wait for app to load in English (default) - should show login screen
 - extendedWaitUntil:
     visible: "Universal MFE - Mobile"
-    timeout: 10000
+    timeout: 15000
 
-# Verify English text
-- assertVisible: "Welcome"
-- assertVisible: "Home"
-- assertVisible: "Settings"
+# Verify English text on login screen
+- assertVisible: "Log in"
+- assertVisible: "Email"
+- assertVisible: "Password"
+- assertVisible: "Continue with Google"
 
 # === Switch to Hindi via header toggle ===
 
 # Tap language toggle (shows current language)
 - tapOn: ".*English.*"
 
-# Wait for language change
+# Wait for language change - login screen should update
 - extendedWaitUntil:
-    visible: "स्वागत है"
+    visible: "लॉग इन"
     timeout: 5000
 
-# Verify Hindi text
-- assertVisible: "स्वागत है"
+# Verify Hindi text on login screen
+- assertVisible: "लॉग इन"
+- assertVisible: "ईमेल"
+- assertVisible: "पासवर्ड"
 
-# Verify navigation in Hindi
-- assertVisible: "होम"
-- assertVisible: "सेटिंग्स"
+# Verify language toggle updated
+- assertVisible: ".*हिंदी.*"
 
-# === Switch back to English via Settings ===
+# === Test language persistence across auth screen navigation ===
 
-# Navigate to Settings (in Hindi)
-- tapOn: "सेटिंग्स"
+# Navigate to Sign Up (in Hindi)
+- tapOn: "साइन अप"
 
 - extendedWaitUntil:
-    visible: "थीम"
+    visible: "साइन अप"
     timeout: 5000
 
-# Tap English option
-- tapOn: "English"
+# Verify Sign Up form in Hindi
+- assertVisible: "नाम"
+- assertVisible: "पासवर्ड की पुष्टि"
+
+# Navigate to Forgot Password (in Hindi)
+- tapOn: "पासवर्ड भूल गए?"
+
+- extendedWaitUntil:
+    visible: "पासवर्ड रीसेट"
+    timeout: 5000
+
+# Verify Forgot Password in Hindi
+- assertVisible: "रीसेट लिंक भेजें"
+
+# === Switch back to English ===
+
+# Tap language toggle
+- tapOn: ".*हिंदी.*"
 
 # Wait for language change
 - extendedWaitUntil:
-    visible: "Theme"
+    visible: "Reset Password"
     timeout: 5000
 
 # Verify English text
-- assertVisible: "Theme"
-- assertVisible: "Language"
+- assertVisible: "Send Reset Link"
 
-# Navigate to Home
-- tapOn:
-    text: "Home"
-    index: 0
-
-# Verify Home page in English
-- extendedWaitUntil:
-    visible: "Welcome"
-    timeout: 5000
-
-# === Test language persistence across navigation ===
-
-# Switch to Hindi
-- tapOn: ".*English.*"
+# Navigate back to Login
+- tapOn: "Back to Login"
 
 - extendedWaitUntil:
-    visible: "स्वागत है"
+    visible: "Log in"
     timeout: 5000
 
-# Navigate to Remote Module page
-- tapOn: "रिमोट मॉड्यूल"
-
-- extendedWaitUntil:
-    visible: ".*लोड करें.*"
-    timeout: 5000
-
-# Navigate to Settings
-- tapOn: "सेटिंग्स"
-
-- extendedWaitUntil:
-    visible: "थीम"
-    timeout: 5000
-
-# Navigate back to Home
-- tapOn:
-    text: "होम"
-    index: 0
-
-# Verify still in Hindi
-- extendedWaitUntil:
-    visible: "स्वागत है"
-    timeout: 5000
+# Verify login screen in English
+- assertVisible: "Email"
+- assertVisible: "Password"
+- assertVisible: "Continue with Google"

@@ -1,5 +1,6 @@
-# Navigation Test - Page navigation flows
-# Verifies navigation between Home, Remote Module, and Settings pages
+# Navigation Test - Auth screen navigation flows
+# Verifies navigation between Login, Sign Up, and Forgot Password screens
+# Note: Protected routes (Home, Remote, Settings) require authentication
 
 appId: ${MAESTRO_APP_ID}
 name: Navigation Test
@@ -12,81 +13,61 @@ tags:
 - launchApp:
     clearState: true
 
-# Wait for home page to load
+# Wait for app to load - should show login screen for unauthenticated users
 - extendedWaitUntil:
     visible: "Universal MFE - Mobile"
-    timeout: 10000
+    timeout: 15000
 
-# === Navigate to Remote Module page ===
-- tapOn: "Remote Module"
+# Verify we're on the login screen
+- assertVisible: "Log in"
+- assertVisible: "Email"
+- assertVisible: "Password"
 
-# Verify on Remote Module page - shows back link
+# === Navigate to Sign Up screen ===
+- tapOn: "Sign up"
+
+# Verify on Sign Up screen
 - extendedWaitUntil:
-    visible: ".*Home.*"
+    visible: "Sign up"
     timeout: 5000
 
-# Verify load button is present
-- assertVisible: ".*Load Remote.*"
+# Verify sign up form elements
+- assertVisible: "Name"
+- assertVisible: "Email"
+- assertVisible: "Password"
+- assertVisible: "Confirm Password"
 
-# === Navigate back to Home ===
-- tapOn: ".*Home.*"
+# === Navigate back to Login ===
+- tapOn: "Log in"
 
-# Verify back on home page
+# Verify back on login screen
 - extendedWaitUntil:
-    visible: "Welcome"
+    visible: "Log in"
+    timeout: 5000
+- assertVisible: "Email"
+- assertVisible: "Password"
+
+# === Navigate to Forgot Password screen ===
+- tapOn: "Forgot Password?"
+
+# Verify on Forgot Password screen
+- extendedWaitUntil:
+    visible: "Reset Password"
     timeout: 5000
 
-# === Navigate to Settings page ===
-- tapOn: "Settings"
+# Verify forgot password form elements
+- assertVisible: "Email"
+- assertVisible: "Send Reset Link"
 
-# Verify on Settings page
+# === Navigate back to Login ===
+- tapOn: "Back to Login"
+
+# Verify back on login screen
 - extendedWaitUntil:
-    visible: "Theme"
+    visible: "Log in"
     timeout: 5000
+- assertVisible: "Email"
+- assertVisible: "Password"
 
-# Verify settings sections are visible
-- assertVisible: "Theme"
-- assertVisible: "Language"
-
-# Verify theme options
-- assertVisible: ".*Light.*"
-- assertVisible: ".*Dark.*"
-
-# Verify language options
-- assertVisible: "English"
-
-# === Navigate back to Home from Settings ===
-- tapOn: ".*Home.*"
-
-# Verify back on home page
-- extendedWaitUntil:
-    visible: "Welcome"
-    timeout: 5000
-
-# === Use header navigation ===
-# Navigate to Settings via header
-- tapOn:
-    text: "Settings"
-    index: 0
-
-- extendedWaitUntil:
-    visible: "Theme"
-    timeout: 5000
-
-# Navigate to Remote Module via header
-- tapOn:
-    text: "Remote Module"
-    index: 0
-
-- extendedWaitUntil:
-    visible: ".*Load Remote.*"
-    timeout: 5000
-
-# Navigate to Home via header
-- tapOn:
-    text: "Home"
-    index: 0
-
-- extendedWaitUntil:
-    visible: "Welcome"
-    timeout: 5000
+# Verify social login options are still visible
+- assertVisible: "Continue with Google"
