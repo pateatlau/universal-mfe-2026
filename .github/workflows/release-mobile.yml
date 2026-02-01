@@ -1,0 +1,683 @@
+name: Release Mobile
+
+# Triggered on version tags - runs E2E tests first, then deploys if tests pass
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Cancel in-progress releases for the same tag
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  # ===========================================================================
+  # E2E TESTS - Must pass before any deployment
+  # ===========================================================================
+
+  e2e-android:
+    name: E2E Tests (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Enable KVM group permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v5.1.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: AVD cache
+        uses: actions/cache@v5
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-29-x86_64-${{ hashFiles('packages/mobile-host/android/app/build.gradle') }}
+          restore-keys: |
+            avd-api-29-x86_64-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Build Android APK
+        working-directory: packages/mobile-host/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Install Maestro CLI
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: default
+          arch: x86_64
+          force-avd-creation: false
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+
+      - name: Run Maestro tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: default
+          arch: x86_64
+          force-avd-creation: false
+          emulator-boot-timeout: 600
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            # Install APK
+            adb install packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk
+            sleep 5
+
+            # Run core tests (exclude remote tests by default)
+            cd packages/mobile-host
+            MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.mobilehosttmp maestro test .maestro/ --exclude-tags=remote --format=junit --output=maestro-results.xml
+
+      - name: Upload Maestro results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maestro-android-results
+          path: packages/mobile-host/maestro-results.xml
+          retention-days: 7
+
+      - name: Upload Maestro debug output
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: maestro-android-debug
+          path: ~/.maestro/tests/
+          retention-days: 7
+
+  e2e-ios:
+    name: E2E Tests (iOS)
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1.6.0
+        with:
+          xcode-version: '16.2'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Setup CocoaPods cache
+        uses: actions/cache@v5
+        with:
+          path: ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-cocoapods-${{ hashFiles('packages/mobile-host/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cocoapods-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Create GoogleService-Info.plist
+        uses: ./.github/actions/create-google-service-info-plist
+        with:
+          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          allow-placeholder: 'false'
+          working-directory: packages/mobile-host/ios
+          bundle-id: org.reactjs.native.MobileHostTmp
+
+      - name: Install CocoaPods dependencies
+        working-directory: packages/mobile-host/ios
+        run: |
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+
+      - name: Build iOS app for Simulator
+        working-directory: packages/mobile-host/ios
+        run: |
+          xcodebuild \
+            -workspace MobileHostTmp.xcworkspace \
+            -scheme MobileHostTmp \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -derivedDataPath build \
+            build
+
+      - name: Install Maestro CLI
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Boot iOS Simulator
+        run: |
+          xcrun simctl boot "iPhone 16" || true
+          xcrun simctl bootstatus "iPhone 16" -b
+
+      - name: Install app on Simulator
+        run: |
+          APP_PATH=$(find packages/mobile-host/ios/build -name "MobileHostTmp.app" -type d | head -1)
+          xcrun simctl install "iPhone 16" "$APP_PATH"
+
+      - name: Run Maestro tests
+        run: |
+          cd packages/mobile-host
+          MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.universal.mobilehost maestro test .maestro/ --exclude-tags=remote --format=junit --output=maestro-results.xml
+
+      - name: Upload Maestro results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maestro-ios-results
+          path: packages/mobile-host/maestro-results.xml
+          retention-days: 7
+
+      - name: Upload Maestro debug output
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: maestro-ios-debug
+          path: ~/.maestro/tests/
+          retention-days: 7
+
+  # ===========================================================================
+  # DEPLOY ANDROID - Only runs if E2E tests pass
+  # ===========================================================================
+
+  deploy-android:
+    name: Deploy Android
+    runs-on: ubuntu-latest
+    needs: [e2e-android, e2e-ios]  # Wait for BOTH E2E tests to pass
+    env:
+      HAS_FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+      HAS_FIREBASE_HOST_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID_HOST != '' }}
+      HAS_FIREBASE_REMOTE_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID_REMOTE != '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Validate required secrets
+        run: |
+          missing_secrets=""
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            missing_secrets="${missing_secrets}ANDROID_KEYSTORE_BASE64 "
+          fi
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ]; then
+            missing_secrets="${missing_secrets}ANDROID_KEYSTORE_PASSWORD "
+          fi
+          if [ -z "${{ secrets.ANDROID_KEY_ALIAS }}" ]; then
+            missing_secrets="${missing_secrets}ANDROID_KEY_ALIAS "
+          fi
+          if [ -z "${{ secrets.ANDROID_KEY_PASSWORD }}" ]; then
+            missing_secrets="${missing_secrets}ANDROID_KEY_PASSWORD "
+          fi
+          if [ -z "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" ]; then
+            missing_secrets="${missing_secrets}GOOGLE_SERVICES_JSON_BASE64 "
+          fi
+          if [ -n "$missing_secrets" ]; then
+            echo "::error::Missing required secrets: ${missing_secrets}"
+            exit 1
+          fi
+          echo "All required secrets are configured."
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v5.1.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Setup Gradle cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Decode release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/release.keystore
+
+      # CRITICAL: Decode google-services.json for Firebase Authentication
+      # Without this file, Firebase Auth (email/password AND Google Sign-In) will not work
+      - name: Decode google-services.json
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > packages/mobile-host/android/app/google-services.json
+          echo "google-services.json created for mobile-host"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@15.4.0
+
+      # Build Host App
+      - name: Build mobile remote for Android (MF bundles)
+        run: yarn build:mobile:android
+
+      - name: Generate React Native codegen for mobile-host
+        working-directory: packages/mobile-host/android
+        run: ./gradlew generateCodegenArtifactsFromSchema --no-daemon
+
+      - name: Build Host Android APK (Release)
+        working-directory: packages/mobile-host/android
+        env:
+          CI: true
+          PLATFORM: android
+          NODE_ENV: production
+          ANDROID_KEYSTORE_FILE: ${{ github.workspace }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Rename Host APK
+        run: |
+          mv packages/mobile-host/android/app/build/outputs/apk/release/app-release.apk \
+             packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk
+
+      # Build Standalone App
+      - name: Generate React Native codegen for mobile-remote-hello
+        working-directory: packages/mobile-remote-hello/android
+        run: ./gradlew generateCodegenArtifactsFromSchema --no-daemon
+
+      - name: Build Standalone Android APK (Release)
+        working-directory: packages/mobile-remote-hello/android
+        env:
+          CI: true
+          PLATFORM: android
+          NODE_ENV: production
+          ANDROID_KEYSTORE_FILE: ${{ github.workspace }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Rename Standalone APK
+        run: |
+          mv packages/mobile-remote-hello/android/app/build/outputs/apk/release/app-release.apk \
+             packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk
+
+      - name: Clean up sensitive files
+        if: always()
+        run: |
+          rm -f ${{ github.workspace }}/release.keystore
+          rm -f packages/mobile-host/android/app/google-services.json
+
+      - name: Get tag name
+        id: tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      # Firebase App Distribution (optional)
+      - name: Authenticate to Google Cloud
+        if: env.HAS_FIREBASE_SA == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Upload Host APK to Firebase App Distribution
+        if: env.HAS_FIREBASE_SA == 'true' && env.HAS_FIREBASE_HOST_ID == 'true'
+        continue-on-error: true
+        run: |
+          firebase appdistribution:distribute \
+            packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk \
+            --app ${{ secrets.FIREBASE_APP_ID_ANDROID_HOST }} \
+            --groups "internal-testers" \
+            --release-notes "Release ${{ steps.tag.outputs.tag }} - Host App | Commit: ${{ github.sha }}"
+
+      - name: Upload Standalone APK to Firebase App Distribution
+        if: env.HAS_FIREBASE_SA == 'true' && env.HAS_FIREBASE_REMOTE_ID == 'true'
+        continue-on-error: true
+        run: |
+          firebase appdistribution:distribute \
+            packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk \
+            --app ${{ secrets.FIREBASE_APP_ID_ANDROID_REMOTE }} \
+            --groups "internal-testers" \
+            --release-notes "Release ${{ steps.tag.outputs.tag }} - Standalone Remote App | Commit: ${{ github.sha }}"
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apks
+          path: |
+            packages/mobile-host/android/app/build/outputs/apk/release/mobile-host-release.apk
+            packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk
+          retention-days: 30
+
+  # ===========================================================================
+  # DEPLOY iOS - Only runs if E2E tests pass
+  # ===========================================================================
+
+  deploy-ios:
+    name: Deploy iOS
+    runs-on: macos-14
+    needs: [e2e-android, e2e-ios]  # Wait for BOTH E2E tests to pass
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1.6.0
+        with:
+          xcode-version: '16.2'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Setup CocoaPods cache
+        uses: actions/cache@v5
+        with:
+          path: ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-cocoapods-deploy-${{ hashFiles('packages/mobile-host/ios/Podfile.lock', 'packages/mobile-remote-hello/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cocoapods-deploy-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: yarn build:shared
+
+      - name: Create GoogleService-Info.plist
+        uses: ./.github/actions/create-google-service-info-plist
+        with:
+          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          allow-placeholder: 'false'
+          working-directory: packages/mobile-host/ios
+          bundle-id: org.reactjs.native.MobileHostTmp
+
+      # Build Host App
+      - name: Build mobile remote for iOS (MF bundles)
+        run: yarn build:mobile:ios
+
+      - name: Generate React Native codegen for mobile-host
+        working-directory: packages/mobile-host
+        run: |
+          # Run codegen and capture exit code
+          set +e
+          yarn react-native codegen
+          EXIT_CODE=$?
+          set -e
+
+          # Only tolerate exit code 1 (known non-fatal cleanup error in RN CLI 19.1.2)
+          # All other exit codes indicate real failures
+          if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
+            echo "❌ Error: Codegen failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+          # Verify codegen files were generated despite exit code 1
+          if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
+            echo "❌ Error: Codegen did not generate iOS files"
+            exit 1
+          fi
+
+          echo "✅ Codegen files generated successfully (exit code $EXIT_CODE is expected)"
+          ls -la build/generated/ios/
+
+          # Copy codegen to Xcode's expected location (direct contents, not nested)
+          mkdir -p ios/build/generated
+          cp -R build/generated/ios/* ios/build/generated/
+          echo "✅ Codegen files copied to ios/build/generated/"
+
+      - name: Install CocoaPods for Host
+        working-directory: packages/mobile-host/ios
+        run: |
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+
+      - name: Build Host iOS app for Simulator
+        working-directory: packages/mobile-host/ios
+        env:
+          NODE_ENV: production
+          PLATFORM: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace MobileHostTmp.xcworkspace \
+            -scheme MobileHostTmp \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -derivedDataPath build \
+            build \
+            2>&1 | tee build.log
+
+          if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileHostTmp.app/main.jsbundle" ]; then
+            exit 1
+          fi
+
+      - name: Zip Host iOS app bundle
+        working-directory: packages/mobile-host/ios
+        run: |
+          APP_PATH=$(find build -name "MobileHostTmp.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            exit 1
+          fi
+          APP_DIR=$(dirname "$APP_PATH")
+          cd "$APP_DIR"
+          zip -r "$GITHUB_WORKSPACE/packages/mobile-host/ios/mobile-host-simulator.zip" MobileHostTmp.app
+
+      # Build Standalone App
+      - name: Generate React Native codegen for mobile-remote-hello
+        working-directory: packages/mobile-remote-hello
+        run: |
+          # Run codegen and capture exit code
+          set +e
+          yarn react-native codegen
+          EXIT_CODE=$?
+          set -e
+
+          # Only tolerate exit code 1 (known non-fatal cleanup error in RN CLI 19.1.2)
+          # All other exit codes indicate real failures
+          if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
+            echo "❌ Error: Codegen failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+          # Verify codegen files were generated despite exit code 1
+          if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
+            echo "❌ Error: Codegen did not generate iOS files"
+            exit 1
+          fi
+
+          echo "✅ Codegen files generated successfully (exit code $EXIT_CODE is expected)"
+          ls -la build/generated/ios/
+
+          # Copy codegen to Xcode's expected location (direct contents, not nested)
+          mkdir -p ios/build/generated
+          cp -R build/generated/ios/* ios/build/generated/
+          echo "✅ Codegen files copied to ios/build/generated/"
+
+      - name: Install CocoaPods for Standalone
+        working-directory: packages/mobile-remote-hello/ios
+        run: |
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+
+      - name: Build Standalone iOS app for Simulator
+        working-directory: packages/mobile-remote-hello/ios
+        env:
+          NODE_ENV: production
+          PLATFORM: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace MobileRemoteHello.xcworkspace \
+            -scheme MobileRemoteHello \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -derivedDataPath build \
+            build \
+            2>&1 | tee build.log
+
+          if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileRemoteHello.app/main.jsbundle" ]; then
+            exit 1
+          fi
+
+      - name: Zip Standalone iOS app bundle
+        working-directory: packages/mobile-remote-hello/ios
+        run: |
+          APP_PATH=$(find build -name "MobileRemoteHello.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            exit 1
+          fi
+          APP_DIR=$(dirname "$APP_PATH")
+          cd "$APP_DIR"
+          zip -r "$GITHUB_WORKSPACE/packages/mobile-remote-hello/ios/mobile-remote-standalone-simulator.zip" MobileRemoteHello.app
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-apps
+          path: |
+            packages/mobile-host/ios/mobile-host-simulator.zip
+            packages/mobile-remote-hello/ios/mobile-remote-standalone-simulator.zip
+          retention-days: 30
+
+  # ===========================================================================
+  # CREATE GITHUB RELEASE - Only after all deployments succeed
+  # ===========================================================================
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [deploy-android, deploy-ios]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-apks
+          path: artifacts/android
+
+      - name: Download iOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-release-apps
+          path: artifacts/ios
+
+      - name: Get tag name
+        id: tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+          body: |
+            ## Mobile Release ${{ steps.tag.outputs.tag }}
+
+            This release has passed E2E tests on both Android and iOS platforms.
+
+            ---
+
+            ### Android APKs
+
+            | App | Description |
+            |-----|-------------|
+            | `mobile-host-release.apk` | Main host app with Module Federation |
+            | `mobile-remote-standalone-release.apk` | Standalone remote app |
+
+            **Installation:**
+            1. Download the APK
+            2. Enable "Install from unknown sources"
+            3. Install and run - no dev server needed!
+
+            ---
+
+            ### iOS Simulator Apps
+
+            | App | Description |
+            |-----|-------------|
+            | `mobile-host-simulator.zip` | Main host app for iOS Simulator |
+            | `mobile-remote-standalone-simulator.zip` | Standalone remote app for iOS Simulator |
+
+            **Installation:**
+            1. Download and unzip
+            2. Drag .app to iOS Simulator, or run:
+               ```bash
+               xcrun simctl install booted <app-name>.app
+               ```
+
+            ---
+
+            ### Requirements
+            - Android: API 24+ (Android 7.0)
+            - iOS: macOS with Xcode and iOS Simulator
+
+            ---
+
+            See the [README](https://github.com/${{ github.repository }}) for more details.
+          files: |
+            artifacts/android/mobile-host-release.apk
+            artifacts/android/mobile-remote-standalone-release.apk
+            artifacts/ios/mobile-host-simulator.zip
+            artifacts/ios/mobile-remote-standalone-simulator.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
