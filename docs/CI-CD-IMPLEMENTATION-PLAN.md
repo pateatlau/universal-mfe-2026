@@ -1,1533 +1,477 @@
 # CI/CD Implementation Plan
 
-**Status:** Phase 8 - Optimized CI/CD Workflow (Trunk-Based Development)
-**Last Updated:** 2026-01-30
-**Target:** POC with minimal costs / free tier options
+**Status:** Restructure In Progress - World-Class Enterprise CI/CD
+**Last Updated:** 2026-02-01
+**Target:** Enterprise-grade CI/CD following industry best practices
 
 ---
 
-## Overview
+## Executive Summary
 
-This document outlines the CI/CD implementation plan for the Universal Microfrontend Platform. The goal is to automate building, testing, and deploying the web, Android, and iOS applications using GitHub Actions with free/minimal cost deployment options.
+This document defines the CI/CD architecture for the Universal Microfrontend Platform. The system implements **shift-left testing** with **mandatory E2E gates** before merge, **staging environments** for validation, and **production promotion** via tags.
+
+### Key Principles
+
+1. **E2E Before Merge** - All platform E2E tests must pass before code reaches `main`
+2. **Platform Parity** - Same quality gates for Web, Android, and iOS
+3. **Staging → Production** - Two-stage deployment with explicit promotion
+4. **Trunk-Based Development** - Single `main` branch, short-lived feature branches
+5. **Zero Manual Steps** - Fully automated pipeline, no labels or manual triggers
 
 ---
 
-## CI/CD Workflow Strategy
-
-### Trunk-Based Development (Optimized)
-
-The project uses **trunk-based development** with `main` as the single source of truth. This eliminates redundant CI runs and simplifies the branching strategy.
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    OPTIMIZED CI/CD WORKFLOW                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  feature-branch                                                  │
-│       │                                                          │
-│       ▼                                                          │
-│  ┌─────────────────┐                                            │
-│  │ PR to main      │◄─── CI (lint, type, test, build)           │
-│  │                 │                                             │
-│  └────────┬────────┘                                            │
-│           │ add label: "ready-to-merge"                          │
-│           ▼                                                      │
-│  ┌─────────────────┐                                            │
-│  │ E2E triggered   │◄─── Web E2E (runs once, blocks merge)      │
-│  │                 │                                             │
-│  └────────┬────────┘                                            │
-│           │ merge (requires CI + E2E pass)                       │
-│           ▼                                                      │
-│  ┌─────────────────┐                                            │
-│  │ main branch     │◄─── Deploy web to Vercel (no CI rerun)     │
-│  └────────┬────────┘                                            │
-│           │ git tag v3.x.x                                       │
-│           ▼                                                      │
-│  ┌─────────────────┐                                            │
-│  │ Release tag     │◄─── Mobile E2E + Deploy to Firebase        │
-│  └─────────────────┘                                            │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Workflow Triggers Summary
-
-| Workflow | Trigger | What Runs |
-|----------|---------|-----------|
-| `ci.yml` | PR to main | Lint, typecheck, test, build |
-| `e2e-web.yml` | Label `ready-to-merge` added to PR | Web E2E tests |
-| `deploy-web.yml` | Push to main (path-filtered) | Deploy to Vercel only (no CI rerun) |
-| `deploy-mobile-remote-bundles.yml` | Push to main (path-filtered) | Deploy MF bundles to Firebase Hosting |
-| `release-mobile.yml` | Tag `v*` | E2E tests first → then Deploy Android & iOS in parallel |
-
-### Mobile Release Flow (Safe Deployment)
-
-The `release-mobile.yml` workflow ensures E2E tests pass **before** any deployment:
+## Architecture Overview
 
 ```
-Tag Push (v3.5.x)
-       │
-       ▼
-┌─────────────────────────────────┐
-│  E2E Tests (Android & iOS)      │  ◄── Must pass first
-│  - Runs in parallel             │
-└─────────────────────────────────┘
-       │
-       ├── ✅ Both Pass ─────────────────────┐
-       │                                     │
-       ▼                                     ▼
-┌─────────────────┐              ┌─────────────────┐
-│ Deploy Android  │   (parallel) │   Deploy iOS    │
-└─────────────────┘              └─────────────────┘
-       │                                     │
-       └──────────────┬──────────────────────┘
-                      ▼
-            ┌─────────────────┐
-            │ GitHub Release  │  ◄── Only after both deploy
-            └─────────────────┘
-
-       ├── ❌ Any E2E Fails
-       │
-       ▼
-   (No deploys - workflow stops, no broken releases)
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         WORLD-CLASS CI/CD PIPELINE                               │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│   PR Created                    Merged to Main                   Tag Created    │
+│       │                              │                               │          │
+│       ▼                              ▼                               ▼          │
+│   ┌─────────┐                  ┌───────────┐                  ┌───────────┐     │
+│   │   CI    │                  │  Deploy   │                  │  Release  │     │
+│   │ + E2E   │──── merge ────▶  │  Staging  │──── tag ──────▶  │Production │     │
+│   │ (ALL)   │                  │           │                  │           │     │
+│   └─────────┘                  └───────────┘                  └───────────┘     │
+│       │                              │                               │          │
+│       ▼                              ▼                               ▼          │
+│   ┌─────────┐                  ┌───────────┐                  ┌───────────┐     │
+│   │BLOCKING │                  │   AUTO    │                  │ BLOCKING  │     │
+│   │All must │                  │Deploys to │                  │E2E re-run │     │
+│   │  pass   │                  │ staging   │                  │then prod  │     │
+│   └─────────┘                  └───────────┘                  └───────────┘     │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Benefits of This Strategy
+### Quality Gates
 
-1. **60% fewer CI runs** - PR validates once, merge doesn't re-run CI
-2. **E2E runs only when ready** - Triggered by label, not every push
-3. **Simpler mental model** - One branch (main), short-lived feature branches
-4. **Faster feedback** - No waiting for redundant validations
-5. **Industry standard** - Trunk-based development used by Google, Meta, etc.
-6. **Safe mobile releases** - E2E tests must pass before any mobile deployment
+| Stage | Gate | Blocks |
+|-------|------|--------|
+| PR → main | CI (lint, typecheck, test, build) | Merge |
+| PR → main | E2E Web (Playwright) | Merge |
+| PR → main | E2E Android (Maestro) | Merge |
+| PR → main | E2E iOS (Maestro) | Merge |
+| Tag → Release | E2E All Platforms (re-verification) | Production deploy |
 
-### Branch Protection Rules (Manual Setup Required)
+---
+
+## Workflow Files
+
+### New Structure
+
+| Workflow | File | Trigger | Purpose |
+|----------|------|---------|---------|
+| **CI** | `ci.yml` | PR to main | Fast checks: lint, typecheck, unit tests, build verification |
+| **E2E** | `e2e.yml` | PR to main | All platform E2E tests (Web + Android + iOS) |
+| **Deploy Staging** | `deploy-staging.yml` | Push to main | Deploy all platforms to staging environments |
+| **Release Production** | `release.yml` | Tag `v*` | Re-run E2E → Deploy to production → Create GitHub Release |
+| **Security** | `codeql.yml` | PR to main + Weekly | CodeQL security analysis |
+
+### Removed/Consolidated
+
+| Old Workflow | Disposition |
+|--------------|-------------|
+| `e2e-web.yml` | Merged into `e2e.yml` |
+| `deploy-web.yml` | Split into `deploy-staging.yml` (staging) + `release.yml` (production) |
+| `deploy-mobile-remote-bundles.yml` | Merged into `deploy-staging.yml` |
+| `release-mobile.yml` | Merged into `release.yml` |
+
+---
+
+## Detailed Workflow Specifications
+
+### 1. CI Workflow (`ci.yml`)
+
+**Trigger:** Pull request to `main`
+**Purpose:** Fast feedback on code quality
+**Duration:** ~5-7 minutes
+
+```yaml
+Jobs:
+  check:
+    - Checkout
+    - Setup Node.js (from .nvmrc)
+    - Install dependencies (yarn --frozen-lockfile)
+    - Validate versions (no ^ or ~ in deps)
+    - Build shared packages
+    - Type checking (tsc --noEmit)
+    - Linting (ESLint)
+    - Unit tests (Jest with coverage)
+    - Security audit (yarn audit, informational)
+
+  build-web:
+    needs: check
+    - Build web-shell
+    - Build web-remote-hello
+    - Upload artifacts
+
+  build-android:
+    needs: check
+    - Setup Java 17
+    - Build mobile-remote for Android
+    - Build Android APK (debug)
+    - Upload artifact
+
+  build-ios:
+    needs: check
+    - Setup Xcode 16.2
+    - Build mobile-remote for iOS
+    - Build iOS app for Simulator
+    - Upload artifact
+```
+
+### 2. E2E Workflow (`e2e.yml`)
+
+**Trigger:** Pull request to `main`
+**Purpose:** Comprehensive E2E testing across all platforms
+**Duration:** ~15-20 minutes (runs in parallel)
+
+```yaml
+Jobs:
+  e2e-web:
+    - Build web packages
+    - Start web servers (shell + remote)
+    - Run Playwright tests
+    - Upload test report
+
+  e2e-android:
+    - Install Linux emulator dependencies
+    - Build Android APK
+    - Create placeholder google-services.json
+    - Start Android emulator (API 29)
+    - Install APK with retry logic
+    - Run Maestro tests
+    - Upload test report
+
+  e2e-ios:
+    - Build iOS app for Simulator
+    - Create placeholder GoogleService-Info.plist
+    - Boot iOS Simulator (iPhone 16)
+    - Install app
+    - Run Maestro tests
+    - Upload test report
+```
+
+**Critical:** All three jobs must pass for PR to be mergeable.
+
+### 3. Deploy Staging Workflow (`deploy-staging.yml`)
+
+**Trigger:** Push to `main` (after PR merge)
+**Purpose:** Automatic deployment to staging environments
+**Duration:** ~10-12 minutes
+
+```yaml
+Jobs:
+  deploy-web-staging:
+    - Build web-remote-hello
+    - Deploy to Vercel (staging-universal-mfe-2026-remote.vercel.app)
+    - Build web-shell (with staging remote URL)
+    - Deploy to Vercel (staging-universal-mfe-2026-shell.vercel.app)
+
+  deploy-mobile-bundles-staging:
+    - Build mobile-remote for Android (production mode)
+    - Build mobile-remote for iOS (production mode)
+    - Deploy to Firebase Hosting (staging channel)
+```
+
+**Staging URLs:**
+- Web Shell: `https://staging-universal-mfe-2026-shell.vercel.app`
+- Web Remote: `https://staging-universal-mfe-2026-remote.vercel.app`
+- Mobile Bundles: `https://universal-mfe.web.app` (staging channel)
+
+### 4. Release Workflow (`release.yml`)
+
+**Trigger:** Tag push matching `v*`
+**Purpose:** Production deployment with E2E re-verification
+**Duration:** ~25-30 minutes
+
+```yaml
+Jobs:
+  # Stage 1: Re-verify with E2E (production validation)
+  e2e-web:
+    - Same as e2e.yml but against staging URLs
+
+  e2e-android:
+    - Same as e2e.yml
+
+  e2e-ios:
+    - Same as e2e.yml
+
+  # Stage 2: Deploy to Production (only if ALL E2E pass)
+  deploy-web-production:
+    needs: [e2e-web, e2e-android, e2e-ios]
+    - Promote staging to production on Vercel
+    - Or rebuild and deploy to production domains
+
+  deploy-android:
+    needs: [e2e-web, e2e-android, e2e-ios]
+    - Build release APK (signed)
+    - Upload to Firebase App Distribution
+    - Prepare for GitHub Release
+
+  deploy-ios:
+    needs: [e2e-web, e2e-android, e2e-ios]
+    - Build release iOS app (Simulator)
+    - Prepare for GitHub Release
+
+  deploy-mobile-bundles-production:
+    needs: [e2e-web, e2e-android, e2e-ios]
+    - Promote staging bundles to live channel on Firebase
+
+  # Stage 3: Create Release
+  create-release:
+    needs: [deploy-web-production, deploy-android, deploy-ios, deploy-mobile-bundles-production]
+    - Create GitHub Release
+    - Attach Android APK
+    - Attach iOS Simulator zip
+    - Generate release notes
+```
+
+---
+
+## Environment Strategy
+
+### Staging Environment
+
+| Platform | URL/Location | Auto-Deploy |
+|----------|--------------|-------------|
+| Web Shell | `staging-universal-mfe-2026-shell.vercel.app` | On push to main |
+| Web Remote | `staging-universal-mfe-2026-remote.vercel.app` | On push to main |
+| Mobile Bundles | Firebase Hosting (`staging` channel) | On push to main |
+| Mobile Apps | N/A (staging is for bundles only) | N/A |
+
+### Production Environment
+
+| Platform | URL/Location | Deploy Trigger |
+|----------|--------------|----------------|
+| Web Shell | `universal-mfe-2026-shell.vercel.app` | Tag v* (after E2E) |
+| Web Remote | `universal-mfe-2026-remote.vercel.app` | Tag v* (after E2E) |
+| Mobile Bundles | Firebase Hosting (`live` channel) | Tag v* (after E2E) |
+| Android APK | GitHub Releases + Firebase App Distribution | Tag v* (after E2E) |
+| iOS Simulator | GitHub Releases | Tag v* (after E2E) |
+
+---
+
+## Branch Protection Rules
 
 Configure in GitHub: **Settings → Branches → Add rule for `main`**
 
-1. ✅ Require a pull request before merging
-2. ✅ Require status checks to pass before merging
-   - Required checks: `ci`, `e2e-web` (when labeled)
-3. ✅ Require branches to be up to date before merging (optional)
-4. ✅ Do not allow bypassing the above settings (recommended)
+### Required Settings
+
+| Setting | Value |
+|---------|-------|
+| Branch name pattern | `main` |
+| Require pull request before merging | ✅ Enabled |
+| Required approvals | 0 (or 1+ for team) |
+| Require status checks to pass | ✅ Enabled |
+| Require branches to be up to date | ✅ Enabled |
+| Do not allow bypassing | ✅ Enabled |
+
+### Required Status Checks
+
+All of these must pass before merge is allowed:
+
+```
+CI / Lint, Typecheck, Test (ubuntu-latest)
+E2E / E2E Web Tests (ubuntu-latest)
+E2E / E2E Android Tests (ubuntu-latest)
+E2E / E2E iOS Tests (macos-14)
+```
 
 ---
 
-## Finalized Deployment Decisions
+## Developer Workflow
 
-| Platform | Deployment Method | Cost |
-|----------|------------------|------|
-| **Web** | Vercel (free tier) | $0 |
-| **Android** | GitHub Releases (APK artifacts) | $0 |
-| **iOS** | GitHub Releases (Simulator .app bundle) | $0 |
+### Daily Development
 
----
-
-## Pre-requisites
-
-### CI Pre-requisites
-
-- [x] **GitHub Repository Access** ✅
-  - [x] Repository is hosted on GitHub
-  - [x] GitHub Actions enabled for the repository
-  - [x] Sufficient Actions minutes (free tier: 2,000 mins/month for public repos)
-
-- [x] **Testing Infrastructure Setup** ✅
-  - [x] Jest configuration for unit tests
-  - [x] ESLint configuration for linting
-  - [x] Prettier configuration for formatting
-  - [x] TypeScript strict mode already enabled
-
-- [x] **Root Package.json Scripts** ✅
-  - [x] Add `build:shared` script
-  - [x] Add `lint` script
-  - [x] Add `test` script
-  - [x] Add `typecheck` script
-
-### CD Pre-requisites
-
-- [x] **Web Deployment (Vercel)** ✅
-  - [x] Create Vercel account (free tier)
-  - [x] Link GitHub repository to Vercel
-  - [x] Add VERCEL_TOKEN to GitHub secrets
-
-- [x] **Android Deployment (GitHub Releases)** ✅
-  - [x] Debug keystore available (default Android debug keystore)
-  - [x] No external accounts required
-
-- [x] **iOS Deployment (Simulator Build)** ✅
-  - [x] macOS runner available (GitHub Actions provides this)
-  - [x] Xcode 16.2 available on runner
-  - [x] No signing certificates required (simulator-only)
-
----
-
-## Phase 1: Foundation Setup
-
-### Task 1.1: Root Package.json Scripts ✅ COMPLETE
-- [x] Add `build:shared` script to build shared packages in order
-- [x] Add `lint` script (after ESLint setup)
-- [x] Add `test` script (after Jest setup)
-- [x] Add `typecheck` script for TypeScript validation
-- [x] Add `build:web` convenience script
-- [x] Add `build:mobile:android` convenience script
-- [x] Add `build:mobile:ios` convenience script
-
-**Additional changes made:**
-- Added `typecheck` script to all 6 workspace packages
-- Fixed web package tsconfig.json files to include DOM lib types
-- Added Module Federation remote type declarations for web-shell
-- Fixed React Native Web style type casting in web-shell
-
-### Task 1.2: ESLint Configuration ✅ COMPLETE
-- [x] Create `eslint.config.mjs` in root (using modern flat config)
-  - [x] Configure TypeScript parser (`typescript-eslint`)
-  - [x] Add React/React Hooks rules
-  - [x] Configure Node.js globals for config files and scripts
-- [x] Add ESLint dependencies to root package.json
-- [x] Configure ignores for build outputs and generated files
-- [x] Verify lint passes on all packages (0 errors, warnings only)
-
-**Dependencies added:**
-- eslint@9.28.0
-- @eslint/js@9.28.0
-- typescript-eslint@8.33.1
-- eslint-plugin-react@7.37.5
-- eslint-plugin-react-hooks@7.0.1 (upgraded from 5.2.0 for ESLint 9 compatibility)
-- globals@16.2.0
-
-### Task 1.3: Prettier Configuration ✅ COMPLETE
-- [x] Create `.prettierrc` in root
-  - [x] Configure consistent formatting rules
-  - [x] Single quotes, trailing commas, 100 char width
-- [x] Create `.prettierignore` for build outputs
-- [x] Add Prettier dependencies to root package.json
-- [x] Add `format` script to check formatting
-- [x] Add `format:fix` script to auto-fix formatting
-- [x] Integrate with ESLint (eslint-config-prettier)
-- [x] Verify formatting works on all packages
-
-**Dependencies added:**
-- prettier@3.5.3
-- eslint-config-prettier@10.1.5
-
-**Scripts added:**
-- `yarn format` - Check formatting (exits non-zero if files need formatting)
-- `yarn format:fix` - Auto-fix formatting issues
-
-### Task 1.4: Jest Configuration ✅ COMPLETE
-- [x] Create `jest.config.js` in root
-  - [x] Configure TypeScript transform (ts-jest)
-  - [x] Setup workspace projects
-  - [x] Configure coverage thresholds (50% minimum)
-- [x] Add Jest dependencies to root package.json
-- [x] Create sample tests for shared-utils
-- [x] Verify tests pass locally (6 tests, 100% coverage)
-
-**Dependencies added:**
-- jest@29.7.0
-- ts-jest@29.3.4
-- @types/jest@29.5.14
-
-**Notes:**
-- Only shared-utils has unit tests (pure TypeScript)
-- shared-hello-ui requires full RN runtime for testing (deferred to E2E - Task 4.5)
-
-### Task 1.5: TypeScript Validation Script ✅ COMPLETE
-- [x] Add `typecheck` script that runs `tsc --noEmit`
-- [x] Verify all packages pass type checking
-
-**Notes:**
-- Implemented in Task 1.1 as `yarn workspaces run typecheck`
-- Each workspace has its own `typecheck` script
-- All 6 packages pass type checking
-
----
-
-## Phase 2: GitHub Actions CI
-
-### Task 2.1: Basic CI Workflow ✅ COMPLETE
-- [x] Create `.github/workflows/ci.yml`
-  - [x] Trigger on PRs to main (optimized: no push trigger to avoid redundant runs after merge)
-  - [x] Setup Node.js via `.nvmrc` with Yarn caching
-  - [x] Install dependencies with Yarn (frozen lockfile)
-  - [x] Run type checking
-  - [x] Run linting
-  - [x] Run unit tests with coverage
-  - [x] Build shared packages
-
-**Features:**
-- Concurrency control (cancels in-progress runs for same branch)
-- Uses `ubuntu-latest` runner (free tier)
-
-### Task 2.2: Web Build Job ✅ COMPLETE
-- [x] Add web build job to CI workflow
-  - [x] Build web-shell
-  - [x] Build web-remote-hello
-  - [x] Upload build artifacts (7 day retention)
-  - [x] Yarn cache via setup-node action
-
-**Features:**
-- Depends on `check` job (runs after lint/test pass)
-- Uploads `web-shell-dist` and `web-remote-hello-dist` artifacts
-
-### Task 2.3: Android Build Job ✅ COMPLETE
-- [x] Add Android build job to CI workflow
-  - [x] Setup Java 17 (Temurin distribution)
-  - [x] Setup Android SDK via `android-actions/setup-android@v3`
-  - [x] Build mobile-remote-hello for Android
-  - [x] Build Android APK (debug)
-  - [x] Upload APK as artifact (7 day retention)
-  - [x] Cache Gradle dependencies
-
-**Features:**
-- Depends on `check` job (runs after lint/test pass)
-- Gradle cache for faster builds
-- Uploads `android-debug-apk` artifact
-
-### Task 2.4: iOS Build Job ✅ COMPLETE
-- [x] Add iOS build job to CI workflow
-  - [x] Use macOS-14 runner (Apple Silicon)
-  - [x] Setup Xcode 16.2 via `maxim-lobanov/setup-xcode@v1.6.0`
-  - [x] Run pod install with CocoaPods cache
-  - [x] Build mobile-remote-hello for iOS
-  - [x] Build iOS app for Simulator (no signing required)
-  - [x] Upload zipped .app bundle as artifact (7 day retention)
-
-**Features:**
-- Depends on `check` job (runs after lint/test pass)
-- CocoaPods download cache (`~/Library/Caches/CocoaPods`)
-- Builds for iPhone 16 Simulator
-- Uploads `ios-simulator-app` artifact (zipped .app bundle)
-
-**CI Fixes Applied:**
-- Removed `.xcode.env.local` from git (contained hardcoded local Node.js path)
-- Added `.xcode.env.local` to `.gitignore` (machine-specific, should not be versioned)
-- Clean pod install in CI: `rm -rf Pods Podfile.lock && pod install --repo-update`
-- Dynamic .app bundle path detection in zip step
-
-**GitHub Actions Updated to Latest Versions:**
-- actions/checkout: v6.0.1
-- actions/setup-node: v6.1.0
-- actions/upload-artifact: v6
-- actions/cache: v5
-- actions/setup-java: v5.1.0
-- maxim-lobanov/setup-xcode: v1.6.0
-
----
-
-## Phase 3: Deployment (CD)
-
-### Task 3.1: Web Deployment (Vercel) ✅ COMPLETE
-- [x] Create Vercel project for web-shell
-- [x] Create Vercel project for web-remote-hello
-- [x] Configure build settings in Vercel dashboard
-  - [x] Set "Ignored Build Step" to "Don't build anything" (GitHub Actions handles builds)
-  - [x] Output directory: `dist`
-- [x] Add VERCEL_TOKEN to GitHub secrets
-- [x] Add VERCEL_ORG_ID to GitHub secrets
-- [x] Add VERCEL_PROJECT_ID_WEB_SHELL to GitHub secrets
-- [x] Add VERCEL_PROJECT_ID_WEB_REMOTE to GitHub secrets
-- [x] Create `.github/workflows/deploy-web.yml`
-  - [x] Trigger on push to main
-  - [x] Deploy web-remote-hello first (remote before host)
-  - [x] Deploy web-shell after remote is deployed
-  - [x] Pass REMOTE_HELLO_URL env var to inject remote URL at build time
-- [x] Update web-shell rspack.config.mjs to support REMOTE_HELLO_URL env var
-
-**Notes:**
-- Vercel auto-deployments disabled ("Don't build anything") - GitHub Actions handles all builds
-- web-shell uses `REMOTE_HELLO_URL` env var (defaults to localhost:9003 for dev)
-- Deployment summary outputs URLs to GitHub Actions job summary
-- Vercel CLI output URL extraction includes validation (non-empty, well-formed https://) with error handling
-
-### Task 3.2: Android Deployment (GitHub Releases) ✅ COMPLETE
-- [x] Create `.github/workflows/deploy-android.yml`
-  - [x] Trigger on tag push (v*)
-  - [x] Build shared packages
-  - [x] Build mobile-remote-hello for Android
-  - [x] Build Android APK (debug for POC)
-  - [x] Create GitHub Release via softprops/action-gh-release@v2
-  - [x] Upload APK as release asset
-
-**Usage:**
 ```bash
-git tag v1.0.0
-git push --tags
+# 1. Create feature branch
+git checkout main
+git pull origin main
+git checkout -b feature/my-feature
+
+# 2. Make changes, commit
+git add .
+git commit -m "feat: add new feature"
+
+# 3. Push and create PR
+git push -u origin feature/my-feature
+# Create PR via GitHub UI or CLI
+
+# 4. Wait for CI + E2E to pass (automated, ~20 min)
+# - CI runs first (~5 min)
+# - E2E runs in parallel (~15-20 min)
+
+# 5. Get review and merge
+# PR can only merge when ALL checks pass
+
+# 6. Staging auto-deploys (no action needed)
+# Verify at staging URLs if desired
 ```
 
-**Notes:**
-- Uses default Android debug keystore (no signing setup required)
-- APK is attached as a downloadable asset on the GitHub Release page
+### Creating a Release
 
-### Task 3.3: iOS Deployment (Simulator Build) ✅ COMPLETE
-- [x] Create `.github/workflows/deploy-ios.yml`
-  - [x] Trigger on tag push (v*)
-  - [x] Use macOS-14 runner (Apple Silicon)
-  - [x] Build shared packages
-  - [x] Build mobile-remote-hello for iOS
-  - [x] Build iOS app for Simulator
-  - [x] Zip .app bundle
-  - [x] Create GitHub Release via softprops/action-gh-release@v2
-  - [x] Upload zipped .app as release asset
-
-**Usage:**
 ```bash
-git tag v1.0.0
-git push --tags
+# 1. Ensure main is stable (all staging tests passing)
+git checkout main
+git pull origin main
+
+# 2. Create and push tag
+git tag v1.2.3
+git push origin v1.2.3
+
+# 3. Release workflow runs automatically:
+# - E2E re-runs (~20 min)
+# - If pass: deploys to production
+# - Creates GitHub Release with artifacts
+
+# 4. Monitor at: GitHub → Actions → Release workflow
 ```
 
-**Notes:**
-- Simulator-only build (cannot run on physical iOS devices)
-- No Apple Developer account or code signing required
-- Users can drag .app to Simulator or use `xcrun simctl install`
+### Hotfix Process
 
----
-
-## Phase 4: Workflow Enhancements
-
-### Task 4.1: Caching Strategy ✅ COMPLETE
-- [x] Cache node_modules with yarn.lock hash (via `actions/setup-node` with `cache: 'yarn'`)
-- [x] Cache Gradle dependencies (~/.gradle/caches and ~/.gradle/wrapper)
-- [x] Cache CocoaPods download cache (~/Library/Caches/CocoaPods)
-- [x] Rspack build outputs - Not cached (marginal benefit, builds are fast ~5s)
-- [x] Add build timing annotations (`::group::` / `::endgroup::` for collapsible logs)
-
-**Caching summary:**
-| Workflow | Yarn | Gradle | CocoaPods |
-|----------|------|--------|-----------|
-| ci.yml | ✅ | ✅ | ✅ |
-| deploy-web.yml | ✅ | N/A | N/A |
-| deploy-android.yml | ✅ | ✅ | N/A |
-| deploy-ios.yml | ✅ | N/A | ✅ |
-
-**Notes:**
-- Rspack persistent caching not added - builds complete in ~5s without it
-- Build timing groups added to ci.yml for better GitHub Actions log visibility
-
-### Task 4.2: PR Checks ✅ COMPLETE
-- [x] Add required status checks for PRs (manual GitHub UI configuration)
-- [x] Configure branch protection rules on main (manual GitHub UI configuration)
-- [x] Add PR comment with build status/artifact links (automated via `pr-summary` job)
-
-**Automated (ci.yml):**
-- Added `pr-summary` job that runs after all builds complete on PRs
-- Posts a comment with build status table and link to download artifacts
-- Updates existing comment on subsequent pushes (doesn't spam)
-
-**Manual GitHub Configuration Required:**
-To enable branch protection, go to **Settings → Branches → Add branch protection rule**:
-1. Branch name pattern: `main`
-2. Enable: "Require a pull request before merging"
-3. Enable: "Require status checks to pass before merging"
-4. Required status checks:
-   - `Lint, Typecheck, Test`
-   - `Build Web`
-   - `Build Android`
-   - `Build iOS (Simulator)`
-5. Enable: "Require branches to be up to date before merging" (optional)
-6. Enable: "Do not allow bypassing the above settings" (recommended)
-
-### Task 4.3: Version Management ✅ COMPLETE
-- [x] Add version validation check
-  - [x] Verify no `^` or `~` in dependencies
-  - [x] Verify Node.js version matches .nvmrc
-  - [x] Verify Yarn version matches packageManager
-
-**Implementation:**
-- Created `scripts/validate-versions.js` - validates:
-  - All dependencies use exact versions (no `^`, `~`, `>=`, `*`)
-  - Internal workspace deps (`@universal/*`) are allowed to use `*`
-  - Node.js version matches `.nvmrc`
-  - Yarn version matches `packageManager` field in package.json
-- Added `yarn validate:versions` script to root package.json
-- Added validation step to CI workflow (runs after install, before build)
-
-### Task 4.4: Security Scanning ✅ COMPLETE
-- [x] Add dependency vulnerability scanning (yarn audit)
-- [x] Add CodeQL analysis for JavaScript/TypeScript
-- [x] Enable GitHub secret scanning alerts
-
-**Implementation:**
-- Added `yarn audit` step to CI workflow (informational, doesn't fail builds)
-- Created `.github/workflows/codeql.yml` for CodeQL security analysis:
-  - Runs on PRs to main and weekly scheduled scan (Sundays 00:00 UTC)
-  - Uses `security-extended` query suite
-- GitHub secret scanning is enabled by default for public repositories
-  - To verify: Settings → Code security and analysis → Secret scanning
-
-### Task 4.5: E2E Testing ✅ COMPLETE
-- [x] Evaluate E2E testing frameworks
-  - [x] Web: Playwright (chosen for better cross-browser support and CI integration)
-  - [ ] Mobile: Detox vs Maestro (future - currently runs on release tags)
-- [x] Configure E2E test workflow
-  - [x] Web E2E: Triggered by `ready-to-merge` label on PRs (avoids running on every push)
-  - [x] Mobile E2E: Runs on release tags (minimizes macOS runner costs)
-  - [x] Separate workflow files: `e2e-web.yml`, `deploy-android.yml`, `deploy-ios.yml`
-- [x] Web E2E setup
-  - [x] Playwright installed and configured in `packages/web-shell`
-  - [x] Basic smoke tests for web-shell
-  - [x] Tests run in CI with HTML report upload
-- [ ] Mobile E2E setup (future - runs on tag push for now)
-  - [ ] Install and configure Detox or Maestro
-  - [ ] Create basic smoke tests for Android
-  - [ ] Create basic smoke tests for iOS Simulator
-
----
-
-## Phase 5: Standalone Mode CI/CD
-
-Standalone mode allows mobile-remote-hello to run as an independent "Super App" without the host shell. This is useful for testing remotes in isolation and demonstrating the Module Federation concept.
-
-### Task 5.1: Add Standalone Build Scripts ✅ COMPLETE
-- [x] `build:standalone` script in mobile-remote-hello package.json
-- [x] `rspack.standalone.config.mjs` configuration
-- [x] Platform-specific dist outputs: `dist/standalone/android/`, `dist/standalone/ios/`
-- [x] Port configuration: Android 8083, iOS 8084
-- [x] Kill scripts for standalone bundlers
-
-**Note:** This task was completed prior to CI/CD implementation.
-
-### Task 5.2: Add Standalone Android Build to CI ✅ COMPLETE
-- [x] Add `build-standalone-android` job to `.github/workflows/ci.yml`
-  - [x] Build standalone bundle for Android
-  - [x] Build standalone Android APK (debug)
-  - [x] Upload APK as artifact (`standalone-android-debug-apk`)
-- [x] Depends on `check` job
-- [x] Uses existing Java 17, Android SDK, Gradle caching setup
-
-### Task 5.3: Add Standalone iOS Build to CI ✅ COMPLETE
-- [x] Add `build-standalone-ios` job to `.github/workflows/ci.yml`
-  - [x] Use macOS-14 runner with Xcode 16.2
-  - [x] Build standalone bundle for iOS
-  - [x] Run pod install with clean slate
-  - [x] Build standalone iOS app for Simulator
-  - [x] Zip and upload .app bundle as artifact (`standalone-ios-simulator-app`)
-- [x] Depends on `check` job
-- [x] Uses existing CocoaPods caching setup
-
-### Task 5.4: Update Deploy Android Workflow ✅ COMPLETE
-- [x] Update `.github/workflows/deploy-android.yml` to include standalone APK
-  - [x] Build both host and standalone APKs
-  - [x] Rename APKs: `mobile-host-debug.apk`, `mobile-remote-standalone-debug.apk`
-  - [x] Add both APKs to GitHub Release
-  - [x] Update release body with standalone instructions
-
-### Task 5.5: Update Deploy iOS Workflow ✅ COMPLETE
-- [x] Update `.github/workflows/deploy-ios.yml` to include standalone app
-  - [x] Build both host and standalone iOS apps
-  - [x] Rename zips: `mobile-host-simulator.zip`, `mobile-remote-standalone-simulator.zip`
-  - [x] Add both zips to GitHub Release
-  - [x] Update release body with standalone instructions
-
-### Task 5.6: Update PR Summary Comment ✅ COMPLETE
-- [x] Update `pr-summary` job in ci.yml
-  - [x] Add standalone build status rows to table
-  - [x] Add standalone artifacts to artifacts table
-  - [x] Add `build-standalone-android` and `build-standalone-ios` to needs array
-
-### Task 5.7: Update Documentation ✅ COMPLETE
-- [x] Update `docs/CI-CD-IMPLEMENTATION-PLAN.md` with Phase 5
-- [x] Update Workflow Files Summary table
-- [x] Update Success Criteria section
-
----
-
-## Phase 6: Production Mobile Builds (Future)
-
-These tasks are required for fully standalone mobile apps that work without a dev server (Metro bundler). Release builds embed the JavaScript bundle directly in the app binary.
-
-### Debug vs Release Builds
-
-| Aspect | Debug Build (Current) | Release Build (Phase 6) |
-|--------|----------------------|-------------------------|
-| **JS Bundle** | Loaded from Metro dev server | Embedded in app binary |
-| **Metro Required** | Yes (must be running) | No (fully standalone) |
-| **Performance** | Slower (development mode) | Optimized, minified |
-| **Debugging** | Enabled (React DevTools, etc.) | Disabled |
-| **Signing** | Debug keystore / Dev cert | Release keystore / Distribution cert |
-| **Distribution** | Developer testing only | Can distribute to testers/users |
-| **Developer Account** | Not required | Android: No, iOS: Yes ($99/year) |
-
-### Task 6.1: Android Release Build ✅ COMPLETE
-- [x] Create release signing keystore (free, self-signed)
-  ```bash
-  keytool -genkeypair -v -storetype PKCS12 \
-    -keystore my-release-key.keystore \
-    -alias my-key-alias \
-    -keyalg RSA -keysize 2048 -validity 10000
-  ```
-- [x] Configure `android/app/build.gradle` for release signing:
-  - Updated both `packages/mobile-host/android/app/build.gradle` and `packages/mobile-remote-hello/android/app/build.gradle`
-  - Uses environment variables: `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
-  - Falls back to debug signing for local development when env vars not set
-- [x] Add GitHub Secrets for signing:
-  - `ANDROID_KEYSTORE_BASE64` - Base64-encoded keystore file
-  - `ANDROID_KEYSTORE_PASSWORD` - Keystore password
-  - `ANDROID_KEY_ALIAS` - Key alias
-  - `ANDROID_KEY_PASSWORD` - Key password
-  - `GOOGLE_SERVICES_JSON_BASE64` - Base64-encoded google-services.json (required for Firebase Auth)
-- [x] Update `deploy-android.yml` workflow:
-  - Decodes keystore from `ANDROID_KEYSTORE_BASE64` secret
-  - Decodes google-services.json from `GOOGLE_SERVICES_JSON_BASE64` secret (required for Firebase Auth)
-  - Builds `assembleRelease` instead of `assembleDebug`
-  - Outputs `mobile-host-release.apk` and `mobile-remote-standalone-release.apk`
-  - Cleans up sensitive files (keystore and google-services.json) after build for security
-- [x] ProGuard/R8 minification configured (controlled by `enableProguardInReleaseBuilds` flag)
-- [ ] Test release APK on physical device (pending first tag push)
-
-**Cost:** $0 (Android release builds require no developer account)
-
-### Task 6.2: Android Distribution Options
-| Method | Cost | Pros | Cons |
-|--------|------|------|------|
-| **Direct APK** | $0 | Simple, no accounts | Manual install, no auto-updates |
-| **Firebase App Distribution** | $0 | CI/CD integration, tester management | Requires Firebase project |
-| **Diawi** | $0 (limited) | Very easy | Links expire, limits on free tier |
-| **Google Play Internal Testing** | $25 one-time | Uses Play Store, auto-updates | Requires Play Console account |
-
-**Recommended for testing:** Firebase App Distribution (free, integrates with GitHub Actions)
-
-### Task 6.3: iOS Release Build
-- [ ] Create Apple Developer account ($99/year) - **Required**
-- [ ] Generate distribution certificate:
-  - Keychain Access → Certificate Assistant → Request Certificate from CA
-  - Apple Developer Portal → Certificates → Create Distribution Certificate
-- [ ] Create provisioning profile:
-  - **Ad Hoc:** For testing on specific devices (up to 100 UDIDs)
-  - **App Store:** For TestFlight and App Store
-- [ ] Configure Xcode project for release signing:
-  - Set Bundle Identifier
-  - Configure signing team and provisioning profile
-- [ ] Export signing credentials for CI:
-  - Export certificate as .p12 file with password
-  - Download provisioning profile (.mobileprovision)
-- [ ] Add GitHub Secrets for signing:
-  - `IOS_CERTIFICATE_BASE64` - Base64-encoded .p12 file
-  - `IOS_CERTIFICATE_PASSWORD` - Certificate password
-  - `IOS_PROVISIONING_PROFILE_BASE64` - Base64-encoded provisioning profile
-  - `APPLE_TEAM_ID` - Apple Developer Team ID
-- [ ] Update `deploy-ios.yml` workflow:
-  ```yaml
-  - name: Install signing certificate
-    run: |
-      echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > cert.p12
-      security create-keychain -p "" build.keychain
-      security import cert.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
-      security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-      
-  - name: Install provisioning profile
-    run: |
-      mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-      echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
-      
-  - name: Build release archive
-    run: |
-      xcodebuild -workspace MobileHostTmp.xcworkspace \
-        -scheme MobileHostTmp \
-        -configuration Release \
-        -archivePath build/MobileHostTmp.xcarchive \
-        archive
-        
-  - name: Export IPA
-    run: |
-      xcodebuild -exportArchive \
-        -archivePath build/MobileHostTmp.xcarchive \
-        -exportPath build/ipa \
-        -exportOptionsPlist ExportOptions.plist
-  ```
-- [ ] Create `ExportOptions.plist` for export configuration
-- [ ] Test IPA on physical device
-
-**Cost:** $99/year (Apple Developer Program required)
-
-### Task 6.4: iOS Distribution Options
-| Method | Cost | Pros | Cons |
-|--------|------|------|------|
-| **TestFlight** | $99/year (included) | Up to 10,000 testers, OTA install | Requires App Store review for external testers |
-| **Ad Hoc** | $99/year (included) | Direct install, no review | Limited to 100 devices/year, requires UDIDs |
-| **Firebase App Distribution** | $99/year (for cert) | Free service, CI integration | Still requires Apple cert, UDID registration |
-| **Enterprise** | $299/year | Unlimited devices, no UDID | Strict eligibility, audit requirements |
-
-**Recommended for testing:** TestFlight (internal testers don't require review)
-
-### Task 6.5: Firebase App Distribution Setup ✅ COMPLETE
-
-Firebase App Distribution provides OTA (over-the-air) distribution for testers, with tester management, release notes, and CI/CD integration. This setup also lays the groundwork for Firebase Authentication (Phase 7).
-
-#### Prerequisites (Manual Steps) ✅
-
-**Step 1: Create Firebase Project** ✅
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Click "Create a project" → Enter name: `universal-mfe`
-3. Enable/disable Google Analytics as preferred
-4. Click "Create project"
-
-**Step 2: Add Android Apps to Firebase** ✅
-1. In Firebase Console, click "Add app" → Android icon
-2. For Host App:
-   - Package name: `com.mobilehosttmp`
-   - App nickname: `Universal MFE Host`
-   - Click "Register app"
-3. For Standalone App (optional):
-   - Package name: `com.mobileremotehello`
-   - App nickname: `Universal MFE Remote Standalone`
-   - Click "Register app"
-4. Download `google-services.json` for each app (needed for Auth later)
-
-**Step 3: Enable App Distribution** ✅
-1. In Firebase Console sidebar: Release & Monitor → App Distribution
-2. Click "Get Started"
-3. Create tester groups:
-   - `internal-testers` - Core team
-   - `beta-testers` - External beta users
-
-**Step 4: Create Service Account for CI/CD** ✅
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select your Firebase project
-3. IAM & Admin → Service Accounts → "Create Service Account"
-   - Name: `github-actions-firebase`
-   - Role: `Firebase App Distribution Admin`
-4. Click on the service account → Keys → Add Key → Create new key → JSON
-5. Download and save the JSON key file securely
-
-**Step 5: Add GitHub Secrets** ✅
-```text
-FIREBASE_SERVICE_ACCOUNT_JSON    - Full contents of the service account JSON file
-FIREBASE_APP_ID_ANDROID_HOST     - App ID from Firebase Console → Project Settings → Your apps (e.g., 1:123456789:android:abc123)
-FIREBASE_APP_ID_ANDROID_REMOTE   - App ID for standalone app (if distributing)
-```
-
-#### Implementation Tasks ✅
-
-- [x] Complete manual prerequisites above
-- [x] Add `google-services.json` to mobile apps (gitignored):
-  - `packages/mobile-host/android/app/google-services.json`
-  - `packages/mobile-remote-hello/android/app/google-services.json`
-- [x] Add Firebase dependencies to `android/app/build.gradle`:
-  ```groovy
-  apply plugin: 'com.google.gms.google-services'
-  ```
-- [x] Add Google Services plugin to `android/build.gradle`:
-  ```groovy
-  buildscript {
-    dependencies {
-      classpath 'com.google.gms:google-services:4.4.4'
-    }
-  }
-  ```
-- [x] Update `deploy-android.yml` workflow with Firebase App Distribution upload steps
-- [ ] Test distribution by pushing a tag and verifying testers receive email notification (pending merge)
-
-**Cost:** $0 (Firebase App Distribution is free)
-
----
-
-## Phase 6.6: Firebase Hosting for Mobile Remote Bundles ✅ COMPLETE
-
-Firebase Hosting provides a fast, secure CDN for hosting mobile remote bundles (Module Federation remote containers and chunks). This enables production release builds to load remote modules from a publicly accessible URL.
-
-### Overview
-
-**Why Firebase Hosting?**
-- Free tier includes 10 GB storage, 360 MB/day bandwidth
-- Global CDN with automatic SSL/TLS
-- CORS headers configurable
-- GitHub Actions integration
-- Same project as Firebase App Distribution
-
-**What gets deployed?**
-- `packages/mobile-remote-hello/dist/android/*.bundle` - All production remote bundles
-- Includes container bundle and all async chunks (numeric IDs in production)
-
-### Task 6.6.1: Firebase Hosting Setup ✅ COMPLETE
-
-**Step 1: Initialize Firebase Hosting** ✅
 ```bash
-# Install Firebase CLI if not already installed
-npm install -g firebase-tools
-
-# Login to Firebase
-firebase login
-
-# Initialize hosting in project root
-firebase init hosting
+# Same as regular development - trunk-based
+git checkout main
+git checkout -b hotfix/critical-bug
+# Make fix
+git push -u origin hotfix/critical-bug
+# Create PR, wait for CI+E2E, merge
+# Then tag for immediate release
+git checkout main
+git pull
+git tag v1.2.4
+git push origin v1.2.4
 ```
-
-**Configuration** (`firebase.json`):
-```json
-{
-  "hosting": {
-    "public": "packages/mobile-remote-hello/dist/android",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "headers": [
-      {
-        "source": "**/*.bundle",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/javascript"
-          },
-          {
-            "key": "Access-Control-Allow-Origin",
-            "value": "*"
-          },
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=3600"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-**Step 2: Build Production Remote Bundles** ✅
-```bash
-cd packages/mobile-remote-hello
-NODE_ENV=production PLATFORM=android yarn build:remote
-```
-
-**Critical**: Remote bundles MUST be built with `NODE_ENV=production`. Development mode bundles contain React DevTools code that crashes in production release builds.
-
-**Step 3: Deploy to Firebase Hosting** ✅
-```bash
-firebase deploy --only hosting
-```
-
-**Verification**:
-```bash
-# Check deployed bundle
-curl -I https://universal-mfe.web.app/HelloRemote.container.js.bundle
-
-# Should return:
-# HTTP/2 200
-# content-type: application/javascript
-# access-control-allow-origin: *
-```
-
-### Task 6.6.2: Mobile Host Configuration ✅ COMPLETE
-
-**Update Production Remote URL** (`packages/mobile-host/src/config/remoteConfig.ts`):
-```typescript
-const PRODUCTION_REMOTE_URL = 'https://universal-mfe.web.app';
-
-// Enforce HTTPS in production
-if (!__DEV__ && !PRODUCTION_REMOTE_URL.startsWith('https://')) {
-  throw new Error('[RemoteConfig] Production remote URL must use HTTPS for security');
-}
-```
-
-**ScriptManager Resolver Requirements**:
-- Must handle numeric chunk IDs (production builds use numeric IDs like `889`, `895`)
-- Must validate scriptIds to prevent path traversal attacks
-- Must return `fetch: true` for all remote scripts
-
-See `docs/MOBILE-RELEASE-BUILD-FIXES.md` for detailed implementation.
-
-### Task 6.6.3: CI/CD Integration ✅ COMPLETE
-
-**Status**: Implemented in `.github/workflows/deploy-mobile-remote-bundles.yml`
-
-**Implementation**:
-```yaml
-name: Deploy Mobile Remote Bundles
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'packages/mobile-remote-hello/**'
-      - 'packages/shared-*/**'
-  workflow_dispatch:
-
-jobs:
-  deploy-android-bundles:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24.11.0'
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Build shared packages
-        run: yarn build:shared
-
-      - name: Build production remote bundle (Android)
-        run: |
-          cd packages/mobile-remote-hello
-          NODE_ENV=production PLATFORM=android yarn build:remote
-
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-          channelId: live
-          projectId: universal-mfe
-```
-
-**Required GitHub Secrets**:
-- `FIREBASE_SERVICE_ACCOUNT` - Service account JSON from Firebase Console → Project Settings → Service Accounts
-
-### Testing Checklist
-
-- [x] Build production remote bundle with `NODE_ENV=production`
-- [x] Deploy to Firebase Hosting
-- [x] Verify bundle accessible via HTTPS
-- [x] Verify CORS headers present
-- [x] Test loading in mobile host release build on emulator
-- [x] Verify all chunks load (numeric IDs in production)
-- [x] Set up CI/CD workflow
-- [ ] Test on physical Android device
-- [ ] Test on physical iOS device
-
-**Cost:** $0 (within Firebase Hosting free tier)
 
 ---
 
-## Phase 6.7: iOS Simulator Release Builds ✅ COMPLETE
+## Cost Estimation
 
-**Objective:** Build iOS release configuration apps for simulator testing, matching the Android release build setup (standalone, production bundles, no Metro bundler required).
+### GitHub Actions Minutes
 
-**Context:**
-- ~~Currently: iOS workflow builds Debug configuration that requires Metro bundler~~
-- ✅ Completed: iOS workflow now builds Release configuration with embedded production bundles
-- Limitation: Simulator-only (physical devices require Apple Developer account)
-- ✅ Achieved: Complete platform parity for release testing without paid Apple account
+| Runner | Cost | Free Tier | Our Usage (Est.) |
+|--------|------|-----------|------------------|
+| Ubuntu | 1x | 2,000 min/month | ~800 min |
+| macOS | 10x | 200 min/month | ~150 min (= 1,500 min equivalent) |
 
-### Task 6.7.1: Update Mobile-Host iOS Release Build for Simulator ✅ COMPLETE
+**Monthly Estimate:** Within free tier for moderate PR volume (10-20 PRs/month)
 
-**Objective:** Build mobile-host iOS app in Release configuration with production bundles for simulator.
+### External Services
 
-**Steps:**
-- [x] Update `packages/mobile-host/rspack.config.mjs`:
-  - [x] Verify PatchMFConsolePlugin is configured (already present for Android)
-  - [x] Ensure production mode respects `NODE_ENV=production`
-  - [x] Verify Hermes bytecode compilation is enabled
-
-- [x] Update `.github/workflows/deploy-ios.yml`:
-  - [x] Change `-configuration Debug` to `-configuration Release` for host build
-  - [x] Add production bundle build step before Xcode build:
-    ```yaml
-    - name: Build Host iOS Production Bundle
-      working-directory: packages/mobile-host
-      run: NODE_ENV=production PLATFORM=ios npx rspack build --config ./rspack.config.mjs
-    ```
-  - [x] Update release notes to indicate these are Release builds (not Debug)
-  - [x] Update installation instructions (no Metro bundler needed)
-
-- [x] Test locally on macOS:
-  ```bash
-  cd packages/mobile-host
-  NODE_ENV=production PLATFORM=ios npx rspack build
-  cd ios
-  xcodebuild -workspace MobileHostTmp.xcworkspace \
-    -scheme MobileHostTmp \
-    -configuration Release \
-    -sdk iphonesimulator \
-    -destination 'platform=iOS Simulator,name=iPhone 16' \
-    -derivedDataPath ./build \
-    build
-  ```
-
-- [x] Verify app runs standalone:
-  - [x] No Metro bundler required
-  - [x] Loads production remote from `https://universal-mfe.web.app`
-  - [x] All chunks resolve correctly
-  - [x] PatchMFConsolePlugin prevents console crashes
-
-**Expected Output:**
-- `mobile-host-simulator-release.zip` - Release configuration app bundle
-- Works completely offline (no dev server)
-- Production bundles embedded
-
-**Cost:** $0 (no Apple account required for simulator builds)
-
-### Task 6.7.2: Update Mobile-Remote-Hello iOS Release Build for Simulator ✅ COMPLETE
-
-**Objective:** Build mobile-remote-hello iOS app in Release configuration for simulator.
-
-**Steps:**
-- [x] Update `packages/mobile-remote-hello/rspack.config.mjs`:
-  - [x] Verify production mode configuration
-  - [x] Ensure standalone build works
-
-- [x] Update `.github/workflows/deploy-ios.yml`:
-  - [x] Change `-configuration Debug` to `-configuration Release` for standalone build
-  - [x] Add production bundle build step:
-    ```yaml
-    - name: Build Standalone iOS Production Bundle
-      working-directory: packages/mobile-remote-hello
-      run: NODE_ENV=production PLATFORM=ios yarn build:standalone
-    ```
-
-- [x] Test locally on macOS:
-  ```bash
-  cd packages/mobile-remote-hello
-  NODE_ENV=production PLATFORM=ios yarn build:standalone
-  cd ios
-  xcodebuild -workspace MobileRemoteHello.xcworkspace \
-    -scheme MobileRemoteHello \
-    -configuration Release \
-    -sdk iphonesimulator \
-    -destination 'platform=iOS Simulator,name=iPhone 16' \
-    -derivedDataPath ./build \
-    build
-  ```
-
-**Expected Output:**
-- `mobile-remote-standalone-simulator.zip` - Release configuration app bundle
-- Works completely offline
-- Production bundles embedded
-
-**Cost:** $0 (no Apple account required)
-
-### Task 6.7.3: Verify and Extend PatchMFConsolePlugin for iOS ✅ COMPLETE
-
-**Objective:** Confirm and extend PatchMFConsolePlugin to handle iOS-specific initialization issues.
-
-**iOS-Specific Issue Discovered:**
-iOS Release builds crash with `TypeError: Cannot read property 'constants' of undefined` because React Native code accesses `Platform.constants.reactNativeVersion` and `Platform.isTesting` during module initialization, before React Native's runtime is ready.
-
-**Solution Implemented:**
-- [x] Extended PatchMFConsolePlugin with comprehensive Platform polyfill
-- [x] Polyfill provides `Platform.constants`, `.isTesting`, `.OS`, `.Version`, `.select()`
-- [x] Polyfill persists until real Platform module loads, then delegates to it
-- [x] Applied via source replacement: `_Platform.default` → `__rn_platform_polyfill__`
-
-**Platform Polyfill Code:**
-```javascript
-// Temporary Platform polyfill until real Platform loads
-globalThis.__rn_platform_polyfill__ = {
-  get constants() {
-    return _realPlatform !== null ? _realPlatform.constants : {
-      reactNativeVersion: { major: 0, minor: 80, patch: 0 },
-      isTesting: false
-    };
-  },
-  get isTesting() { /* ... */ },
-  get OS() { /* ... */ },
-  get Version() { /* ... */ },
-  select: function(obj) { /* ... */ },
-  __setRealPlatform: function(platform) { _realPlatform = platform; }
-};
-```
-
-**iOS-Specific Xcode Integration:**
-- [x] Created custom bundling script: `ios/scripts/bundle-repack.sh`
-- [x] Modified Xcode project to use custom script instead of standard React Native bundler
-- [x] Script properly integrates with Xcode's build process and code signing
-- [x] Handles Debug (dev server) vs Release (embedded bundle) configurations
-
-**Custom Bundling Script:**
-```bash
-#!/bin/bash
-# ios/scripts/bundle-repack.sh
-set -e
-
-# For Release builds, create production bundle
-yarn build:ios
-
-# Copy the bundle to Xcode's destination
-cp "$PROJECT_ROOT/ios/main.jsbundle" "$DEST/main.jsbundle"
-```
-
-**Xcode Project Modification:**
-```javascript
-// ios/MobileHostTmp.xcodeproj/project.pbxproj
-shellScript = "set -e\n\n# Use custom Re.Pack bundling script\nexport NODE_BINARY=node\n\"${SRCROOT}/scripts/bundle-repack.sh\"\n";
-```
-
-**Testing Results:**
-- [x] iOS release builds work exactly like Android release builds
-- [x] No "console is not defined" errors
-- [x] No "Platform.constants is undefined" errors
-- [x] Host app (iPhone 15 simulator) - UI loads, remote loading works ✅
-- [x] Remote standalone app (iPhone 15 Pro simulator) - launches successfully ✅
-- [x] Module Federation v2 verified working
-- [x] Theme switching functional
-- [x] Standalone operation confirmed (no Metro bundler)
-
-**Comparison with Android:**
-- ✅ Same console polyfill prepended
-- ✅ Same Module Federation console patching
-- ✅ Enhanced Platform polyfill (iOS-critical, harmless on Android)
-- ✅ Same production bundle loading
-- ✅ Platform-agnostic implementation
-
-**Documentation:**
-- [x] Updated `docs/MOBILE-RELEASE-BUILD-FIXES.md` with iOS implementation details
-- [x] Added Platform polyfill documentation
-- [x] Documented custom Xcode bundling script approach
-
-**Cost:** $0
-
-### Task 6.7.4: Update Documentation ✅ COMPLETE
-
-**Steps:**
-- [x] Update `docs/CI-CD-IMPLEMENTATION-PLAN.md`:
-  - [x] Mark Phase 6.7 tasks as complete
-  - [x] Update status summary
-
-- [x] Update `docs/MOBILE-RELEASE-BUILD-FIXES.md`:
-  - [x] Change "iOS Testing Pending" to "iOS Simulator Testing Complete"
-  - [x] Add iOS simulator release build verification results
-  - [x] Document any iOS-specific issues or differences
-
-- [x] Update `README.md`:
-  - [x] Add iOS simulator release build instructions
-  - [x] Update release notes template
-
-- [x] Update `.github/workflows/deploy-ios.yml` release notes:
-  - [x] Change from "Debug Builds" to "Release Builds"
-  - [x] Remove Metro bundler requirement from instructions
-  - [x] Add note about standalone operation
-
-**Cost:** $0
-
-### Success Criteria for Phase 6.7
-
-| Metric | Target | Verification | Status |
-|--------|--------|--------------|--------|
-| iOS Host Release Build | ✅ Compiles successfully | `xcodebuild` succeeds with `-configuration Release` | ✅ PASS |
-| iOS Standalone Release Build | ✅ Compiles successfully | `xcodebuild` succeeds with `-configuration Release` | ✅ PASS |
-| PatchMFConsolePlugin on iOS | ✅ Works correctly | No console crashes, polyfill prepended | ✅ PASS |
-| Platform Polyfill | ✅ Handles iOS initialization | No Platform.constants crashes | ✅ PASS |
-| Custom Xcode Script | ✅ Integrates correctly | Bundle builds and copies to app | ✅ PASS |
-| Code Signing | ✅ Valid signature | App installs on simulator | ✅ PASS |
-| Standalone Operation | ✅ No Metro required | App runs completely offline | ✅ PASS |
-| Production Bundles | ✅ Loads from Firebase | Fetches from `https://universal-mfe.web.app` | ✅ PASS |
-| Module Federation | ✅ Remote loads correctly | Dynamic chunks resolve | ✅ PASS |
-| Host App UI | ✅ Renders correctly | iPhone 15 simulator | ✅ PASS |
-| Remote App UI | ✅ Renders correctly | iPhone 15 Pro simulator | ✅ PASS |
-| Remote Loading | ✅ "Load Remote" button works | Loads MF2 remote successfully | ✅ PASS |
-| Theme Switching | ✅ Works in remote | Theme changes apply | ✅ PASS |
-| Platform Parity | ✅ iOS matches Android | Same release build behavior | ✅ PASS |
-| CI/CD Automation | ✅ Workflow updated | Tag push builds and releases | ✅ PASS |
-
-### Task 6.7.5: CI/CD Workflow Integration ✅ COMPLETE
-
-**Objective:** Update GitHub Actions workflows to use the custom bundling scripts created in Phase 6.7.
-
-**Problem:**
-The `.github/workflows/deploy-ios.yml` workflow was using an outdated approach that:
-- Manually ran `npx rspack build` to create bundles
-- Set `SKIP_BUNDLING=1` to bypass Xcode bundling phase
-- Manually copied bundles into the app after build
-- **Did not use the custom bundling scripts** that contain the Platform polyfill fix
-
-**Solution:**
-Updated the workflow to let Xcode invoke the custom bundling scripts during the build process.
-
-**Changes Made:**
-
-1. **Mobile Host Build (lines 50-107):**
-   - Removed "Build Host iOS Production Bundle" step (manual rspack build)
-   - Removed `SKIP_BUNDLING=1` environment variable
-   - Removed manual bundle copy after Xcode build
-   - Added bundle verification check to ensure script succeeded
-
-2. **Mobile Remote Standalone Build (lines 125-179):**
-   - Removed "Build Standalone iOS Production Bundle" step
-   - Removed `SKIP_BUNDLING=1` environment variable
-   - Removed manual bundle copy after Xcode build
-   - Added bundle verification check
-
-**Workflow Steps Now:**
-```yaml
-# 1. Build shared packages
-- name: Build shared packages
-  run: yarn build:shared
-
-# 2. Build remote MF bundles (for host to consume)
-- name: Build mobile remote for iOS (MF bundles)
-  run: yarn build:mobile:ios
-
-# 3. Generate codegen
-- name: Generate React Native codegen for mobile-host
-  run: yarn react-native codegen
-
-# 4. Install CocoaPods
-- name: Install CocoaPods for Host
-  run: pod install --repo-update
-
-# 5. Build with Xcode (custom script runs automatically)
-- name: Build Host iOS app for Simulator
-  env:
-    NODE_ENV: production
-    PLATFORM: ios
-  run: |
-    xcodebuild \
-      -workspace MobileHostTmp.xcworkspace \
-      -scheme MobileHostTmp \
-      -configuration Release \
-      -sdk iphonesimulator \
-      -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
-      -derivedDataPath build \
-      build
-
-    # Verify bundle was created by custom bundling script
-    if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileHostTmp.app/main.jsbundle" ]; then
-      echo "❌ Error: main.jsbundle not found in app bundle"
-      exit 1
-    fi
-    echo "✅ Verified bundle exists in app"
-```
-
-**Benefits:**
-- ✅ Uses Platform polyfill fix from PatchMFConsolePlugin
-- ✅ Follows same build process as local development
-- ✅ Eliminates manual bundle path management
-- ✅ Ensures consistency between local and CI builds
-- ✅ Reduces workflow complexity (26 fewer lines, 8 fewer steps)
-
-**Verification:**
-When the workflow runs on next tag push, expect to see in logs:
-```
-🔧 Custom Re.Pack bundling script for iOS
-📂 Project root: /Users/runner/work/.../packages/mobile-host
-📦 Configuration: Release
-🎯 Platform: iphonesimulator
-🏗️  Building production bundle with Re.Pack...
-✅ Bundle created: /Users/runner/work/.../packages/mobile-host/ios/main.jsbundle
-✅ Bundle copied to: ...
-✨ Re.Pack bundling complete!
-✅ Verified bundle exists in app
-```
-
-**Other Workflows:**
-- `ci.yml` - No changes needed (builds Debug configuration, uses dev server)
-- `e2e-mobile.yml` - No changes needed (builds Debug configuration)
-- `deploy-mobile-remote-bundles.yml` - No changes needed (only deploys MF bundles)
-
-**Files Modified:**
-- `.github/workflows/deploy-ios.yml` - Updated to use custom bundling scripts
-
-**Documentation:**
-- [x] Update this document (CI-CD-IMPLEMENTATION-PLAN.md)
-- [x] Mark CI/CD Automation as complete in success criteria table
-
-**Cost:** $0
-
-### Benefits of Phase 6.7
-
-1. **Platform Parity:** iOS release builds match Android capabilities
-2. **No Apple Account Required:** All testing can be done on simulators
-3. **Production Testing:** Verify production bundles before investing in Apple Developer account
-4. **Documentation Complete:** Full iOS release process documented
-5. **Foundation for Physical Devices:** When Apple account is acquired, just add code signing
-6. **CI/CD Integration:** Automated iOS release builds via GitHub Actions
-7. **Cost:** $0 - Complete iOS release testing infrastructure at zero cost
-
-### Known Limitations
-
-- **Simulator Only:** Cannot test on physical iOS devices without Apple Developer account
-- **No TestFlight:** Cannot use Apple's OTA distribution
-- **macOS Required:** Testers must have macOS with Xcode to run simulator builds
-- **Not End-User Distribution:** Simulator builds are for internal testing only
-
-### Future: Physical Device Support
-
-When Apple Developer account is acquired ($99/year):
-- [ ] Add code signing certificates (Task 6.3)
-- [ ] Add provisioning profiles
-- [ ] Change from `-sdk iphonesimulator` to `-sdk iphoneos`
-- [ ] Export as IPA instead of .app bundle
-- [ ] Distribute via TestFlight or Firebase App Distribution
-
-**Cost:** $99/year (Apple Developer Program)
+| Service | Tier | Cost |
+|---------|------|------|
+| Vercel | Hobby | $0 |
+| Firebase Hosting | Spark | $0 |
+| Firebase App Distribution | Free | $0 |
+| **Total** | | **$0/month** |
 
 ---
 
-## Phase 7: Firebase Authentication (Future)
+## Comparison: Before vs After
 
-Firebase Authentication will provide secure user authentication with support for email/password and social login providers. This builds on the Firebase project created in Task 6.5.
-
-### Overview
-
-| Provider | Setup Complexity | Notes |
-|----------|-----------------|-------|
-| Email/Password | Easy | Built-in, no external setup |
-| Google Sign-In | Easy | Just enable in Firebase console |
-| Apple Sign-In | Medium | Requires Apple Developer account ($99/year) |
-| Facebook | Medium | Requires Facebook Developer app |
-| GitHub | Easy | Requires GitHub OAuth app |
-| Phone (SMS) | Easy | Pay-per-use for SMS |
-
-### Task 7.1: Firebase Auth Setup (Android)
-- [ ] Enable authentication providers in Firebase Console:
-  - Authentication → Sign-in method → Enable desired providers
-- [ ] Add Firebase Auth dependencies:
-  ```bash
-  yarn workspace @universal/mobile-host add @react-native-firebase/app @react-native-firebase/auth
-  yarn workspace @universal/mobile-remote-hello add @react-native-firebase/app @react-native-firebase/auth
-  ```
-- [ ] For Google Sign-In, add additional dependency:
-  ```bash
-  yarn workspace @universal/mobile-host add @react-native-google-signin/google-signin
-  ```
-- [ ] Configure SHA-1 fingerprint in Firebase Console (required for Google Sign-In):
-  ```bash
-  cd packages/mobile-host/android
-  ./gradlew signingReport
-  ```
-- [ ] Update Android configuration for Firebase
-
-### Task 7.2: Firebase Auth Setup (iOS)
-- [ ] Add Firebase Auth pods (automatic via react-native-firebase)
-- [ ] Download and add `GoogleService-Info.plist` to iOS project
-- [ ] Configure URL schemes for social login providers
-- [ ] For Apple Sign-In, configure in Apple Developer Portal
-
-### Task 7.3: Integrate with shared-auth-store
-- [ ] Update `packages/shared-auth-store` to use Firebase Auth:
-  ```typescript
-  // src/authStore.ts
-  import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
-  
-  interface AuthState {
-    user: FirebaseAuthTypes.User | null;
-    isLoading: boolean;
-    isAuthenticated: boolean;
-    
-    // Actions
-    initAuth: () => () => void;  // Returns unsubscribe function
-    signInWithEmail: (email: string, password: string) => Promise<void>;
-    signInWithGoogle: () => Promise<void>;
-    signUp: (email: string, password: string) => Promise<void>;
-    signOut: () => Promise<void>;
-    resetPassword: (email: string) => Promise<void>;
-  }
-  
-  export const useAuthStore = create<AuthState>((set) => ({
-    user: null,
-    isLoading: true,
-    isAuthenticated: false,
-    
-    initAuth: () => {
-      const unsubscribe = auth().onAuthStateChanged((user) => {
-        set({ 
-          user, 
-          isLoading: false,
-          isAuthenticated: !!user 
-        });
-      });
-      return unsubscribe;
-    },
-    
-    signInWithEmail: async (email, password) => {
-      await auth().signInWithEmailAndPassword(email, password);
-    },
-    
-    signInWithGoogle: async () => {
-      // Implement Google Sign-In flow
-    },
-    
-    signUp: async (email, password) => {
-      await auth().createUserWithEmailAndPassword(email, password);
-    },
-    
-    signOut: async () => {
-      await auth().signOut();
-    },
-    
-    resetPassword: async (email) => {
-      await auth().sendPasswordResetEmail(email);
-    },
-  }));
-  ```
-
-### Task 7.4: Create Auth UI Components
-- [ ] Create universal login/signup screens in `shared-hello-ui`:
-  - `LoginScreen.tsx` - Email/password + social login buttons
-  - `SignUpScreen.tsx` - Registration form
-  - `ForgotPasswordScreen.tsx` - Password reset
-- [ ] Use React Native primitives for cross-platform compatibility
-- [ ] Integrate with `shared-theme-context` for theming
-- [ ] Integrate with `shared-i18n` for translations (Hindi/English)
-
-### Task 7.5: Protected Routes
-- [ ] Update `shared-router` to support protected routes:
-  ```typescript
-  interface Route {
-    path: string;
-    component: React.ComponentType;
-    protected?: boolean;  // Requires authentication
-    roles?: string[];     // Optional role-based access
-  }
-  ```
-- [ ] Add authentication guard in hosts
-- [ ] Redirect unauthenticated users to login
-
-### Task 7.6: Web Authentication
-- [ ] Add Firebase web SDK for web-shell and web-remote-hello:
-  ```bash
-  yarn workspace @universal/web-shell add firebase
-  yarn workspace @universal/web-remote-hello add firebase
-  ```
-- [ ] Create platform abstraction for auth (mobile uses @react-native-firebase, web uses firebase SDK)
-- [ ] Ensure auth state syncs across MFEs via event bus
-
-### Cost Summary for Phase 7
-
-| Item | Cost | Notes |
-|------|------|-------|
-| Firebase Auth (Spark Plan) | $0 | Up to 50K MAU free |
-| Google Sign-In | $0 | Included with Firebase |
-| Apple Sign-In | $99/year | Requires Apple Developer account |
-| Facebook Login | $0 | Requires Facebook Developer app |
-| Phone Auth (SMS) | ~$0.01/verification | Pay-per-use after free tier |
-| **Minimum** | **$0** | Email + Google Sign-In |
-| **With Apple Sign-In** | **$99/year** | Required for iOS App Store apps |
-
-**Note:** Apple requires apps that offer social login to also offer "Sign in with Apple" if distributed via App Store.
-
-### Cost Summary for Phase 6
-
-| Item | Cost | Required For |
-|------|------|--------------|
-| Android Release Keystore | $0 (self-signed) | Android release builds |
-| Apple Developer Account | $99/year | iOS release builds (required) |
-| Google Play Console | $25 one-time | Play Store distribution only |
-| Firebase App Distribution | $0 | OTA distribution (optional) |
-| **Minimum for Android** | **$0** | Release APK for testing |
-| **Minimum for iOS** | **$99/year** | Release IPA for testing |
-| **Full distribution** | **$124 first year** | Both platforms, Play Store |
+| Aspect | Before (Broken) | After (World-Class) |
+|--------|-----------------|---------------------|
+| Web E2E timing | After merge (manual label) | Before merge (required) |
+| Mobile E2E timing | Only on release tag | Before merge (required) |
+| E2E as merge blocker | No | Yes |
+| Staging environment | None | Full staging |
+| Platform parity | Different gates per platform | Same gates all platforms |
+| Manual steps | Label required for E2E | Zero manual steps |
+| Production safety | Broken code could deploy | E2E re-verified on release |
 
 ---
 
-## Workflow Files Summary
+## Implementation Checklist
 
-| File | Purpose | Trigger |
-|------|---------|---------|
-| `.github/workflows/ci.yml` | Lint, typecheck, test, build | PR to main |
-| `.github/workflows/e2e-web.yml` | Web E2E tests (Playwright) | Label `ready-to-merge` on PR |
-| `.github/workflows/codeql.yml` | CodeQL security analysis | PR to main, Weekly |
-| `.github/workflows/deploy-web.yml` | Deploy to Vercel (no CI rerun) | Push to main (path-filtered) |
-| `.github/workflows/deploy-mobile-remote-bundles.yml` | Deploy MF bundles to Firebase Hosting | Push to main (path-filtered) |
-| `.github/workflows/release-mobile.yml` | E2E tests → Deploy Android & iOS | Tag v* |
+### Prerequisites (Manual)
 
----
+- [ ] Vercel: Add staging domain for web-shell
+- [ ] Vercel: Add staging domain for web-remote
+- [ ] Firebase: Staging channel created
+- [ ] GitHub: Merge current `fix/mobile-deploy-flow` PR
+- [ ] Local: Verify Maestro tests pass
 
-## Cost Estimation (Monthly)
+### Implementation (Automated by Claude)
 
-| Service | Free Tier | Estimated Usage | Cost |
-|---------|-----------|-----------------|------|
-| GitHub Actions (Linux) | 2,000 mins | ~500 mins | $0 |
-| GitHub Actions (macOS) | 200 mins | ~50 mins (iOS on tags only) | $0 |
-| Vercel | 100 GB bandwidth | ~5 GB | $0 |
-| GitHub Releases | Unlimited | ~10 releases | $0 |
-| **Total** | | | **$0/month** |
+- [ ] Create `e2e.yml` (consolidated E2E workflow)
+- [ ] Create `deploy-staging.yml` (staging deployments)
+- [ ] Create `release.yml` (production release)
+- [ ] Update `ci.yml` (if needed)
+- [ ] Delete `e2e-web.yml`
+- [ ] Delete `deploy-web.yml`
+- [ ] Delete `deploy-mobile-remote-bundles.yml`
+- [ ] Delete `release-mobile.yml`
+- [ ] Delete `docs/GIT-FLOW-WORKFLOW.md`
+- [ ] Update `CLAUDE.md`
+- [ ] Update this document
+
+### Post-Implementation (Manual)
+
+- [ ] Configure branch protection rules
+- [ ] Add required status checks
+- [ ] Test full workflow with a PR
+- [ ] Test release workflow with a tag
 
 ---
 
 ## Success Criteria
 
-- [x] All PRs automatically run lint, typecheck, and tests ✅
-- [x] Main branch automatically deploys web apps to Vercel ✅
-  - Remote: https://universal-mfe-2026-remote.vercel.app/
-  - Shell: https://universal-mfe-2026-shell.vercel.app/
-- [x] Tagged releases automatically build and publish Android APK ✅
-  - Host: `mobile-host-release.apk` (release build, standalone - no Metro needed)
-  - Standalone: `mobile-remote-standalone-release.apk` (release build, standalone - no Metro needed)
-- [x] Tagged releases automatically build and publish iOS Simulator app ✅
-  - Host: `mobile-host-simulator.zip`
-  - Standalone: `mobile-remote-standalone-simulator.zip`
-- [x] Build times under 10 minutes for full CI ✅
-- [x] Zero cost for CI/CD ($0/month) ✅
-- [x] Standalone mode builds included in CI and deploy workflows ✅
+| Metric | Target | Verification |
+|--------|--------|--------------|
+| E2E blocks merge | All 3 platforms required | Cannot merge without green checks |
+| Staging auto-deploys | On every push to main | Verify staging URLs update |
+| Production requires tag | Only deploys on v* tag | Verify prod URLs don't change on main push |
+| Release E2E re-runs | E2E passes before prod deploy | Check release workflow logs |
+| Zero manual steps | No labels, no manual triggers | Full automation |
+| CI time | < 25 min total | Measure in GitHub Actions |
 
 ---
 
-## Notes
+## Appendix: Firebase Hosting Channels
 
-### Current Mobile Build Limitations
+Firebase Hosting channels allow multiple versions to be deployed simultaneously:
 
-**Both Android and iOS builds are DEBUG builds** that require a Metro bundler running to load the JavaScript bundle. They are NOT standalone production builds.
+```bash
+# Deploy to staging channel
+firebase deploy --only hosting --channel staging
 
-**Android APK (`app-debug.apk`):**
-- Requires Metro dev server running on `http://10.0.2.2:8081` (emulator) or `http://localhost:8081` (device via USB)
-- Will crash with "Could not open file" error without Metro running
-- Useful for: Development testing with Metro, CI/CD pipeline validation
+# Deploy to production (live channel)
+firebase deploy --only hosting --channel live
 
-**iOS Simulator App (`ios-simulator-app.zip`):**
-- Can only run in Xcode iOS Simulator (not on physical devices)
-- Requires Metro dev server running on `http://localhost:8082`
-- No code signing required (Simulator-only)
-- Useful for: Development testing, CI/CD pipeline validation
+# Or just (live is default)
+firebase deploy --only hosting
+```
 
-### React Native Specific Considerations
-- Symlinks must be setup after yarn install (`postinstall` hook handles this)
-- Android SDK and Java 17 required for Android builds
-- Hermes bytecode compilation is automatic
-- Platform-specific output directories (`dist/android/`, `dist/ios/`)
-
-### Module Federation Deployment Order
-- Remote modules must be deployed before or with host
-- Web: Deploy web-remote-hello → web-shell
-- Mobile: Remote bundles are loaded at runtime from configured URLs
+Channel URLs:
+- Staging: `https://universal-mfe--staging-{random}.web.app`
+- Production: `https://universal-mfe.web.app`
 
 ---
 
-## Summary
+## Appendix: Vercel Deployment Aliases
 
-**Phase 1-3: COMPLETE** - Full CI/CD pipeline for all platforms
-- Web: Automated deployment to Vercel on push to main
-- Android: Debug APK published to GitHub Releases on tag
-- iOS: Simulator app published to GitHub Releases on tag
+Vercel allows multiple domains per project:
 
-**Phase 4: COMPLETE** - Workflow enhancements
-- Task 4.1: Caching strategy (Yarn, Gradle, CocoaPods) ✅
-- Task 4.2: PR checks (automated comments, branch protection documented) ✅
-- Task 4.3: Version management (validation script) ✅
-- Task 4.4: Security scanning (yarn audit, CodeQL) ✅
-- Task 4.5: E2E Testing ✅ COMPLETE
+```bash
+# Deploy to staging alias
+vercel --prod --alias staging-universal-mfe-2026-shell.vercel.app
 
-**Phase 5: COMPLETE** - Standalone mode CI/CD
-- Task 5.1: Standalone build scripts (already implemented) ✅
-- Task 5.2: Standalone Android CI build ✅
-- Task 5.3: Standalone iOS CI build ✅
-- Task 5.4: Update deploy-android workflow (host + standalone) ✅
-- Task 5.5: Update deploy-ios workflow (host + standalone) ✅
-- Task 5.6: Update PR summary comment ✅
-- Task 5.7: Update documentation ✅
+# Deploy to production alias
+vercel --prod --alias universal-mfe-2026-shell.vercel.app
+```
 
-**Phase 6: COMPLETE** - Production mobile builds
-- Task 6.1: Android release build (keystore signing) ✅ COMPLETE - $0
-- Task 6.2: Android distribution options (APK, Firebase, Play Store) - documented
-- Task 6.3: iOS release build (requires Apple Developer $99/year) - future
-- Task 6.4: iOS distribution options (TestFlight, Ad Hoc, Firebase) - documented
-- Task 6.5: Firebase App Distribution setup ✅ COMPLETE - $0
-- Task 6.6: Firebase Hosting for Mobile Remote Bundles ✅ COMPLETE - $0
-- Task 6.7: iOS Simulator Release Builds ✅ COMPLETE - $0
+Both point to the same project, different deployments.
 
-**Phase 7: COMPLETE** - Firebase Authentication
-- Task 7.1: Firebase Auth Setup (Android) ✅
-- Task 7.2: Firebase Auth Setup (iOS) ✅
-- Task 7.3: Integrate with shared-auth-store (Zustand) ✅
-- Task 7.4: Create Auth UI Components (universal, themed, i18n) ✅
-- Task 7.5: Protected Routes in shared-router ✅
-- Task 7.6: Web Authentication (Firebase web SDK) ✅
+---
 
-**Phase 8: COMPLETE** - Optimized CI/CD Workflow
-- Task 8.1: Adopt trunk-based development (main branch only) ✅
-- Task 8.2: Remove develop branch ✅
-- Task 8.3: CI runs only on PRs to main (not on push to main) ✅
-- Task 8.4: E2E runs on `ready-to-merge` label (not every push) ✅
-- Task 8.5: Deploy workflows skip CI (already validated) ✅
-- Task 8.6: Path-filtered CI for efficiency ✅
-- Task 8.7: Update documentation ✅
+## Document History
 
-**Result:** 60% reduction in CI runs while maintaining code quality
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-02-01 | Complete restructure for world-class CI/CD | Claude + User |
+| 2026-01-30 | Phase 8 - Optimized workflow | Previous |
+| 2026-01-08 | Initial CI/CD implementation | Previous |
