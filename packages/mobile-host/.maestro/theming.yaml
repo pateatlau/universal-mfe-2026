@@ -18,8 +18,10 @@ tags:
     visible: "Universal MFE - Mobile"
     timeout: 15000
 
-# Verify we're on the login screen
-- assertVisible: "Log in"
+# Wait for login screen to finish rendering (auth.login.title = "Sign In")
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 5000
 
 # === Test theme toggle from header on login screen ===
 
@@ -35,7 +37,7 @@ tags:
     timeout: 3000
 
 # Verify login screen still visible (theme change doesn't affect navigation)
-- assertVisible: "Log in"
+- assertVisible: "Sign In"
 - assertVisible: "Email"
 - assertVisible: "Password"
 
@@ -49,11 +51,14 @@ tags:
 
 # === Test theme persistence across auth screen navigation ===
 
-# Navigate to Sign Up
-- tapOn: "Sign up"
+# Navigate to Sign Up (tap on "Sign Up" in "Don't have an account? Sign Up")
+- tapOn:
+    text: ".*Sign Up.*"
+    index: 0
 
+# Wait for Sign Up screen - unique element (auth.signup.title = "Create Account")
 - extendedWaitUntil:
-    visible: "Sign up"
+    visible: "Create Account"
     timeout: 5000
 
 # Verify theme persists (still light mode)
@@ -66,7 +71,16 @@ tags:
     visible: ".*Light.*"
     timeout: 3000
 
-# Navigate to Forgot Password
+# Navigate back to Login first (auth.signup.hasAccount = "Already have an account? Sign In")
+- tapOn:
+    text: ".*Sign In.*"
+    index: 0
+
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 5000
+
+# Navigate to Forgot Password (auth.login.forgotPassword = "Forgot Password?")
 - tapOn: "Forgot Password?"
 
 - extendedWaitUntil:
@@ -76,11 +90,11 @@ tags:
 # Verify dark mode persists
 - assertVisible: ".*Light.*"
 
-# Navigate back to Login
-- tapOn: "Back to Login"
+# Navigate back to Login (auth.forgotPassword.backToLogin = "Back to Sign In")
+- tapOn: "Back to Sign In"
 
 - extendedWaitUntil:
-    visible: "Log in"
+    visible: "Sign In"
     timeout: 5000
 
 # Verify dark mode still persists

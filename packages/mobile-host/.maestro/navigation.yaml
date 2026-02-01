@@ -18,39 +18,48 @@ tags:
     visible: "Universal MFE - Mobile"
     timeout: 15000
 
-# Verify we're on the login screen
-- assertVisible: "Log in"
+# Verify we're on the login screen (auth.login.title = "Sign In")
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 5000
 - assertVisible: "Email"
 - assertVisible: "Password"
 
 # === Navigate to Sign Up screen ===
-- tapOn: "Sign up"
+# The link text is "Don't have an account? Sign Up" - tap on "Sign Up" part
+- tapOn:
+    text: ".*Sign Up.*"
+    index: 0
 
-# Verify on Sign Up screen
+# Verify on Sign Up screen - wait for unique element (auth.signup.title = "Create Account")
 - extendedWaitUntil:
-    visible: "Sign up"
+    visible: "Create Account"
     timeout: 5000
 
-# Verify sign up form elements
-- assertVisible: "Name"
+# Verify sign up form elements (unique to sign up: Display Name, Confirm Password)
+- assertVisible: "Display Name"
 - assertVisible: "Email"
 - assertVisible: "Password"
 - assertVisible: "Confirm Password"
 
 # === Navigate back to Login ===
-- tapOn: "Log in"
+# The link text is "Already have an account? Sign In"
+- tapOn:
+    text: ".*Sign In.*"
+    index: 0
 
 # Verify back on login screen
 - extendedWaitUntil:
-    visible: "Log in"
+    visible: "Sign In"
     timeout: 5000
 - assertVisible: "Email"
 - assertVisible: "Password"
 
 # === Navigate to Forgot Password screen ===
+# auth.login.forgotPassword = "Forgot Password?"
 - tapOn: "Forgot Password?"
 
-# Verify on Forgot Password screen
+# Verify on Forgot Password screen (auth.forgotPassword.title = "Reset Password")
 - extendedWaitUntil:
     visible: "Reset Password"
     timeout: 5000
@@ -60,11 +69,12 @@ tags:
 - assertVisible: "Send Reset Link"
 
 # === Navigate back to Login ===
-- tapOn: "Back to Login"
+# auth.forgotPassword.backToLogin = "Back to Sign In"
+- tapOn: "Back to Sign In"
 
 # Verify back on login screen
 - extendedWaitUntil:
-    visible: "Log in"
+    visible: "Sign In"
     timeout: 5000
 - assertVisible: "Email"
 - assertVisible: "Password"
