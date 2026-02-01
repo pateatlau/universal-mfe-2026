@@ -94,9 +94,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         provider: user.provider,
       });
     } catch (error) {
-      const message = getAuthErrorMessage((error as { code?: string }).code || '');
+      // Log the full error for debugging - this helps identify unknown error codes
+      const errorCode = (error as { code?: string }).code;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[shared-auth-store] signInWithEmail error:', {
+        code: errorCode,
+        message: errorMessage,
+        errorType: error?.constructor?.name,
+        error,
+      });
+
+      const message = getAuthErrorMessage(errorCode || '');
       set({ error: message, isLoading: false });
-      emitAuthEvent?.('AUTH_ERROR', { code: (error as { code?: string }).code, message });
+      emitAuthEvent?.('AUTH_ERROR', { code: errorCode, message });
       throw error;
     }
   },
@@ -117,9 +127,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         provider: user.provider,
       });
     } catch (error) {
-      const message = getAuthErrorMessage((error as { code?: string }).code || '');
+      // Log the full error for debugging - this helps identify unknown error codes
+      const errorCode = (error as { code?: string }).code;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[shared-auth-store] signUpWithEmail error:', {
+        code: errorCode,
+        message: errorMessage,
+        errorType: error?.constructor?.name,
+        error,
+      });
+
+      const message = getAuthErrorMessage(errorCode || '');
       set({ error: message, isLoading: false });
-      emitAuthEvent?.('AUTH_ERROR', { code: (error as { code?: string }).code, message });
+      emitAuthEvent?.('AUTH_ERROR', { code: errorCode, message });
       throw error;
     }
   },
