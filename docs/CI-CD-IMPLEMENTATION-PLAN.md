@@ -18,6 +18,12 @@ This document defines the CI/CD architecture for the Universal Microfrontend Pla
 4. **Trunk-Based Development** - Single `main` branch, short-lived feature branches
 5. **Zero Manual Steps** - Fully automated pipeline, no labels or manual triggers
 
+### Core Invariant
+
+> **`main` is always releasable.**
+
+This invariant is enforced by mandatory E2E gates before merge. Any commit on `main` has passed full platform E2E and can be tagged for production release at any time.
+
 ---
 
 ## Architecture Overview
@@ -241,7 +247,9 @@ Jobs:
 | Web Shell | `staging-universal-mfe-2026-shell.vercel.app` | On push to main |
 | Web Remote | `staging-universal-mfe-2026-remote.vercel.app` | On push to main |
 | Mobile Bundles | Firebase Hosting (`staging` channel) | On push to main |
-| Mobile Apps | N/A (staging is for bundles only) | N/A |
+| Mobile Apps | N/A (see note below) | N/A |
+
+**Note on Mobile App Staging:** Mobile staging validates remote bundles only, not native app binaries. Native apps are built fresh for E2E tests. This covers runtime integration correctness but not distribution mechanics (signing, store constraints, metadata). This is an intentional scope limitation for this POC - full distribution testing would require Apple Developer account and Play Store access.
 
 ### Production Environment
 
@@ -252,6 +260,20 @@ Jobs:
 | Mobile Bundles | Firebase Hosting (`live` channel) | Tag v* (after E2E) |
 | Android APK | GitHub Releases + Firebase App Distribution | Tag v* (after E2E) |
 | iOS Simulator | GitHub Releases | Tag v* (after E2E) |
+
+### Environment Invariants
+
+To ensure staging accurately represents production behavior, maintain these invariants:
+
+| Invariant | Staging | Production |
+|-----------|---------|------------|
+| Node.js version | Same (from .nvmrc) | Same (from .nvmrc) |
+| Build configuration | `NODE_ENV=production` | `NODE_ENV=production` |
+| Bundle optimization | Minified, production mode | Minified, production mode |
+| Feature flags | Same defaults | Same defaults |
+| Firebase project | Same project, different channel | Same project, different channel |
+
+**Drift Prevention:** Both environments use identical build commands. The only difference is the deployment target (staging domain/channel vs production domain/channel).
 
 ---
 
@@ -468,10 +490,150 @@ Both point to the same project, different deployments.
 
 ---
 
+## Architectural Trade-offs
+
+This section documents intentional design decisions and their implications.
+
+### Trade-off 1: Full E2E on Every PR (All Platforms)
+
+**Decision:** Every PR runs Web, Android, and iOS E2E tests, regardless of which files changed.
+
+**Rationale:**
+- Maximizes correctness and cross-platform safety
+- Eliminates "forgot to test mobile" scenarios
+- Simpler mental model - no conditional logic
+
+**Cost:**
+- Higher CI minutes usage
+- Longer feedback loop (~20 min vs ~5 min for CI-only)
+- May create throughput bottleneck at high PR volume (>20/month)
+
+**Mitigation:** This is acceptable for current scale. See "Future Enhancements" for change-aware optimization.
+
+### Trade-off 2: Rebuild vs Promote Artifacts
+
+**Decision:** Production artifacts are rebuilt from source at release time, not promoted from staging.
+
+**Current behavior:**
+- PR: Build artifacts for E2E testing
+- Staging: Rebuild and deploy
+- Production: Rebuild and deploy
+
+**Rationale:**
+- Simpler implementation
+- No artifact storage/versioning complexity
+- Acceptable for POC scale
+
+**Implication:**
+- Production artifacts are not bit-for-bit identical to tested artifacts
+- Source is identical (same git tag), but build is separate
+
+**Mitigation:** The double E2E (PR + release) compensates by re-verifying before production deploy.
+
+### Trade-off 3: Double E2E Execution
+
+**Decision:** E2E runs both before merge (PR gate) and before production (release gate).
+
+**Rationale:**
+- PR E2E: Ensures `main` stays releasable
+- Release E2E: Final verification before production
+- Catches any issues from staging soak time
+
+**Cost:**
+- Release takes ~25-30 min instead of ~10 min
+- Higher CI minutes on release
+
+**Justification:** Production safety is worth the extra time and cost.
+
+---
+
+## Known Limitations
+
+### Mobile App Distribution Testing
+
+- Simulator builds only (no physical device testing in CI)
+- No TestFlight/Play Store integration testing
+- Signing and store metadata validation not covered
+
+**Why:** Requires Apple Developer account ($99/year) and Play Store access. Out of scope for POC.
+
+### Security Scanning Depth
+
+Current controls:
+- CodeQL for static analysis
+- `yarn audit` for dependency vulnerabilities (informational)
+
+Not implemented:
+- Dependency change risk analysis
+- SBOM (Software Bill of Materials) generation
+- Container scanning (not applicable - no containers)
+
+**Why:** Sufficient for POC. Enterprise deployments should enhance.
+
+---
+
+## Future Enhancements
+
+These optimizations are documented for future implementation as the project scales.
+
+### Enhancement 1: Change-Aware E2E Scoping
+
+Reduce CI load by running only relevant E2E based on changed files:
+
+| Change Scope | Required E2E |
+|--------------|--------------|
+| `packages/shared-*/**` | Web + Android + iOS (all) |
+| `packages/web-*/**` only | Web + 1 mobile sanity |
+| `packages/mobile-*/**` only | Android + iOS |
+| `docs/**`, `scripts/**` | CI only (skip E2E) |
+
+**When to implement:** When PR volume exceeds ~20/month or CI costs become significant.
+
+### Enhancement 2: Artifact Promotion Pipeline
+
+Replace rebuild-on-release with promote-tested-artifacts:
+
+1. PR: Build artifacts → Store with commit SHA
+2. E2E: Test stored artifacts
+3. Staging: Deploy stored artifacts
+4. Production: Promote same artifacts (no rebuild)
+
+**Benefits:**
+- "What we tested is what shipped" guarantee
+- Faster releases
+- Better incident forensics
+
+**When to implement:** When release frequency increases or audit requirements demand it.
+
+### Enhancement 3: Release Candidate Tags
+
+Add intermediate verification stage:
+
+- `rc/v1.2.3` tag → Full E2E, deploy to staging
+- `v1.2.3` tag → Deploy to production only (E2E already passed)
+
+**Benefits:**
+- Faster production deployments
+- Explicit "release candidate" phase for stakeholder review
+
+**When to implement:** When release approval process requires stakeholder sign-off.
+
+### Enhancement 4: Enhanced Security Scanning
+
+- Dependency diff analysis on PRs
+- SBOM generation for releases
+- Secret rotation reminders
+- Supply chain attestation (SLSA)
+
+**When to implement:** When preparing for enterprise/regulated deployments.
+
+---
+
 ## Document History
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-02-01 | Add architectural trade-offs, limitations, future enhancements from expert review | Claude + User |
 | 2026-02-01 | Complete restructure for world-class CI/CD | Claude + User |
 | 2026-01-30 | Phase 8 - Optimized workflow | Previous |
 | 2026-01-08 | Initial CI/CD implementation | Previous |
