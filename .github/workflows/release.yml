@@ -1,6 +1,7 @@
-name: Release Mobile
+name: Release
 
-# Triggered on version tags - runs E2E tests first, then deploys if tests pass
+# Triggered on version tags - runs E2E re-verification, then deploys everything to production,
+# then creates a GitHub Release with all artifacts.
 on:
   push:
     tags:
@@ -16,11 +17,84 @@ permissions:
 
 jobs:
   # ===========================================================================
-  # E2E TESTS - Must pass before any deployment
+  # STAGE 1: E2E RE-VERIFICATION (3 parallel jobs)
   # ===========================================================================
 
+  e2e-web:
+    name: E2E Web Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Setup Turborepo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Install Playwright browsers
+        working-directory: packages/web-shell
+        run: |
+          echo "::group::Installing Playwright browsers"
+          npx playwright install --with-deps chromium
+          echo "::endgroup::"
+
+      - name: Build web packages
+        run: |
+          echo "::group::Building web packages"
+          yarn build:web
+          echo "::endgroup::"
+
+      - name: Run Playwright tests
+        working-directory: packages/web-shell
+        run: |
+          echo "::group::Running Playwright E2E tests"
+          npx playwright test --reporter=html
+          echo "::endgroup::"
+        env:
+          CI: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: playwright-report
+          path: packages/web-shell/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: packages/web-shell/test-results/
+          retention-days: 7
+
   e2e-android:
-    name: E2E Tests (Android)
+    name: E2E Android Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -34,8 +108,6 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # Install Linux libraries required by Android Emulator
-      # These are missing on GitHub Actions runners and cause emulator crashes
       - name: Install Linux dependencies for Android Emulator
         run: |
           sudo apt-get update
@@ -54,7 +126,7 @@ jobs:
             libpango-1.0-0 \
             libcairo2 \
             libasound2
-          echo "✅ Linux dependencies for Android Emulator installed"
+          echo "Linux dependencies for Android Emulator installed"
 
       - name: Setup Java 17
         uses: actions/setup-java@v5.1.0
@@ -88,7 +160,6 @@ jobs:
       - name: Build shared packages
         run: yarn build:shared
 
-      # E2E tests need Firebase config - create placeholder for testing UI (not actual auth)
       - name: Create placeholder google-services.json
         run: |
           cat > packages/mobile-host/android/app/google-services.json << 'EOF'
@@ -122,7 +193,7 @@ jobs:
             "configuration_version": "1"
           }
           EOF
-          echo "✅ Placeholder google-services.json created for E2E tests"
+          echo "Placeholder google-services.json created for E2E tests"
 
       - name: Build Android APK
         working-directory: packages/mobile-host/android
@@ -169,24 +240,23 @@ jobs:
             # Wait for device to be online (with explicit timeout to avoid indefinite hang)
             echo "Waiting for device..."
             if ! timeout 120 adb wait-for-device; then
-              echo "❌ adb wait-for-device timed out after 120 seconds"
+              echo "adb wait-for-device timed out after 120 seconds"
               adb devices -l
               exit 1
             fi
-            echo "✅ Device online"
+            echo "Device online"
 
             # Wait for device to be fully booted (not just connected)
-            # Timeout aligned with emulator-boot-timeout (600s) to avoid premature failures
             echo "Waiting for device to fully boot..."
             BOOT_TIMEOUT=300
             for i in $(seq 1 $BOOT_TIMEOUT); do
               BOOT_STATUS=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
               if [ "$BOOT_STATUS" = "1" ]; then
-                echo "✅ Device fully booted after $i seconds"
+                echo "Device fully booted after $i seconds"
                 break
               fi
               if [ $i -eq $BOOT_TIMEOUT ]; then
-                echo "❌ Device boot timeout after $BOOT_TIMEOUT seconds"
+                echo "Device boot timeout after $BOOT_TIMEOUT seconds"
                 adb devices -l
                 exit 1
               fi
@@ -200,11 +270,11 @@ jobs:
             echo "Waiting for package manager..."
             for i in {1..30}; do
               if adb shell pm path android >/dev/null 2>&1; then
-                echo "✅ Package manager ready"
+                echo "Package manager ready"
                 break
               fi
               if [ $i -eq 30 ]; then
-                echo "⚠️ Package manager slow, continuing anyway..."
+                echo "Package manager slow, continuing anyway..."
               fi
               sleep 1
             done
@@ -216,13 +286,13 @@ jobs:
             echo "Installing APK..."
             for attempt in 1 2 3; do
               if adb install -r packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk; then
-                echo "✅ APK installed successfully (attempt $attempt)"
+                echo "APK installed successfully (attempt $attempt)"
                 break
               else
-                echo "⚠️ Install attempt $attempt failed, retrying..."
+                echo "Install attempt $attempt failed, retrying..."
                 sleep 5
                 if [ $attempt -eq 3 ]; then
-                  echo "❌ APK installation failed after 3 attempts"
+                  echo "APK installation failed after 3 attempts"
                   exit 1
                 fi
               fi
@@ -233,11 +303,11 @@ jobs:
 
             # Verify app is installed
             if ! adb shell pm list packages | grep -q "com.mobilehosttmp"; then
-              echo "❌ App not found in package list after installation"
+              echo "App not found in package list after installation"
               adb shell pm list packages | grep mobile
               exit 1
             fi
-            echo "✅ App package verified: com.mobilehosttmp"
+            echo "App package verified: com.mobilehosttmp"
 
             # Run Maestro tests
             echo "Running Maestro E2E tests..."
@@ -246,7 +316,7 @@ jobs:
             echo "::endgroup::"
 
       - name: Upload Maestro results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: maestro-android-results
@@ -254,7 +324,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Maestro debug output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: maestro-android-debug
@@ -262,7 +332,7 @@ jobs:
           retention-days: 7
 
   e2e-ios:
-    name: E2E Tests (iOS)
+    name: E2E iOS Tests
     runs-on: macos-14
     timeout-minutes: 60
 
@@ -295,8 +365,6 @@ jobs:
       - name: Build shared packages
         run: yarn build:shared
 
-      # E2E tests can use placeholder Firebase config - we're testing UI, not actual auth
-      # Bundle ID must match the actual iOS app bundle identifier: com.universal.mobilehost
       - name: Create GoogleService-Info.plist
         uses: ./.github/actions/create-google-service-info-plist
         with:
@@ -343,16 +411,15 @@ jobs:
           echo "Waiting for simulator to stabilize..."
           sleep 5
 
-          # Verify simulator is in Booted state using the booted devices list
-          # This avoids false failures when multiple "iPhone 16" devices exist across runtimes
+          # Verify simulator is in Booted state
           echo "Verifying simulator is booted..."
           BOOTED_DEVICES=$(xcrun simctl list devices booted)
           echo "Booted devices:"
           echo "$BOOTED_DEVICES"
           if echo "$BOOTED_DEVICES" | grep -q "iPhone 16"; then
-            echo "✅ iPhone 16 simulator is booted and ready"
+            echo "iPhone 16 simulator is booted and ready"
           else
-            echo "❌ iPhone 16 not found in booted devices list"
+            echo "iPhone 16 not found in booted devices list"
             echo "All devices:"
             xcrun simctl list devices
             exit 1
@@ -363,7 +430,7 @@ jobs:
           # Find the built app
           APP_PATH=$(find packages/mobile-host/ios/build -name "MobileHostTmp.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then
-            echo "❌ Could not find MobileHostTmp.app in build directory"
+            echo "Could not find MobileHostTmp.app in build directory"
             find packages/mobile-host/ios/build -type d -name "*.app" || echo "No .app directories found"
             exit 1
           fi
@@ -379,16 +446,14 @@ jobs:
           # Verify installation succeeded
           echo "Verifying app installation..."
           if xcrun simctl listapps "iPhone 16" 2>/dev/null | grep -q "com.universal.mobilehost"; then
-            echo "✅ App installed successfully: com.universal.mobilehost"
+            echo "App installed successfully: com.universal.mobilehost"
           else
-            echo "⚠️ Could not verify app in listapps, checking alternate method..."
-            # Some simctl versions don't support listapps, try launching as verification
+            echo "Could not verify app in listapps, checking alternate method..."
             if xcrun simctl launch "iPhone 16" com.universal.mobilehost 2>/dev/null; then
-              echo "✅ App launches successfully"
-              # Terminate it so Maestro can start fresh
+              echo "App launches successfully"
               xcrun simctl terminate "iPhone 16" com.universal.mobilehost 2>/dev/null || true
             else
-              echo "⚠️ Could not verify launch, continuing with tests..."
+              echo "Could not verify launch, continuing with tests..."
             fi
           fi
 
@@ -405,7 +470,7 @@ jobs:
           MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.universal.mobilehost maestro test .maestro/ --exclude-tags=remote --format=junit --output=maestro-results.xml
 
       - name: Upload Maestro results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: maestro-ios-results
@@ -413,7 +478,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Maestro debug output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: maestro-ios-debug
@@ -421,13 +486,130 @@ jobs:
           retention-days: 7
 
   # ===========================================================================
-  # DEPLOY ANDROID - Only runs if E2E tests pass
+  # STAGE 2: PRODUCTION DEPLOYMENTS (needs ALL 3 E2E jobs)
   # ===========================================================================
+
+  deploy-web-production:
+    name: Deploy Web (Production)
+    runs-on: ubuntu-latest
+    needs: [e2e-web, e2e-android, e2e-ios]
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Install dependencies
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Build web-remote-hello
+        working-directory: packages/web-remote-hello
+        run: yarn build
+
+      - name: Copy vercel.json to web-remote-hello dist
+        run: |
+          if [ ! -f "packages/web-remote-hello/vercel.json" ]; then
+            echo "::error::vercel.json not found at packages/web-remote-hello/vercel.json"
+            exit 1
+          fi
+          if [ ! -d "packages/web-remote-hello/dist" ]; then
+            echo "::error::dist directory not found at packages/web-remote-hello/dist"
+            exit 1
+          fi
+          cp packages/web-remote-hello/vercel.json packages/web-remote-hello/dist/
+          echo "Copied vercel.json to web-remote-hello/dist/"
+
+      - name: Deploy web-remote-hello to Vercel (Production)
+        id: deploy-remote
+        working-directory: packages/web-remote-hello/dist
+        run: |
+          echo "::group::Deploying web-remote-hello to Vercel production"
+          CLI_OUTPUT=$(vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
+          echo "=== Full Vercel CLI output ==="
+          echo "$CLI_OUTPUT"
+          echo "=============================="
+
+          # Extract the deployment URL
+          DEPLOYMENT_URL=$(echo "$CLI_OUTPUT" | grep -oE 'https://[a-zA-Z0-9._-]+\.vercel\.app' | tail -1)
+
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "::error::Failed to extract deployment URL from Vercel CLI output"
+            exit 1
+          fi
+
+          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed web-remote-hello to: $DEPLOYMENT_URL"
+          echo "::endgroup::"
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_REMOTE }}
+
+      - name: Build web-shell
+        working-directory: packages/web-shell
+        run: yarn build
+        env:
+          REMOTE_HELLO_URL: ${{ steps.deploy-remote.outputs.deployment-url }}
+
+      - name: Copy vercel.json to web-shell dist
+        run: |
+          if [ ! -f "packages/web-shell/vercel.json" ]; then
+            echo "::error::vercel.json not found at packages/web-shell/vercel.json"
+            exit 1
+          fi
+          if [ ! -d "packages/web-shell/dist" ]; then
+            echo "::error::dist directory not found at packages/web-shell/dist"
+            exit 1
+          fi
+          cp packages/web-shell/vercel.json packages/web-shell/dist/
+          echo "Copied vercel.json to web-shell/dist/"
+
+      - name: Deploy web-shell to Vercel (Production)
+        id: deploy-shell
+        working-directory: packages/web-shell/dist
+        run: |
+          echo "::group::Deploying web-shell to Vercel production"
+          CLI_OUTPUT=$(vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
+          echo "=== Full Vercel CLI output ==="
+          echo "$CLI_OUTPUT"
+          echo "=============================="
+
+          # Extract the deployment URL
+          DEPLOYMENT_URL=$(echo "$CLI_OUTPUT" | grep -oE 'https://[a-zA-Z0-9._-]+\.vercel\.app' | tail -1)
+
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "::error::Failed to extract deployment URL from Vercel CLI output"
+            exit 1
+          fi
+
+          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed web-shell to: $DEPLOYMENT_URL"
+          echo "::endgroup::"
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_SHELL }}
 
   deploy-android:
     name: Deploy Android
     runs-on: ubuntu-latest
-    needs: [e2e-android, e2e-ios]  # Wait for BOTH E2E tests to pass
+    needs: [e2e-web, e2e-android, e2e-ios]
     env:
       HAS_FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
       HAS_FIREBASE_HOST_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID_HOST != '' }}
@@ -439,6 +621,7 @@ jobs:
 
       - name: Validate required secrets
         run: |
+          echo "::group::Validating required secrets"
           missing_secrets=""
           if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
             missing_secrets="${missing_secrets}ANDROID_KEYSTORE_BASE64 "
@@ -460,6 +643,7 @@ jobs:
             exit 1
           fi
           echo "All required secrets are configured."
+          echo "::endgroup::"
 
       - name: Setup Java 17
         uses: actions/setup-java@v5.1.0
@@ -487,17 +671,21 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       - name: Decode release keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/release.keystore
 
-      # CRITICAL: Decode google-services.json for Firebase Authentication
-      # Without this file, Firebase Auth (email/password AND Google Sign-In) will not work
       - name: Decode google-services.json
         run: |
           echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > packages/mobile-host/android/app/google-services.json
@@ -508,7 +696,10 @@ jobs:
 
       # Build Host App
       - name: Build mobile remote for Android (MF bundles)
-        run: yarn build:mobile:android
+        run: |
+          echo "::group::Building mobile remote for Android"
+          yarn build:mobile:android
+          echo "::endgroup::"
 
       - name: Generate React Native codegen for mobile-host
         working-directory: packages/mobile-host/android
@@ -563,7 +754,7 @@ jobs:
         id: tag
         run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      # Firebase App Distribution (optional)
+      # Firebase App Distribution (optional - conditional on secrets)
       - name: Authenticate to Google Cloud
         if: env.HAS_FIREBASE_SA == 'true'
         uses: google-github-actions/auth@v2
@@ -591,7 +782,7 @@ jobs:
             --release-notes "Release ${{ steps.tag.outputs.tag }} - Standalone Remote App | Commit: ${{ github.sha }}"
 
       - name: Upload Android artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: android-release-apks
           path: |
@@ -599,14 +790,10 @@ jobs:
             packages/mobile-remote-hello/android/app/build/outputs/apk/release/mobile-remote-standalone-release.apk
           retention-days: 30
 
-  # ===========================================================================
-  # DEPLOY iOS - Only runs if E2E tests pass
-  # ===========================================================================
-
   deploy-ios:
     name: Deploy iOS
     runs-on: macos-14
-    needs: [e2e-android, e2e-ios]  # Wait for BOTH E2E tests to pass
+    needs: [e2e-web, e2e-android, e2e-ios]
 
     steps:
       - name: Checkout repository
@@ -632,10 +819,16 @@ jobs:
             ${{ runner.os }}-cocoapods-deploy-
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
 
       - name: Build shared packages
-        run: yarn build:shared
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
 
       # Bundle ID must match the actual iOS app bundle identifier: com.universal.mobilehost
       - name: Create GoogleService-Info.plist
@@ -648,11 +841,15 @@ jobs:
 
       # Build Host App
       - name: Build mobile remote for iOS (MF bundles)
-        run: yarn build:mobile:ios
+        run: |
+          echo "::group::Building mobile remote for iOS"
+          yarn build:mobile:ios
+          echo "::endgroup::"
 
       - name: Generate React Native codegen for mobile-host
         working-directory: packages/mobile-host
         run: |
+          echo "::group::Generating codegen for mobile-host"
           # Run codegen and capture exit code
           set +e
           yarn react-native codegen
@@ -662,36 +859,40 @@ jobs:
           # Only tolerate exit code 1 (known non-fatal cleanup error in RN CLI 19.1.2)
           # All other exit codes indicate real failures
           if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
-            echo "❌ Error: Codegen failed with exit code $EXIT_CODE"
+            echo "Error: Codegen failed with exit code $EXIT_CODE"
             exit $EXIT_CODE
           fi
 
           # Verify codegen files were generated despite exit code 1
           if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
-            echo "❌ Error: Codegen did not generate iOS files"
+            echo "Error: Codegen did not generate iOS files"
             exit 1
           fi
 
-          echo "✅ Codegen files generated successfully (exit code $EXIT_CODE is expected)"
+          echo "Codegen files generated successfully (exit code $EXIT_CODE is expected)"
           ls -la build/generated/ios/
 
           # Copy codegen to Xcode's expected location (direct contents, not nested)
           mkdir -p ios/build/generated
           cp -R build/generated/ios/* ios/build/generated/
-          echo "✅ Codegen files copied to ios/build/generated/"
+          echo "Codegen files copied to ios/build/generated/"
+          echo "::endgroup::"
 
       - name: Install CocoaPods for Host
         working-directory: packages/mobile-host/ios
         run: |
+          echo "::group::Installing CocoaPods for Host"
           rm -rf Pods Podfile.lock
           pod install --repo-update
+          echo "::endgroup::"
 
-      - name: Build Host iOS app for Simulator
+      - name: Build Host iOS app (Release)
         working-directory: packages/mobile-host/ios
         env:
           NODE_ENV: production
           PLATFORM: ios
         run: |
+          echo "::group::Building Host iOS app (Release)"
           set -o pipefail
           xcodebuild \
             -workspace MobileHostTmp.xcworkspace \
@@ -704,14 +905,17 @@ jobs:
             2>&1 | tee build.log
 
           if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileHostTmp.app/main.jsbundle" ]; then
+            echo "Error: main.jsbundle not found in Release build"
             exit 1
           fi
+          echo "::endgroup::"
 
       - name: Zip Host iOS app bundle
         working-directory: packages/mobile-host/ios
         run: |
           APP_PATH=$(find build -name "MobileHostTmp.app" -type d 2>/dev/null | head -1)
           if [ -z "$APP_PATH" ]; then
+            echo "Error: MobileHostTmp.app not found"
             exit 1
           fi
           APP_DIR=$(dirname "$APP_PATH")
@@ -722,6 +926,7 @@ jobs:
       - name: Generate React Native codegen for mobile-remote-hello
         working-directory: packages/mobile-remote-hello
         run: |
+          echo "::group::Generating codegen for mobile-remote-hello"
           # Run codegen and capture exit code
           set +e
           yarn react-native codegen
@@ -731,36 +936,40 @@ jobs:
           # Only tolerate exit code 1 (known non-fatal cleanup error in RN CLI 19.1.2)
           # All other exit codes indicate real failures
           if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
-            echo "❌ Error: Codegen failed with exit code $EXIT_CODE"
+            echo "Error: Codegen failed with exit code $EXIT_CODE"
             exit $EXIT_CODE
           fi
 
           # Verify codegen files were generated despite exit code 1
           if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
-            echo "❌ Error: Codegen did not generate iOS files"
+            echo "Error: Codegen did not generate iOS files"
             exit 1
           fi
 
-          echo "✅ Codegen files generated successfully (exit code $EXIT_CODE is expected)"
+          echo "Codegen files generated successfully (exit code $EXIT_CODE is expected)"
           ls -la build/generated/ios/
 
           # Copy codegen to Xcode's expected location (direct contents, not nested)
           mkdir -p ios/build/generated
           cp -R build/generated/ios/* ios/build/generated/
-          echo "✅ Codegen files copied to ios/build/generated/"
+          echo "Codegen files copied to ios/build/generated/"
+          echo "::endgroup::"
 
       - name: Install CocoaPods for Standalone
         working-directory: packages/mobile-remote-hello/ios
         run: |
+          echo "::group::Installing CocoaPods for Standalone"
           rm -rf Pods Podfile.lock
           pod install --repo-update
+          echo "::endgroup::"
 
-      - name: Build Standalone iOS app for Simulator
+      - name: Build Standalone iOS app (Release)
         working-directory: packages/mobile-remote-hello/ios
         env:
           NODE_ENV: production
           PLATFORM: ios
         run: |
+          echo "::group::Building Standalone iOS app (Release)"
           set -o pipefail
           xcodebuild \
             -workspace MobileRemoteHello.xcworkspace \
@@ -773,14 +982,17 @@ jobs:
             2>&1 | tee build.log
 
           if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileRemoteHello.app/main.jsbundle" ]; then
+            echo "Error: main.jsbundle not found in Standalone Release build"
             exit 1
           fi
+          echo "::endgroup::"
 
       - name: Zip Standalone iOS app bundle
         working-directory: packages/mobile-remote-hello/ios
         run: |
           APP_PATH=$(find build -name "MobileRemoteHello.app" -type d 2>/dev/null | head -1)
           if [ -z "$APP_PATH" ]; then
+            echo "Error: MobileRemoteHello.app not found"
             exit 1
           fi
           APP_DIR=$(dirname "$APP_PATH")
@@ -788,7 +1000,7 @@ jobs:
           zip -r "$GITHUB_WORKSPACE/packages/mobile-remote-hello/ios/mobile-remote-standalone-simulator.zip" MobileRemoteHello.app
 
       - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ios-release-apps
           path: |
@@ -796,27 +1008,111 @@ jobs:
             packages/mobile-remote-hello/ios/mobile-remote-standalone-simulator.zip
           retention-days: 30
 
+  deploy-mobile-bundles-production:
+    name: Deploy Mobile Bundles (Production)
+    runs-on: ubuntu-latest
+    needs: [e2e-web, e2e-android, e2e-ios]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: |
+          echo "::group::Installing dependencies"
+          yarn install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Build production remote bundle for Android
+        run: |
+          echo "::group::Building production remote bundle for Android"
+          cd packages/mobile-remote-hello
+          PLATFORM=android yarn build:remote
+          echo "::endgroup::"
+        env:
+          NODE_ENV: production
+
+      - name: Verify bundle output
+        run: |
+          echo "::group::Verifying bundle output"
+          echo "Checking Android bundle output..."
+          ls -lh packages/mobile-remote-hello/dist/android/*.bundle | head -10
+          echo "Total bundles:"
+          ls packages/mobile-remote-hello/dist/android/*.bundle | wc -l
+
+          # Check for container bundle
+          if [ -f "packages/mobile-remote-hello/dist/android/HelloRemote.container.js.bundle" ]; then
+            echo "Container bundle exists"
+            ls -lh packages/mobile-remote-hello/dist/android/HelloRemote.container.js.bundle
+          else
+            echo "Container bundle not found!"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Deploy to Firebase Hosting (Production)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          channelId: live
+          projectId: universal-mfe
+
+      - name: Verify deployment
+        run: |
+          echo "::group::Verifying deployment"
+          echo "Waiting 10 seconds for Firebase CDN to propagate..."
+          sleep 10
+
+          echo "Testing deployed bundle..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://universal-mfe.web.app/HelloRemote.container.js.bundle)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Bundle successfully deployed and accessible"
+            echo "URL: https://universal-mfe.web.app/HelloRemote.container.js.bundle"
+
+            # Check bundle size
+            SIZE=$(curl -sI https://universal-mfe.web.app/HelloRemote.container.js.bundle | grep -i content-length | awk '{print $2}' | tr -d '\r')
+            echo "Bundle size: $SIZE bytes"
+          else
+            echo "Bundle not accessible (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+          echo "::endgroup::"
+
   # ===========================================================================
-  # CREATE GITHUB RELEASE - Only after all deployments succeed
+  # STAGE 3: CREATE GITHUB RELEASE (needs ALL Stage 2 jobs)
   # ===========================================================================
 
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [deploy-android, deploy-ios]
+    needs: [deploy-web-production, deploy-android, deploy-ios, deploy-mobile-bundles-production]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6.0.1
 
       - name: Download Android artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: android-release-apks
           path: artifacts/android
 
       - name: Download iOS artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ios-release-apps
           path: artifacts/ios
@@ -831,9 +1127,19 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
           body: |
-            ## Mobile Release ${{ steps.tag.outputs.tag }}
+            ## Release ${{ steps.tag.outputs.tag }}
 
-            This release has passed E2E tests on both Android and iOS platforms.
+            Release passed E2E tests on Web, Android, and iOS.
+
+            ---
+
+            ### Web (Production)
+
+            | App | URL |
+            |-----|-----|
+            | Web Shell | Deployed to Vercel (production) |
+            | Web Remote | Deployed to Vercel (production) |
+            | Mobile Bundles | https://universal-mfe.web.app |
 
             ---
 

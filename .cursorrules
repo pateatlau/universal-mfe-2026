@@ -441,15 +441,21 @@ Firebase Authentication is fully implemented across all platforms:
 
 ### CI/CD (GitHub Actions) ✅ Complete
 
-Trunk-based development workflow with automated quality gates:
+World-class trunk-based development workflow with mandatory E2E gates:
 
-- **PR Checks**: Type checking, linting, architecture validation
-- **Build Validation**: Web and mobile builds on every PR
-- **Deployment**: Automatic deployment to Firebase Hosting on merge to main
+- **PR Checks**: Type checking, linting, unit tests, build verification (`ci.yml`)
+- **E2E Gates**: Mandatory Web (Playwright) + Android (Maestro) + iOS (Maestro) E2E before merge (`e2e.yml`)
+- **Staging Deployment**: Automatic deployment to staging on push to main (`deploy-staging.yml`)
+- **Production Release**: Tag-based production promotion with E2E re-verification (`release.yml`)
+
+**Core Invariant:** `main` is always releasable.
 
 **Key files:**
-- `.github/workflows/ci.yml` - Main CI workflow
-- `docs/CI-CD-IMPLEMENTATION-PLAN.md` - CI/CD documentation
+- `.github/workflows/ci.yml` - Fast CI checks (lint, typecheck, test, build)
+- `.github/workflows/e2e.yml` - All-platform E2E tests (merge gate)
+- `.github/workflows/deploy-staging.yml` - Staging deployments (Vercel + Firebase)
+- `.github/workflows/release.yml` - Production release with E2E re-run
+- `docs/CI-CD-IMPLEMENTATION-PLAN.md` - Complete CI/CD architecture documentation
 
 ## Enterprise Feature Summary
 
@@ -500,8 +506,8 @@ For comprehensive feature documentation, see `docs/ENTERPRISE-ENHANCEMENTS.md`.
 - `docs/universal-mfe-architecture-overview.md` - Complete system design
 - `docs/universal-mfe-all-platforms-testing-guide.md` - Running apps and testing guide
 - `docs/universal-mfe-mf-v2-implementation.md` - MF v2 implementation details
-- `docs/GIT-FLOW-WORKFLOW.md` - Branch strategy, PR process, release workflow
-- `docs/CI-CD-IMPLEMENTATION-PLAN.md` - CI/CD workflows and deployment
+- `docs/CI-CD-IMPLEMENTATION-PLAN.md` - CI/CD architecture, workflows, environments, and deployment
+- `docs/CI-CD-PREREQUISITES-MANUAL-STEPS.md` - Manual prerequisite steps for CI/CD setup
 - `docs/MOBILE-RELEASE-BUILD-FIXES.md` - Critical Android release build fixes
 - `docs/PATCHMFCONSOLEPLUGIN-GUIDE.md` - Community guide for Hermes + MF v2 console fix
 

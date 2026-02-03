@@ -411,25 +411,24 @@ git push origin v1.2.4
 
 ### Prerequisites (Manual)
 
-- [ ] Vercel: Add staging domain for web-shell
-- [ ] Vercel: Add staging domain for web-remote
-- [ ] Firebase: Staging channel created
-- [ ] GitHub: Merge current `fix/mobile-deploy-flow` PR
-- [ ] Local: Verify Maestro tests pass
+- [x] Vercel: Add staging domain for web-shell
+- [x] Vercel: Add staging domain for web-remote
+- [x] Firebase: Staging channel (auto-created on first deploy)
+- [x] GitHub: Merge current `fix/mobile-deploy-flow` PR
 
 ### Implementation (Automated by Claude)
 
-- [ ] Create `e2e.yml` (consolidated E2E workflow)
-- [ ] Create `deploy-staging.yml` (staging deployments)
-- [ ] Create `release.yml` (production release)
-- [ ] Update `ci.yml` (if needed)
-- [ ] Delete `e2e-web.yml`
-- [ ] Delete `deploy-web.yml`
-- [ ] Delete `deploy-mobile-remote-bundles.yml`
-- [ ] Delete `release-mobile.yml`
-- [ ] Delete `docs/GIT-FLOW-WORKFLOW.md`
-- [ ] Update `CLAUDE.md`
-- [ ] Update this document
+- [x] Create `e2e.yml` (consolidated E2E workflow)
+- [x] Create `deploy-staging.yml` (staging deployments)
+- [x] Create `release.yml` (production release)
+- [x] Update `ci.yml` (updated PR summary, removed label references)
+- [x] Delete `e2e-web.yml`
+- [x] Delete `deploy-web.yml`
+- [x] Delete `deploy-mobile-remote-bundles.yml`
+- [x] Delete `release-mobile.yml`
+- [x] Delete `docs/GIT-FLOW-WORKFLOW.md`
+- [x] Update `CLAUDE.md` and `.cursorrules`
+- [x] Update this document
 
 ### Post-Implementation (Manual)
 
