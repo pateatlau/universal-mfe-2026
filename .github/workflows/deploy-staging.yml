@@ -1,0 +1,305 @@
+name: Deploy Staging
+
+# Deploy to staging environment on push to main.
+# Intentionally triggers on ALL pushes (no path filters) to ensure staging
+# always reflects the exact state of main. This prevents staging drift and
+# guarantees that staging is always a faithful mirror for release validation.
+on:
+  push:
+    branches: [main]
+
+# Cancel in-progress deployments for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: Deploy web-remote-hello to Vercel staging
+  # ─────────────────────────────────────────────────────────────
+  deploy-web-remote-staging:
+    name: Deploy Web Remote (Staging)
+    runs-on: ubuntu-latest
+
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.deployment-url }}
+
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Build web-remote-hello
+        working-directory: packages/web-remote-hello
+        run: |
+          echo "::group::Building web-remote-hello"
+          yarn build
+          echo "::endgroup::"
+
+      - name: Copy vercel.json to dist for SPA routing
+        run: |
+          echo "::group::Validating build output"
+          if [ ! -f "packages/web-remote-hello/vercel.json" ]; then
+            echo "::error::vercel.json not found at packages/web-remote-hello/vercel.json"
+            exit 1
+          fi
+          if [ ! -d "packages/web-remote-hello/dist" ]; then
+            echo "::error::dist directory not found at packages/web-remote-hello/dist"
+            exit 1
+          fi
+          cp packages/web-remote-hello/vercel.json packages/web-remote-hello/dist/
+          echo "Copied vercel.json to dist/"
+          echo "::endgroup::"
+
+      - name: Deploy to Vercel staging
+        id: deploy
+        working-directory: packages/web-remote-hello/dist
+        run: |
+          echo "::group::Deploying to Vercel (staging)"
+          echo "Creating preview deployment..."
+          DEPLOYMENT_URL=$(vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
+
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "::error::Failed to get deployment URL from Vercel"
+            exit 1
+          fi
+
+          echo "Preview deployment URL: $DEPLOYMENT_URL"
+
+          echo "Aliasing to staging domain..."
+          vercel alias set "$DEPLOYMENT_URL" staging-universal-mfe-2026-remote.vercel.app --token=${{ secrets.VERCEL_TOKEN }}
+
+          echo "deployment-url=https://staging-universal-mfe-2026-remote.vercel.app" >> $GITHUB_OUTPUT
+          echo "Staging URL: https://staging-universal-mfe-2026-remote.vercel.app"
+          echo "::endgroup::"
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_REMOTE }}
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: Deploy web-shell to Vercel staging
+  #   Depends on web-remote to get the staging remote URL for MF config
+  # ─────────────────────────────────────────────────────────────
+  deploy-web-shell-staging:
+    name: Deploy Web Shell (Staging)
+    runs-on: ubuntu-latest
+    needs: deploy-web-remote-staging
+
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.deployment-url }}
+
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Build web-shell with staging remote URL
+        working-directory: packages/web-shell
+        run: |
+          echo "::group::Building web-shell for staging"
+          echo "Using staging remote URL: $REMOTE_HELLO_URL"
+          yarn build
+          echo "::endgroup::"
+        env:
+          REMOTE_HELLO_URL: https://staging-universal-mfe-2026-remote.vercel.app
+
+      - name: Copy vercel.json to dist for SPA routing
+        run: |
+          echo "::group::Validating build output"
+          if [ ! -f "packages/web-shell/vercel.json" ]; then
+            echo "::error::vercel.json not found at packages/web-shell/vercel.json"
+            exit 1
+          fi
+          if [ ! -d "packages/web-shell/dist" ]; then
+            echo "::error::dist directory not found at packages/web-shell/dist"
+            exit 1
+          fi
+          cp packages/web-shell/vercel.json packages/web-shell/dist/
+          echo "Copied vercel.json to dist/"
+          echo "::endgroup::"
+
+      - name: Deploy to Vercel staging
+        id: deploy
+        working-directory: packages/web-shell/dist
+        run: |
+          echo "::group::Deploying to Vercel (staging)"
+          echo "Creating preview deployment..."
+          DEPLOYMENT_URL=$(vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
+
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "::error::Failed to get deployment URL from Vercel"
+            exit 1
+          fi
+
+          echo "Preview deployment URL: $DEPLOYMENT_URL"
+
+          echo "Aliasing to staging domain..."
+          vercel alias set "$DEPLOYMENT_URL" staging-universal-mfe-2026-shell.vercel.app --token=${{ secrets.VERCEL_TOKEN }}
+
+          echo "deployment-url=https://staging-universal-mfe-2026-shell.vercel.app" >> $GITHUB_OUTPUT
+          echo "Staging URL: https://staging-universal-mfe-2026-shell.vercel.app"
+          echo "::endgroup::"
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB_SHELL }}
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 3: Build and deploy mobile remote bundles to Firebase staging channel
+  # ─────────────────────────────────────────────────────────────
+  deploy-mobile-bundles-staging:
+    name: Deploy Mobile Bundles (Staging)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared packages
+        run: |
+          echo "::group::Building shared packages"
+          yarn build:shared
+          echo "::endgroup::"
+
+      - name: Build production remote bundle (Android)
+        run: |
+          echo "::group::Building Android remote bundle"
+          cd packages/mobile-remote-hello
+          PLATFORM=android yarn build:remote
+          echo "::endgroup::"
+        env:
+          NODE_ENV: production
+
+      - name: Verify Android bundle output
+        run: |
+          echo "::group::Verifying bundle output"
+          echo "Checking Android bundle output..."
+          ls -lh packages/mobile-remote-hello/dist/android/*.bundle | head -10
+          echo "Total bundles:"
+          ls packages/mobile-remote-hello/dist/android/*.bundle | wc -l
+
+          if [ -f "packages/mobile-remote-hello/dist/android/HelloRemote.container.js.bundle" ]; then
+            echo "Container bundle exists"
+            ls -lh packages/mobile-remote-hello/dist/android/HelloRemote.container.js.bundle
+          else
+            echo "::error::Container bundle not found!"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: Deploy to Firebase Hosting staging channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          channelId: staging
+          projectId: universal-mfe
+
+      - name: Summary
+        run: |
+          echo "## Android Remote Bundle - Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Staging Channel**: Firebase Hosting \`staging\` channel" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Container Bundle**: \`HelloRemote.container.js.bundle\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Test remote loading in mobile host app against staging bundles" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify bundle integrity on staging before promoting to production" >> $GITHUB_STEP_SUMMARY
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 4: Staging deployment summary
+  # ─────────────────────────────────────────────────────────────
+  staging-summary:
+    name: Staging Summary
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [deploy-web-remote-staging, deploy-web-shell-staging, deploy-mobile-bundles-staging]
+
+    steps:
+      - name: Print deployment summary
+        run: |
+          echo "## Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Staging URL | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          # Web Shell
+          if [ "${{ needs.deploy-web-shell-staging.result }}" = "success" ]; then
+            echo "| Web Shell | https://staging-universal-mfe-2026-shell.vercel.app | Deployed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Web Shell | https://staging-universal-mfe-2026-shell.vercel.app | ${{ needs.deploy-web-shell-staging.result }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Web Remote
+          if [ "${{ needs.deploy-web-remote-staging.result }}" = "success" ]; then
+            echo "| Web Remote | https://staging-universal-mfe-2026-remote.vercel.app | Deployed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Web Remote | https://staging-universal-mfe-2026-remote.vercel.app | ${{ needs.deploy-web-remote-staging.result }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Mobile Bundles
+          if [ "${{ needs.deploy-mobile-bundles-staging.result }}" = "success" ]; then
+            echo "| Mobile Bundles (Android) | Firebase Hosting \`staging\` channel | Deployed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Mobile Bundles (Android) | Firebase Hosting \`staging\` channel | ${{ needs.deploy-mobile-bundles-staging.result }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Staging Environment" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web App**: https://staging-universal-mfe-2026-shell.vercel.app" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web Remote**: https://staging-universal-mfe-2026-remote.vercel.app" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mobile Bundles**: Firebase Hosting \`staging\` channel" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Verify all staging deployments are working correctly" >> $GITHUB_STEP_SUMMARY
+          echo "2. Run E2E tests against the staging environment" >> $GITHUB_STEP_SUMMARY
+          echo "3. Promote to production when ready" >> $GITHUB_STEP_SUMMARY
