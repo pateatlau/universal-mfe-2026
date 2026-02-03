@@ -77,7 +77,7 @@ Document these (should already exist):
 
 **Required Status Checks (add these after workflows exist):**
 
-```
+```text
 CI / Lint, Typecheck, Test (ubuntu-latest)
 E2E / E2E Web Tests (ubuntu-latest)
 E2E / E2E Android Tests (ubuntu-latest)

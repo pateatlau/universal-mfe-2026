@@ -28,7 +28,7 @@ This invariant is enforced by mandatory E2E gates before merge. Any commit on `m
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                         WORLD-CLASS CI/CD PIPELINE                               │
 ├─────────────────────────────────────────────────────────────────────────────────┤
@@ -186,7 +186,7 @@ Jobs:
 **Staging URLs:**
 - Web Shell: `https://staging-universal-mfe-2026-shell.vercel.app`
 - Web Remote: `https://staging-universal-mfe-2026-remote.vercel.app`
-- Mobile Bundles: `https://universal-mfe.web.app` (staging channel)
+- Mobile Bundles: `https://universal-mfe--staging-<id>.web.app` (Firebase auto-generates a unique channel URL on first deploy)
 
 ### 4. Release Workflow (`release.yml`)
 
@@ -296,7 +296,7 @@ Configure in GitHub: **Settings → Branches → Add rule for `main`**
 
 All of these must pass before merge is allowed:
 
-```
+```text
 CI / Lint, Typecheck, Test (ubuntu-latest)
 E2E / E2E Web Tests (ubuntu-latest)
 E2E / E2E Android Tests (ubuntu-latest)
