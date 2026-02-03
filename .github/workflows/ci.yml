@@ -309,8 +309,25 @@ jobs:
 
       # macos-15 runners may not have iOS simulator runtimes pre-installed.
       # This downloads the runtime matching the selected Xcode version.
+      # Requires runFirstLaunch + retry logic due to intermittent failures.
       - name: Download iOS Simulator runtime
-        run: sudo xcodebuild -downloadPlatform iOS
+        run: |
+          sudo xcodebuild -runFirstLaunch
+          xcrun simctl list > /dev/null 2>&1 || true
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt: Downloading iOS platform..."
+            if sudo xcodebuild -downloadPlatform iOS; then
+              echo "iOS platform downloaded successfully"
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Failed to download iOS platform after 3 attempts"
+              exit 1
+            fi
+            echo "Download failed, retrying in 10 seconds..."
+            sleep 10
+          done
+          sudo xcodebuild -runFirstLaunch
 
       - name: Setup Node.js
         uses: actions/setup-node@v6.1.0
@@ -445,8 +462,25 @@ jobs:
 
       # macos-15 runners may not have iOS simulator runtimes pre-installed.
       # This downloads the runtime matching the selected Xcode version.
+      # Requires runFirstLaunch + retry logic due to intermittent failures.
       - name: Download iOS Simulator runtime
-        run: sudo xcodebuild -downloadPlatform iOS
+        run: |
+          sudo xcodebuild -runFirstLaunch
+          xcrun simctl list > /dev/null 2>&1 || true
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt: Downloading iOS platform..."
+            if sudo xcodebuild -downloadPlatform iOS; then
+              echo "iOS platform downloaded successfully"
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Failed to download iOS platform after 3 attempts"
+              exit 1
+            fi
+            echo "Download failed, retrying in 10 seconds..."
+            sleep 10
+          done
+          sudo xcodebuild -runFirstLaunch
 
       - name: Setup Node.js
         uses: actions/setup-node@v6.1.0
