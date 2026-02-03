@@ -609,7 +609,7 @@ jobs:
             | 📱 Build Standalone Android | ${getStatus(results.standaloneAndroid)} ${results.standaloneAndroid} |
             | 📲 Build Standalone iOS | ${getStatus(results.standaloneIos)} ${results.standaloneIos} |
 
-            > 💡 **E2E Tests:** Running automatically in the [E2E workflow](${runUrl.replace(/runs\/\d+/, 'workflows')}). All platforms (Web, Android, iOS) must pass before merge.
+            > 💡 **E2E Tests:** Running automatically in the [E2E workflow](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/workflows/e2e.yml). All platforms (Web, Android, iOS) must pass before merge.
 
             ### Artifacts
             ${!anyFailed ? `📦 [Download artifacts from workflow run](${runUrl}#artifacts)

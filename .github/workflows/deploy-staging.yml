@@ -1,7 +1,9 @@
 name: Deploy Staging
 
-# Deploy to staging environment on push to main
-# CI was already validated in the PR - this deploys directly
+# Deploy to staging environment on push to main.
+# Intentionally triggers on ALL pushes (no path filters) to ensure staging
+# always reflects the exact state of main. This prevents staging drift and
+# guarantees that staging is always a faithful mirror for release validation.
 on:
   push:
     branches: [main]
@@ -240,22 +242,6 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
           channelId: staging
           projectId: universal-mfe
-
-      - name: Verify staging deployment
-        run: |
-          echo "::group::Verifying staging deployment"
-          echo "Waiting 10 seconds for Firebase CDN to propagate..."
-          sleep 10
-
-          echo "Testing deployed bundle on staging channel..."
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://universal-mfe--staging-*.web.app/HelloRemote.container.js.bundle || echo "000")
-
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "Bundle successfully deployed and accessible on staging"
-          else
-            echo "::warning::Could not verify staging bundle (HTTP $HTTP_CODE). Firebase staging channel URL may differ. Check the Firebase deploy step output for the exact URL."
-          fi
-          echo "::endgroup::"
 
       - name: Summary
         run: |
