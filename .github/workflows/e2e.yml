@@ -180,9 +180,18 @@ jobs:
           }
           EOF
 
-      - name: Build Android APK
+      # Release builds bundle JS into the APK (self-contained, no dev server needed).
+      # Debug builds require a running Re.Pack dev server which is impractical in CI.
+      - name: Generate React Native codegen
         working-directory: packages/mobile-host/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew generateCodegenArtifactsFromSchema --no-daemon
+
+      - name: Build Android APK (Release)
+        working-directory: packages/mobile-host/android
+        env:
+          PLATFORM: android
+          NODE_ENV: production
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Install Maestro CLI
         run: |
@@ -270,7 +279,7 @@ jobs:
             # Install APK with retry logic
             echo "Installing APK..."
             for attempt in 1 2 3; do
-              if adb install -r packages/mobile-host/android/app/build/outputs/apk/debug/app-debug.apk; then
+              if adb install -r packages/mobile-host/android/app/build/outputs/apk/release/app-release.apk; then
                 echo "APK installed successfully (attempt $attempt)"
                 break
               else
@@ -370,17 +379,57 @@ jobs:
           rm -rf Pods Podfile.lock
           pod install --repo-update
 
-      - name: Build iOS app for Simulator
-        working-directory: packages/mobile-host/ios
+      # Release builds bundle JS into the app (self-contained, no dev server needed).
+      # Debug builds require a running Re.Pack dev server which is impractical in CI.
+      - name: Generate React Native codegen
+        working-directory: packages/mobile-host
         run: |
+          # Run codegen and capture exit code
+          set +e
+          yarn react-native codegen
+          EXIT_CODE=$?
+          set -e
+
+          # Only tolerate exit code 1 (known non-fatal cleanup error in RN CLI 19.1.2)
+          if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
+            echo "Codegen failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+          # Verify codegen files were generated
+          if [ ! -d "build/generated/ios" ] || [ -z "$(ls -A build/generated/ios 2>/dev/null)" ]; then
+            echo "Codegen did not generate iOS files"
+            exit 1
+          fi
+
+          # Copy codegen to Xcode's expected location
+          mkdir -p ios/build/generated
+          cp -R build/generated/ios/* ios/build/generated/
+          echo "Codegen files generated and copied successfully"
+
+      - name: Build iOS app for Simulator (Release)
+        working-directory: packages/mobile-host/ios
+        env:
+          NODE_ENV: production
+          PLATFORM: ios
+        run: |
+          set -o pipefail
           xcodebuild \
             -workspace MobileHostTmp.xcworkspace \
             -scheme MobileHostTmp \
-            -configuration Debug \
+            -configuration Release \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -derivedDataPath build \
-            build
+            build \
+            2>&1 | tee build.log
+
+          # Verify JS bundle was embedded in the app
+          if [ ! -f "build/Build/Products/Release-iphonesimulator/MobileHostTmp.app/main.jsbundle" ]; then
+            echo "main.jsbundle not found in Release build - JS bundle was not embedded"
+            exit 1
+          fi
+          echo "Release build complete with embedded JS bundle"
 
       - name: Install Maestro CLI
         run: |
