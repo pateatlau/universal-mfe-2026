@@ -225,7 +225,7 @@ jobs:
           arch: x86_64
           force-avd-creation: false
           emulator-boot-timeout: 600
-          emulator-options: -no-snapshot-save -no-snapshot-load -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
             echo "::group::Preparing device for Maestro tests"
