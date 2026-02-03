@@ -24,8 +24,9 @@ tags:
 # Verify theme toggle is present (light mode default shows Dark option)
 - assertVisible: ".*Dark.*"
 
-# Verify language toggle is present
-- assertVisible: ".*English.*"
+# Verify language toggle is present (shows NEXT locale, not current)
+# When current locale is English, the toggle button shows "हिन्दी" (Hindi)
+- assertVisible: ".*हिन्दी.*"
 
 # Wait for login screen to finish rendering (use login-unique element "Forgot Password?")
 - extendedWaitUntil:

@@ -27,6 +27,11 @@ tags:
 
 # === Navigate to Sign Up screen ===
 # The link text is "Don't have an account? Sign Up" - tap on "Sign Up" part
+# Scroll down first as the link may be below the fold on small screens
+- scrollUntilVisible:
+    element: ".*Sign Up.*"
+    direction: DOWN
+    timeout: 5000
 - tapOn:
     text: ".*Sign Up.*"
     index: 0
@@ -44,6 +49,11 @@ tags:
 
 # === Navigate back to Login ===
 # The link text is "Already have an account? Sign In"
+# Scroll down first as the link may be below the fold on small screens
+- scrollUntilVisible:
+    element: ".*Sign In.*"
+    direction: DOWN
+    timeout: 5000
 - tapOn:
     text: ".*Sign In.*"
     index: 0

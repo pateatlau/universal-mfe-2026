@@ -52,6 +52,11 @@ tags:
 # === Test theme persistence across auth screen navigation ===
 
 # Navigate to Sign Up (tap on "Sign Up" in "Don't have an account? Sign Up")
+# Scroll down first as the link may be below the fold on small screens
+- scrollUntilVisible:
+    element: ".*Sign Up.*"
+    direction: DOWN
+    timeout: 5000
 - tapOn:
     text: ".*Sign Up.*"
     index: 0
@@ -72,6 +77,11 @@ tags:
     timeout: 3000
 
 # Navigate back to Login first (auth.signup.hasAccount = "Already have an account? Sign In")
+# Scroll down first as the link may be below the fold on small screens
+- scrollUntilVisible:
+    element: ".*Sign In.*"
+    direction: DOWN
+    timeout: 5000
 - tapOn:
     text: ".*Sign In.*"
     index: 0
