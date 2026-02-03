@@ -237,92 +237,15 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
-            echo "::group::Preparing device for Maestro tests"
+            # The emulator-runner action already waits for boot before running this script.
+            # Do NOT restart ADB here — it kills the connection the action established.
 
-            # Restart ADB server for clean state (fixes "device offline" issues)
-            echo "Restarting ADB server..."
-            adb kill-server
-            sleep 2
-            adb start-server
-            sleep 2
+            adb devices -l
+            adb install -r packages/mobile-host/android/app/build/outputs/apk/release/app-release.apk
+            sleep 5
 
-            # Wait for device to be online (with explicit timeout to avoid indefinite hang)
-            echo "Waiting for device..."
-            if ! timeout 120 adb wait-for-device; then
-              echo "adb wait-for-device timed out after 120 seconds"
-              adb devices -l
-              exit 1
-            fi
-            echo "Device online"
-
-            # Wait for device to be fully booted (not just connected)
-            echo "Waiting for device to fully boot..."
-            BOOT_TIMEOUT=300
-            for i in $(seq 1 $BOOT_TIMEOUT); do
-              BOOT_STATUS=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-              if [ "$BOOT_STATUS" = "1" ]; then
-                echo "Device fully booted after $i seconds"
-                break
-              fi
-              if [ $i -eq $BOOT_TIMEOUT ]; then
-                echo "Device boot timeout after $BOOT_TIMEOUT seconds"
-                adb devices -l
-                exit 1
-              fi
-              if [ $((i % 30)) -eq 0 ]; then
-                echo "  Waiting for boot... ($i/$BOOT_TIMEOUT)"
-              fi
-              sleep 1
-            done
-
-            # Additional wait for system services to stabilize
-            echo "Waiting for package manager..."
-            for i in {1..30}; do
-              if adb shell pm path android >/dev/null 2>&1; then
-                echo "Package manager ready"
-                break
-              fi
-              if [ $i -eq 30 ]; then
-                echo "Package manager slow, continuing anyway..."
-              fi
-              sleep 1
-            done
-
-            echo "::endgroup::"
-            echo "::group::Installing and running tests"
-
-            # Install APK with retry logic
-            echo "Installing APK..."
-            for attempt in 1 2 3; do
-              if adb install -r packages/mobile-host/android/app/build/outputs/apk/release/app-release.apk; then
-                echo "APK installed successfully (attempt $attempt)"
-                break
-              else
-                echo "Install attempt $attempt failed, retrying..."
-                sleep 5
-                if [ $attempt -eq 3 ]; then
-                  echo "APK installation failed after 3 attempts"
-                  exit 1
-                fi
-              fi
-            done
-
-            # Wait for app installation to fully complete
-            sleep 10
-
-            # Verify app is installed
-            if ! adb shell pm list packages | grep -q "com.mobilehosttmp"; then
-              echo "App not found in package list after installation"
-              adb shell pm list packages | grep mobile
-              exit 1
-            fi
-            echo "App package verified: com.mobilehosttmp"
-
-            # Run Maestro tests
             echo "Running Maestro E2E tests..."
             MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.mobilehosttmp maestro test packages/mobile-host/.maestro/ --exclude-tags=remote --format=junit --output=packages/mobile-host/maestro-results.xml
-
-            echo "::endgroup::"
 
       - name: Upload Maestro results
         uses: actions/upload-artifact@v6
@@ -342,7 +265,7 @@ jobs:
 
   e2e-ios:
     name: E2E iOS Tests
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
 
     steps:
@@ -829,7 +752,7 @@ jobs:
 
   deploy-ios:
     name: Deploy iOS
-    runs-on: macos-14
+    runs-on: macos-15
     needs: [e2e-web, e2e-android, e2e-ios]
 
     steps:

@@ -295,7 +295,7 @@ jobs:
   # iOS build job (Simulator only - no signing required)
   build-ios:
     name: Build iOS (Simulator)
-    runs-on: macos-14
+    runs-on: macos-15
     needs: check
 
     steps:
@@ -426,7 +426,7 @@ jobs:
   # Standalone iOS build job (mobile-remote-hello as standalone app)
   build-standalone-ios:
     name: Build Standalone iOS (Simulator)
-    runs-on: macos-14
+    runs-on: macos-15
     needs: check
 
     steps:
