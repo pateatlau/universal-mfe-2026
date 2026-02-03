@@ -277,6 +277,11 @@ jobs:
         with:
           xcode-version: '16.2'
 
+      # macos-15 runners may not have iOS simulator runtimes pre-installed.
+      # This downloads the runtime matching the selected Xcode version.
+      - name: Download iOS Simulator runtime
+        run: sudo xcodebuild -downloadPlatform iOS
+
       - name: Setup Node.js
         uses: actions/setup-node@v6.1.0
         with:
@@ -763,6 +768,11 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
           xcode-version: '16.2'
+
+      # macos-15 runners may not have iOS simulator runtimes pre-installed.
+      # This downloads the runtime matching the selected Xcode version.
+      - name: Download iOS Simulator runtime
+        run: sudo xcodebuild -downloadPlatform iOS
 
       - name: Setup Node.js
         uses: actions/setup-node@v6.1.0
