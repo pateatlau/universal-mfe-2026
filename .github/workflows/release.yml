@@ -210,6 +210,7 @@ jobs:
 
       - name: Install Maestro CLI
         run: |
+          export MAESTRO_VERSION=2.1.0
           curl -fsSL "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
@@ -387,6 +388,7 @@ jobs:
 
       - name: Install Maestro CLI
         run: |
+          export MAESTRO_VERSION=2.1.0
           curl -fsSL "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
@@ -502,7 +504,9 @@ jobs:
           cache: 'yarn'
 
       - name: Install Vercel CLI
-        run: npm install -g vercel@latest
+        run: |
+          npm install -g vercel@50.9.6
+          vercel --version
 
       - name: Install dependencies
         run: |
@@ -678,6 +682,8 @@ jobs:
 
       # Build Host App
       - name: Build mobile remote for Android (MF bundles)
+        env:
+          NODE_ENV: production
         run: |
           echo "::group::Building mobile remote for Android"
           yarn build:mobile:android
@@ -845,6 +851,8 @@ jobs:
 
       # Build Host App
       - name: Build mobile remote for iOS (MF bundles)
+        env:
+          NODE_ENV: production
         run: |
           echo "::group::Building mobile remote for iOS"
           yarn build:mobile:ios
