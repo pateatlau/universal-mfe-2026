@@ -300,7 +300,7 @@ All of these must pass before merge is allowed:
 CI / Lint, Typecheck, Test (ubuntu-latest)
 E2E / E2E Web Tests (ubuntu-latest)
 E2E / E2E Android Tests (ubuntu-latest)
-E2E / E2E iOS Tests (macos-14)
+E2E / E2E iOS Tests (macos-15)
 ```
 
 ---
