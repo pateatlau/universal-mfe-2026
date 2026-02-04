@@ -195,6 +195,7 @@ jobs:
 
       - name: Install Maestro CLI
         run: |
+          export MAESTRO_VERSION=2.1.0
           curl -fsSL "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
@@ -378,6 +379,7 @@ jobs:
 
       - name: Install Maestro CLI
         run: |
+          export MAESTRO_VERSION=2.1.0
           curl -fsSL "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
