@@ -11,8 +11,9 @@ This document details the critical issues discovered and fixed to enable React N
 5. [Issue #4: Production Chunk ID Resolution](#issue-4-production-chunk-id-resolution)
 6. [Issue #5: Missing React Native Codegen for Re.Pack](#issue-5-missing-react-native-codegen-for-repack)
 7. [Issue #6: PLATFORM Environment Variable Required](#issue-6-platform-environment-variable-required)
-8. [Security Hardening](#security-hardening)
-9. [Testing Checklist](#testing-checklist)
+8. [Issue #7: iOS Simulator Runtime on macOS-15 CI Runners](#issue-7-ios-simulator-runtime-on-macos-15-ci-runners)
+9. [Security Hardening](#security-hardening)
+10. [Testing Checklist](#testing-checklist)
 
 ---
 
@@ -423,7 +424,7 @@ node_modules/@callstack/repack/android/build/generated/source/codegen/jni/
 
 **CI/CD Integration** (automated in workflow):
 ```yaml
-# .github/workflows/deploy-android.yml
+# .github/workflows/e2e.yml and .github/workflows/release.yml
 - name: Generate React Native codegen for mobile-host
   working-directory: packages/mobile-host/android
   run: ./gradlew generateCodegenArtifactsFromSchema --no-daemon
@@ -487,7 +488,9 @@ Without codegen, the native bridge fails to link, making Module Federation impos
 }
 ```
 
-**In CI/CD**: The workflow now automatically generates codegen before all Android release builds (see `.github/workflows/deploy-android.yml`).
+**In CI/CD**: The workflows now automatically generate codegen before all release builds (see `.github/workflows/e2e.yml` and `.github/workflows/release.yml`).
+
+**iOS Codegen Note**: iOS codegen via `yarn react-native codegen` may exit with code 1 due to a known non-fatal cleanup error in RN CLI 19.1.2. The CI workflow tolerates exit code 1 and verifies files were actually generated before proceeding.
 
 ---
 
@@ -550,22 +553,21 @@ select: function(obj) {
 
 The GitHub Actions workflows must also set the `PLATFORM` environment variable:
 
-**`.github/workflows/deploy-android.yml`**:
+**`.github/workflows/e2e.yml` and `.github/workflows/release.yml`**:
 ```yaml
-- name: Build Host Bundle
+# Android
+- name: Build Android APK (Release)
   env:
     PLATFORM: android
     NODE_ENV: production
-  run: yarn build:android
-```
+  run: ./gradlew assembleRelease --no-daemon
 
-**`.github/workflows/deploy-ios.yml`**:
-```yaml
-- name: Build Host Bundle
+# iOS
+- name: Build iOS app for Simulator (Release)
   env:
     PLATFORM: ios
     NODE_ENV: production
-  run: yarn build:ios
+  run: xcodebuild -configuration Release ...
 ```
 
 ### Verification
@@ -603,8 +605,87 @@ Without the correct `PLATFORM` value:
 - `packages/mobile-host/scripts/PatchMFConsolePlugin.mjs` - Plugin that uses PLATFORM
 - `packages/mobile-host/package.json` - Build scripts with PLATFORM set
 - `packages/mobile-remote-hello/package.json` - Remote app build scripts (also needs PLATFORM)
-- `.github/workflows/deploy-android.yml` - Android CI/CD workflow
-- `.github/workflows/deploy-ios.yml` - iOS CI/CD workflow
+- `.github/workflows/e2e.yml` - E2E test workflow (builds Release APKs/apps)
+- `.github/workflows/release.yml` - Production release workflow
+
+---
+
+## Issue #7: iOS Simulator Runtime on macOS-15 CI Runners
+
+### Problem Description
+
+iOS builds on GitHub Actions `macos-15` runners fail with:
+```text
+xcodebuild: error: Unable to find a device matching the provided destination specifier:
+    { platform:iOS Simulator, OS:latest, name:iPhone 16 }
+```
+
+Additionally, attempting to download the simulator runtime via `xcodebuild -downloadPlatform iOS` fails intermittently (~40% of the time) with:
+```text
+Unable to connect to simulator.
+Error: Process completed with exit code 70.
+```
+
+### Root Cause
+
+GitHub Actions `macos-15` runner images may not have iOS simulator runtimes pre-installed. This is a [known issue](https://github.com/actions/runner-images/issues/13459) — the runner images have grown large enough that disk space constraints prevent pre-installing all runtimes. The download command also fails intermittently because the simulator framework isn't initialized before the download is attempted.
+
+### Solution
+
+**Initialize Xcode, then download with retry logic:**
+
+```yaml
+- name: Download iOS Simulator runtime
+  run: |
+    # Initialize Xcode first-launch tasks (required before platform downloads)
+    sudo xcodebuild -runFirstLaunch
+    # Initialize simulator framework
+    xcrun simctl list > /dev/null 2>&1 || true
+    # Download iOS simulator runtime with retry logic
+    for attempt in 1 2 3; do
+      echo "Attempt $attempt: Downloading iOS platform..."
+      if sudo xcodebuild -downloadPlatform iOS; then
+        echo "iOS platform downloaded successfully"
+        break
+      fi
+      if [ "$attempt" -eq 3 ]; then
+        echo "::error::Failed to download iOS platform after 3 attempts"
+        exit 1
+      fi
+      echo "Download failed, retrying in 10 seconds..."
+      sleep 10
+    done
+    # Re-run first launch tasks after platform install
+    sudo xcodebuild -runFirstLaunch
+```
+
+**Key steps:**
+1. `xcodebuild -runFirstLaunch` — initializes Xcode components (required before downloads)
+2. `xcrun simctl list` — initializes the simulator framework
+3. `xcodebuild -downloadPlatform iOS` — downloads the runtime with 3 retry attempts
+4. `xcodebuild -runFirstLaunch` — re-runs after install to register the new runtime
+
+### Where Applied
+
+This step is added to **all iOS jobs** across the CI/CD workflows:
+
+| Workflow | Job(s) |
+|----------|--------|
+| `e2e.yml` | `e2e-ios` |
+| `ci.yml` | `build-ios`, `build-standalone-ios` |
+| `release.yml` | `e2e-ios`, `deploy-ios` |
+
+### Known Limitations
+
+- The download adds ~5-10 minutes to iOS job runtime
+- Even with retries, the download may occasionally fail on `macos-15` (if all 3 attempts fail, the step errors out)
+- If this becomes persistently unreliable, fallback options include pinning to a specific runner image version
+
+### References
+
+- [actions/runner-images#13459](https://github.com/actions/runner-images/issues/13459) — Unable to connect to simulator
+- [actions/runner-images#12763](https://github.com/actions/runner-images/issues/12763) — iOS 18.0 platform installation fails
+- [actions/runner-images#12948](https://github.com/actions/runner-images/issues/12948) — Xcode 16.4 sometimes missing simulators
 
 ---
 
@@ -824,10 +905,11 @@ For production readiness details, see [PatchMFConsolePlugin Guide - Production R
    - CORS headers
    - Cache control
 
-7. **`/.github/workflows/*.yml`** (to be updated)
-   - CI/CD pipeline for automated builds
-   - Firebase Hosting deployment
-   - Firebase App Distribution
+7. **`/.github/workflows/*.yml`**
+   - `ci.yml` - Fast CI checks (lint, typecheck, test, build)
+   - `e2e.yml` - All-platform E2E tests with Release builds
+   - `deploy-staging.yml` - Staging deployments
+   - `release.yml` - Production release with E2E re-verification
 
 ---
 
@@ -951,7 +1033,7 @@ xcrun simctl launch <DEVICE_UUID> com.universal.mobilehost
 
 **Documentation**: Complete implementation in `docs/CI-CD-IMPLEMENTATION-PLAN.md` Phase 6.7
 
-**Workflow File**: `.github/workflows/deploy-ios.yml`
+**Workflow Files**: `.github/workflows/e2e.yml`, `.github/workflows/release.yml`
 
 **Related Files**:
 - `packages/mobile-host/ios/scripts/bundle-repack.sh` - Custom bundling script
@@ -1026,7 +1108,7 @@ xcrun simctl launch <DEVICE_UUID> com.universal.mobilehost
 ### Internal Documentation
 - [PatchMFConsolePlugin Guide](./PATCHMFCONSOLEPLUGIN-GUIDE.md) - Comprehensive guide to the console polyfill plugin
 - [CI/CD Implementation Plan](./CI-CD-IMPLEMENTATION-PLAN.md) - Automated deployment workflows
-- [Git Flow Workflow](./GIT-FLOW-WORKFLOW.md) - Development and release process
+- [CI/CD Prerequisites](./CI-CD-PREREQUISITES-MANUAL-STEPS.md) - Manual setup steps for CI/CD
 
 ### External References
 - [Module Federation v2 Documentation](https://module-federation.io/)
@@ -1037,7 +1119,7 @@ xcrun simctl launch <DEVICE_UUID> com.universal.mobilehost
 
 ---
 
-**Document Version**: 1.3
-**Last Updated**: 2026-01-27
+**Document Version**: 1.4
+**Last Updated**: 2026-02-04
 **Authors**: Claude + Development Team
 **Status**: Complete and Verified (Android + iOS)

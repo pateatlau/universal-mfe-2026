@@ -81,7 +81,7 @@ Document these (should already exist):
 CI / Lint, Typecheck, Test (ubuntu-latest)
 E2E / E2E Web Tests (ubuntu-latest)
 E2E / E2E Android Tests (ubuntu-latest)
-E2E / E2E iOS Tests (macos-14)
+E2E / E2E iOS Tests (macos-15)
 ```
 
 **Note:** You can only add status checks AFTER the workflows have run at least once. I'll remind you to do this after implementation.

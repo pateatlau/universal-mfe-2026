@@ -62,6 +62,14 @@ All versions are exact (no `^` or `~`) to ensure reproducibility.
 | CocoaPods           | 1.16.2        | macOS only                             |
 | Ruby                | 2.6.10+       | For CocoaPods                          |
 
+### CI/CD CLI Tools
+
+| Tool           | Version | Notes                              |
+| -------------- | ------- | ---------------------------------- |
+| Vercel CLI     | 50.9.6  | Web deployment to Vercel           |
+| Firebase CLI   | 15.4.0  | Mobile bundle deployment + hosting |
+| Maestro CLI    | 2.1.0   | Mobile E2E testing                 |
+
 ### Port Assignments
 
 | Service                 | Port |
