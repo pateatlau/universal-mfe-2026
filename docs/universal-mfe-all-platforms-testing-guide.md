@@ -31,6 +31,7 @@ yarn workspace @universal/web-shell dev
 Open <http://localhost:9001> in your browser.
 
 **Manual Testing:**
+
 - Navigate using the header links (Home, Remote Hello, Settings)
 - On Remote Hello page: click "Load Remote" and verify component loads
 - On Settings page: toggle theme and language
@@ -39,218 +40,253 @@ Open <http://localhost:9001> in your browser.
 
 ### iOS
 
-#### iOS Shell App (with Remote)
+#### iOS Host App (with Remote MFE)
 
-##### Step 1: Start an iOS Simulator
+This setup runs the remote MFE and host app in **two separate simulators**.
+
+---
+
+#### A. Remote Standalone App
+
+##### Terminal 1: Build and Serve Remote Bundle
 
 ```bash
-# List available simulators
-xcrun simctl list devices available
+# Build the iOS remote MFE bundle
+PLATFORM=ios yarn workspace @universal/mobile-remote-hello build:remote
 
-# Boot a simulator (use an available device name)
-xcrun simctl boot "iPhone 16"
-
-# Open the Simulator app (makes it visible)
-open -a Simulator
+# Serve the remote bundle on port 9005
+PLATFORM=ios yarn workspace @universal/mobile-remote-hello serve
 ```
 
-##### Step 2: Build and serve the iOS remote
+**Wait** until you see: `Server listening on port 9005`
+
+**Keep this terminal running.**
+
+##### Terminal 2: Start Metro Bundler for Remote
 
 ```bash
-# Terminal 1: Build and serve iOS remote
-yarn workspace @universal/mobile-remote-hello build:ios
-yarn workspace @universal/mobile-remote-hello serve:ios
-```
+# Optional: Shutdown all simulators and list available ones
+xcrun simctl shutdown all
+xcrun simctl list devices available | grep iPhone
 
-Wait until you see "Server listening on port 9005".
-
-##### Step 3: Start the iOS Metro bundler
-
-```bash
-# Terminal 2: Start iOS Metro bundler
-yarn workspace @universal/mobile-host start:bundler:ios
-```
-
-Wait until you see "Welcome to Metro" and the bundler is ready.
-
-##### Step 4: Build and run the iOS app
-
-```bash
-# Terminal 3: Build and install iOS app
-yarn workspace @universal/mobile-host ios
-```
-
-The app will automatically install and launch in the iOS Simulator.
-
-**Manual Testing:**
-- Navigate using the header links (Home, Remote Hello, Settings)
-- On Remote Hello page: tap "Load Remote" and verify component loads
-- On Settings page: toggle theme and language
-
-#### iOS Remote Standalone App
-
-For isolated development of the remote component without the shell app.
-
-##### Step 1: Start an iOS Simulator (if not already running)
-
-```bash
-xcrun simctl boot "iPhone 16"
-open -a Simulator
-```
-
-##### Step 2: Start the standalone bundler
-
-```bash
-# Terminal 1: Start standalone bundler for remote
+# Start Metro bundler for remote app
 yarn workspace @universal/mobile-remote-hello start:bundler:ios
 ```
 
-Wait until you see "Welcome to Metro" and the bundler is ready.
+**Wait** until you see: `Welcome to Metro` and Metro is ready.
 
-##### Step 3: Install CocoaPods (first time only)
+**Keep this terminal running.**
 
-```bash
-# Install pods for the remote iOS project
-cd packages/mobile-remote-hello/ios
-pod install
-cd ../../..
-```
-
-##### Step 4: Build and run the standalone app
+##### Terminal 3: Build, Boot, and Launch Remote App
 
 ```bash
-# Terminal 2: Build and install standalone remote app
-cd packages/mobile-remote-hello/ios
+# Build the remote app
+cd packages/mobile-remote-hello/ios && \
 xcodebuild -workspace MobileRemoteHello.xcworkspace \
   -scheme MobileRemoteHello \
   -configuration Debug \
-  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
   -derivedDataPath build \
   build
 
-# Install the app on the simulator
-xcrun simctl install booted build/Build/Products/Debug-iphonesimulator/MobileRemoteHello.app
+# Boot the simulator
+xcrun simctl boot "iPhone 16 Pro"
 
-# Launch the app
-xcrun simctl launch booted com.universal.mobileremote
+# Install and launch the remote app
+xcrun simctl install "iPhone 16 Pro" build/Build/Products/Debug-iphonesimulator/MobileRemoteHello.app && \
+xcrun simctl launch "iPhone 16 Pro" com.universal.mobileremote
 ```
+
+**Verify:** You should see the standalone remote app running in the iPhone 16 Pro simulator.
+
+---
+
+#### B. Host App
+
+##### Terminal 3 (reuse): Start Metro Bundler for Host
+
+```bash
+# Start Metro bundler for host app
+yarn workspace @universal/mobile-host start:bundler:ios
+```
+
+**Wait** until you see: `Welcome to Metro` and Metro is ready.
+
+**Keep this terminal running.**
+
+##### Terminal 4: Build, Boot, and Launch Host App
+
+```bash
+# Build the host app
+cd packages/mobile-host/ios
+xcodebuild -workspace MobileHostTmp.xcworkspace \
+  -scheme MobileHostTmp \
+  -configuration Debug \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro Max' \
+  -derivedDataPath build \
+  build
+
+# Boot the second simulator
+xcrun simctl boot "iPhone 16 Pro Max"
+
+# Install and launch the host app
+xcrun simctl install "iPhone 16 Pro Max" build/Build/Products/Debug-iphonesimulator/MobileHostTmp.app && \
+xcrun simctl launch "iPhone 16 Pro Max" com.universal.mobilehost
+```
+
+**Verify:** You should now see **two simulators running** side by side.
+
+---
+
+#### Manual Testing
+
+- Navigate using header links (Home, Remote Hello, Settings)
+- On **Remote Hello** page: tap "Load Remote" → verify the remote component loads from Simulator 1
+- On **Settings** page: toggle theme and language → verify changes persist
+
+#### Active Services
+
+- Terminal 1: Remote serve (port 9005) ✅ Keep running
+- Terminal 2: Remote Metro bundler (port 8084) ✅ Keep running
+- Terminal 3: Host Metro bundler (port 8082) ✅ Keep running
+- Simulator 1: Remote app (iPhone 16 Pro) ✅ Running
+- Simulator 2: Host app (iPhone 16 Pro Max) ✅ Running
 
 ---
 
 ### Android
 
-#### Android Shell App (with Remote)
+#### Android Host App (with Remote MFE)
 
-##### Step 1: Start an Android Emulator
+This setup runs the remote MFE and host app in **two separate emulators**.
+
+---
+
+#### A. Remote Standalone App
+
+##### Terminal 1: Build and Serve Remote Bundle
 
 ```bash
-# List available emulators
+# Build the Android remote MFE bundle
+PLATFORM=android yarn workspace @universal/mobile-remote-hello build:remote
+
+# Serve the remote bundle on port 9004
+PLATFORM=android yarn workspace @universal/mobile-remote-hello serve
+```
+
+**Wait** until you see: `Server listening on port 9004`
+
+**Keep this terminal running.**
+
+##### Terminal 2: Start Metro Bundler for Remote
+
+```bash
+# Optional: List available emulators
 emulator -list-avds
 
-# Start an emulator (replace with your AVD name)
-emulator -avd Pixel_7_API_35 &
-
-# Wait for emulator to boot, then verify it's connected
-adb wait-for-device
-adb devices  # Should show: emulator-5554  device
-```
-
-##### Step 2: Build and serve the Android remote
-
-```bash
-# Terminal 1: Build and serve Android remote
-yarn workspace @universal/mobile-remote-hello build:android
-yarn workspace @universal/mobile-remote-hello serve:android
-```
-
-Wait until you see "Server listening on port 9004".
-
-##### Step 3: Start the Android Metro bundler
-
-```bash
-# Terminal 2: Start Android Metro bundler
-yarn workspace @universal/mobile-host start:bundler:android
-```
-
-Wait until you see "Welcome to Metro" and the bundler is ready.
-
-##### Step 4: Build and run the Android app
-
-```bash
-# Terminal 3: Build and install Android app
-yarn workspace @universal/mobile-host android
-```
-
-The app will automatically install and launch in the Android emulator.
-
-**Manual Testing:**
-- Navigate using the header links (Home, Remote Hello, Settings)
-- On Remote Hello page: tap "Load Remote" and verify component loads
-- On Settings page: toggle theme and language
-
-#### Android Remote Standalone App
-
-For isolated development of the remote component without the shell app.
-
-##### Step 1: Start an Android Emulator (if not already running)
-
-```bash
-emulator -avd Pixel_7_API_35 &
-adb wait-for-device
-adb devices
-```
-
-##### Step 2: Start the standalone bundler
-
-```bash
-# Terminal 1: Start standalone bundler for remote
+# Start Metro bundler for remote app
 yarn workspace @universal/mobile-remote-hello start:bundler:android
 ```
 
-Wait until you see "Welcome to Metro" and the bundler is ready.
+**Wait** until you see: `Welcome to Metro` and Metro is ready.
 
-##### Step 3: Set up ADB reverse port
+**Keep this terminal running.**
 
-```bash
-# Forward the bundler port from emulator to host
-adb reverse tcp:8083 tcp:8083
-```
-
-##### Step 4: Build and run the standalone app
+##### Terminal 3: Boot Emulator, Build, and Launch Remote App
 
 ```bash
-# Terminal 2: Build and install standalone remote app
-cd packages/mobile-remote-hello/android
+# Boot first emulator for remote app (e.g., Pixel_8_Pro_API_35)
+emulator -avd Pixel_8_Pro_API_35 &
+
+# Wait for emulator to boot completely
+adb wait-for-device
+sleep 10
+
+# Build and install the remote app
+cd packages/mobile-remote-hello/android && \
 ./gradlew installDebug
 
-# Launch the app
-adb shell am start -n com.mobileremotehello/.MainActivity
+# Get the emulator device ID (should be emulator-5554)
+adb devices
+
+# Launch the remote app
+adb -s emulator-5554 shell am start -n com.mobileremotehello/.MainActivity
 ```
+
+**Verify:** You should see the standalone remote app running in the first emulator.
+
+---
+
+#### B. Host App
+
+##### Terminal 3 (reuse): Start Metro Bundler for Host
+
+```bash
+# Start Metro bundler for host app
+yarn workspace @universal/mobile-host start:bundler:android
+```
+
+**Wait** until you see: `Welcome to Metro` and Metro is ready.
+
+**Keep this terminal running.**
+
+##### Terminal 4: Boot Emulator, Build, and Launch Host App
+
+```bash
+# Boot second emulator for host app (e.g., Pixel_7_API_35)
+emulator -avd Pixel_7_API_35 &
+
+# Wait for second emulator to boot completely
+adb wait-for-device
+sleep 10
+
+# Build and install the host app
+cd packages/mobile-host/android
+./gradlew installDebug
+
+# Get the second emulator device ID (should be emulator-5556)
+adb devices
+
+# Launch the host app
+adb -s emulator-5556 shell am start -n com.mobilehosttmp/.MainActivity
+```
+
+**Verify:** You should now see **two emulators running** side by side.
+
+---
+
+#### Manual Testing
+
+- Navigate using header links (Home, Remote Hello, Settings)
+- On **Remote Hello** page: tap "Load Remote" → verify the remote component loads from Emulator 1
+- On **Settings** page: toggle theme and language → verify changes persist
+
+#### Active Services
+
+- Terminal 1: Remote serve (port 9004) ✅ Keep running
+- Terminal 2: Remote Metro bundler (port 8083) ✅ Keep running
+- Terminal 3: Host Metro bundler (port 8081) ✅ Keep running
+- Emulator 1: Remote app (Pixel_8_Pro_API_35 / emulator-5554) ✅ Running
+- Emulator 2: Host app (Pixel_7_API_35 / emulator-5556) ✅ Running
 
 ---
 
 ## Port Reference
 
-| Service | Port |
-|---------|------|
-| Web Shell | 9001 |
-| Web Remote | 9003 |
-| iOS Metro Bundler | 8082 |
-| iOS Remote Server | 9005 |
-| Android Metro Bundler | 8081 |
-| Android Remote Server | 9004 |
-| iOS Standalone Remote Bundler | 8084 |
+| Service                           | Port |
+| --------------------------------- | ---- |
+| Web Shell                         | 9001 |
+| Web Remote                        | 9003 |
+| iOS Metro Bundler                 | 8082 |
+| iOS Remote Server                 | 9005 |
+| Android Metro Bundler             | 8081 |
+| Android Remote Server             | 9004 |
+| iOS Standalone Remote Bundler     | 8084 |
 | Android Standalone Remote Bundler | 8083 |
 
 ---
 
 ## Troubleshooting
-
-### Kill All Servers
-
-```bash
-lsof -ti:9001,9003,9004,9005,8081,8082,8083,8084 | xargs kill -9 2>/dev/null
-```
 
 ### Fresh Start
 
@@ -295,6 +331,7 @@ adb devices
 ### Remote Component Won't Load
 
 1. Verify the remote server is running:
+
    ```bash
    # iOS
    curl -I http://localhost:9005/HelloRemote.container.js.bundle
@@ -304,6 +341,7 @@ adb devices
    ```
 
 2. Verify the Metro bundler is running:
+
    ```bash
    # iOS
    curl http://localhost:8082/status
@@ -335,12 +373,12 @@ yarn workspace @universal/shared-theme-context test
 
 ### Test Coverage
 
-| Package | Tests | Coverage |
-|---------|-------|----------|
-| shared-utils | 6 | 100% |
-| shared-hello-ui | 16 | 100% |
-| shared-theme-context | 24 | 100% |
-| **Total** | **46** | **100%** |
+| Package              | Tests  | Coverage |
+| -------------------- | ------ | -------- |
+| shared-utils         | 6      | 100%     |
+| shared-hello-ui      | 16     | 100%     |
+| shared-theme-context | 24     | 100%     |
+| **Total**            | **46** | **100%** |
 
 ### Test Structure
 
@@ -358,12 +396,14 @@ packages/
 ### Troubleshooting Tests
 
 **Tests fail with "Cannot find module 'react-native'"**
+
 ```bash
 # The shared-hello-ui package uses a custom mock at src/__mocks__/react-native.ts
 # Ensure the package jest.config.js has moduleNameMapper configured
 ```
 
 **Tests fail with "useTheme must be used within a ThemeProvider"**
+
 ```bash
 # Wrap components with required providers in tests:
 # - ThemeProvider for themed components
@@ -371,6 +411,7 @@ packages/
 ```
 
 **Coverage not showing for a package**
+
 ```bash
 # Ensure the package has jest.config.js and is listed in root jest.config.js projects array
 ```
@@ -395,12 +436,12 @@ yarn workspace @universal/shared-data-layer test:integration
 
 ### Integration Test Coverage
 
-| Package | Tests | Description |
-|---------|-------|-------------|
-| web-shell | 27 | Provider composition, routing, theme persistence |
-| mobile-host | 15 | Provider composition, navigation |
-| shared-data-layer | 31 | QueryClient config, QueryProvider, cache sharing |
-| **Total** | **73** | |
+| Package           | Tests  | Description                                      |
+| ----------------- | ------ | ------------------------------------------------ |
+| web-shell         | 27     | Provider composition, routing, theme persistence |
+| mobile-host       | 15     | Provider composition, navigation                 |
+| shared-data-layer | 31     | QueryClient config, QueryProvider, cache sharing |
+| **Total**         | **73** |                                                  |
 
 ### Test Structure
 
@@ -431,24 +472,28 @@ packages/
 ### Troubleshooting Integration Tests
 
 **Tests fail with "Cannot find module 'react-native'"**
+
 ```bash
 # Integration tests use custom mocks, not react-native-web
 # Ensure jest.integration.config.js has moduleNameMapper for react-native
 ```
 
 **Tests fail with React version conflicts**
+
 ```bash
 # Web packages use React 19.2.0, mobile/shared use 19.1.0
 # The jest.integration.config.js maps React to workspace versions
 ```
 
 **Tests fail with "toHaveTextContent is not a function"**
+
 ```bash
 # Ensure setup.ts imports @testing-library/jest-dom
 # And jest.integration.config.js has setupFilesAfterEnv pointing to setup.ts
 ```
 
 **Tests hang or timeout**
+
 ```bash
 # Integration tests have 15s timeout (longer than unit tests)
 # Run with --verbose to see which test is hanging:
@@ -491,16 +536,17 @@ yarn workspace @universal/web-shell exec npx playwright test --project=webkit
 
 ### Test Suites
 
-| Suite | File | Description |
-|-------|------|-------------|
-| Smoke | `e2e/smoke.spec.ts` | Basic app launch, header visibility |
-| Routing | `e2e/routing.spec.ts` | SPA navigation, URL handling |
-| Theming | `e2e/theming.spec.ts` | Theme toggle, persistence |
-| Remote Loading | `e2e/remote-loading.spec.ts` | Module Federation remote loading |
+| Suite          | File                         | Description                         |
+| -------------- | ---------------------------- | ----------------------------------- |
+| Smoke          | `e2e/smoke.spec.ts`          | Basic app launch, header visibility |
+| Routing        | `e2e/routing.spec.ts`        | SPA navigation, URL handling        |
+| Theming        | `e2e/theming.spec.ts`        | Theme toggle, persistence           |
+| Remote Loading | `e2e/remote-loading.spec.ts` | Module Federation remote loading    |
 
 ### Browser Coverage
 
 Tests run across 5 browser configurations:
+
 - Chromium (Desktop)
 - Firefox (Desktop)
 - WebKit (Desktop)
@@ -568,6 +614,7 @@ adb shell am start -n com.mobilehosttmp/.MainActivity
 ```
 
 **Expected Behavior:**
+
 - ✅ App launches without Metro bundler
 - ✅ Production bundles embedded
 - ✅ Loads remote from `https://universal-mfe.web.app`
@@ -645,6 +692,7 @@ xcrun simctl launch booted com.universal.mobilehost
 ```
 
 **Expected Behavior:**
+
 - ✅ App launches without Metro bundler
 - ✅ Production bundles embedded via custom Xcode script
 - ✅ No blank white screen
@@ -680,6 +728,7 @@ xcrun simctl launch booted com.universal.mobileremote
 ```
 
 **Testing Configuration:**
+
 - Host app: iPhone 15 simulator
 - Remote app: iPhone 15 Pro simulator (separate device)
 - Both apps run standalone simultaneously
@@ -687,6 +736,7 @@ xcrun simctl launch booted com.universal.mobileremote
 ### Release Build Verification Checklist
 
 #### Android
+
 - [ ] Host APK builds successfully
 - [ ] Host app launches without Metro
 - [ ] Host app loads UI correctly
@@ -697,6 +747,7 @@ xcrun simctl launch booted com.universal.mobileremote
 - [ ] Standalone remote app launches
 
 #### iOS
+
 - [ ] Host bundle builds (1.2MB production bundle)
 - [ ] Xcode build succeeds (Release configuration)
 - [ ] Host app installs on simulator
@@ -712,20 +763,26 @@ xcrun simctl launch booted com.universal.mobileremote
 ### Key Implementation Details
 
 #### Platform Polyfill (iOS-Critical)
+
 iOS Release builds require extended polyfills in `PatchMFConsolePlugin.mjs`:
+
 - Console polyfill (Android + iOS)
 - Platform polyfill (iOS-critical, handles `Platform.constants`, `.isTesting`, `.OS`, `.Version`, `.select()`)
 - Prevents crashes during React Native initialization
 
 #### Custom Xcode Bundling Script
+
 Both iOS apps use custom bundling scripts:
+
 - Location: `ios/scripts/bundle-repack.sh`
 - Integrates with Xcode build process
 - Handles Debug vs Release configurations
 - Properly manages code signing
 
 #### Build Mode Strategy
+
 Both platforms use **Option B approach**:
+
 - Rspack `mode: 'development'` (preserves React Native runtime)
 - Dev support disabled at native level:
   - Android: `BuildConfig.DEBUG` flag
@@ -734,6 +791,7 @@ Both platforms use **Option B approach**:
 ### Troubleshooting Release Builds
 
 **Android: DNS Resolution Issues (Emulators Only)**
+
 ```bash
 # Restart emulator with explicit DNS
 adb devices | grep emulator | cut -f1 | xargs -I {} adb -s {} emu kill
@@ -741,17 +799,20 @@ emulator -avd Pixel_8_Pro_API_35 -dns-server 8.8.8.8,8.8.4.4 -wipe-data
 ```
 
 **Android: Codegen Missing**
+
 ```bash
 cd packages/mobile-host/android
 ./gradlew generateCodegenArtifactsFromSchema --no-daemon
 ```
 
 **iOS: Blank White Screen**
+
 - Verify Platform polyfill is in PatchMFConsolePlugin.mjs
 - Check Xcode build logs for custom script output
 - Ensure bundle exists: `ls -lh ios/main.jsbundle`
 
 **iOS: Code Signing Invalid**
+
 ```bash
 # Verify signature
 codesign -vv path/to/MobileHostTmp.app
@@ -804,20 +865,20 @@ yarn workspace @universal/mobile-host exec maestro test .maestro/smoke.yaml
 
 ### Test Flows
 
-| Flow | File | Description | Tags |
-|------|------|-------------|------|
-| Smoke | `smoke.yaml` | App launch, header, navigation links | smoke, core |
-| Navigation | `navigation.yaml` | Page transitions, header nav | navigation, core |
-| Theming | `theming.yaml` | Theme toggle from header and settings | theming, core |
-| i18n | `i18n.yaml` | Language switching (EN/HI) | i18n, core |
-| Remote Loading | `remote-loading.yaml` | Module Federation loading | remote, federation |
+| Flow           | File                  | Description                           | Tags               |
+| -------------- | --------------------- | ------------------------------------- | ------------------ |
+| Smoke          | `smoke.yaml`          | App launch, header, navigation links  | smoke, core        |
+| Navigation     | `navigation.yaml`     | Page transitions, header nav          | navigation, core   |
+| Theming        | `theming.yaml`        | Theme toggle from header and settings | theming, core      |
+| i18n           | `i18n.yaml`           | Language switching (EN/HI)            | i18n, core         |
+| Remote Loading | `remote-loading.yaml` | Module Federation loading             | remote, federation |
 
 ### App Identifiers
 
-| Platform | App ID |
-|----------|--------|
-| Android | `com.mobilehosttmp` |
-| iOS | `com.universal.mobilehost` |
+| Platform | App ID                     |
+| -------- | -------------------------- |
+| Android  | `com.mobilehosttmp`        |
+| iOS      | `com.universal.mobilehost` |
 
 ### Running Remote Loading Tests
 
@@ -848,13 +909,15 @@ yarn workspace @universal/mobile-host test:e2e:ios
 ### CI Integration
 
 Maestro tests can be triggered via `.github/workflows/e2e-mobile.yml`:
+
 - **Manual trigger**: Use workflow_dispatch with platform selector (android/ios/both)
-- **Automatic on tags**: Runs on release tags (v*)
+- **Automatic on tags**: Runs on release tags (v\*)
 - Excludes remote loading tests by default (requires remote server)
 
 ### Troubleshooting Maestro
 
 **"Unable to launch app"**
+
 ```bash
 # Ensure app is installed on device/emulator
 adb shell pm list packages | grep mobilehosttmp  # Android
@@ -862,6 +925,7 @@ xcrun simctl listapps booted | grep mobilehost   # iOS
 ```
 
 **Tests timeout**
+
 ```bash
 # Increase timeout in YAML
 - extendedWaitUntil:
@@ -870,6 +934,7 @@ xcrun simctl listapps booted | grep mobilehost   # iOS
 ```
 
 **Element not found**
+
 ```bash
 # Use regex patterns for flexible matching
 - assertVisible: ".*Welcome.*"
