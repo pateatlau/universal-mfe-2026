@@ -60,6 +60,14 @@ packages/mobile-remote-hello/ios/main.jsbundle.map
 packages/mobile-host/ios/Pods/.last_build_configuration
 packages/mobile-remote-hello/ios/Pods/.last_build_configuration
 
+# Hermes binaries (build artifacts that change during builds)
+packages/mobile-host/ios/Pods/hermes-engine/destroot/bin/hermes
+packages/mobile-host/ios/Pods/hermes-engine/destroot/bin/hermesc
+packages/mobile-host/ios/Pods/hermes-engine/destroot/Library/Frameworks/macosx/hermes.framework/Versions/0/hermes
+packages/mobile-host/ios/Pods/hermes-engine/destroot/Library/Frameworks/universal/hermes.xcframework/Info.plist
+packages/mobile-host/ios/Pods/hermes-engine/destroot/Library/Frameworks/universal/hermes.xcframework/*/hermes.framework/hermes
+packages/mobile-host/ios/Pods/hermes-engine/destroot/Library/Frameworks/universal/hermes.xcframework/*/hermes.framework/Versions/0/hermes
+
 # IDE
 .vscode/
 .idea/
