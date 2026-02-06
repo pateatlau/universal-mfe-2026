@@ -289,16 +289,6 @@ export function SignUpScreen({
             />
           </View>
 
-          <SocialLoginButtons
-            onGooglePress={handleGoogleSignUp}
-            onGitHubPress={handleGitHubSignUp}
-            isGoogleLoading={isGoogleLoading}
-            isGitHubLoading={isGitHubLoading}
-            disabled={isFormDisabled}
-            showDivider={true}
-            testIDPrefix={testIDPrefix}
-          />
-
           {onSignInPress && (
             <Pressable
               style={styles.signInContainer}
@@ -312,6 +302,16 @@ export function SignUpScreen({
               </Text>
             </Pressable>
           )}
+
+          <SocialLoginButtons
+            onGooglePress={handleGoogleSignUp}
+            onGitHubPress={handleGitHubSignUp}
+            isGoogleLoading={isGoogleLoading}
+            isGitHubLoading={isGitHubLoading}
+            disabled={isFormDisabled}
+            showDivider={true}
+            testIDPrefix={testIDPrefix}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

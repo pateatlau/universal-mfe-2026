@@ -173,18 +173,6 @@ export function LoginScreen({
             testID={`${testIDPrefix}-password-input`}
           />
 
-          <View style={styles.buttonContainer}>
-            <AuthButton
-              label={t('login.signIn', { defaultValue: 'Sign In' })}
-              onPress={handleEmailLogin}
-              variant="primary"
-              isLoading={isLoading && !isGoogleLoading && !isGitHubLoading}
-              disabled={isEmailLoginDisabled}
-              accessibilityHint="Signs you in with email and password"
-              testID={`${testIDPrefix}-submit-button`}
-            />
-          </View>
-
           {onForgotPasswordPress && (
             <Pressable
               style={styles.linkButton}
@@ -199,15 +187,17 @@ export function LoginScreen({
             </Pressable>
           )}
 
-          <SocialLoginButtons
-            onGooglePress={handleGoogleLogin}
-            onGitHubPress={handleGitHubLogin}
-            isGoogleLoading={isGoogleLoading}
-            isGitHubLoading={isGitHubLoading}
-            disabled={isFormDisabled}
-            showDivider={true}
-            testIDPrefix={testIDPrefix}
-          />
+          <View style={styles.buttonContainer}>
+            <AuthButton
+              label={t('login.signIn', { defaultValue: 'Sign In' })}
+              onPress={handleEmailLogin}
+              variant="primary"
+              isLoading={isLoading && !isGoogleLoading && !isGitHubLoading}
+              disabled={isEmailLoginDisabled}
+              accessibilityHint="Signs you in with email and password"
+              testID={`${testIDPrefix}-submit-button`}
+            />
+          </View>
 
           {onSignUpPress && (
             <Pressable
@@ -222,6 +212,16 @@ export function LoginScreen({
               </Text>
             </Pressable>
           )}
+
+          <SocialLoginButtons
+            onGooglePress={handleGoogleLogin}
+            onGitHubPress={handleGitHubLogin}
+            isGoogleLoading={isGoogleLoading}
+            isGitHubLoading={isGitHubLoading}
+            disabled={isFormDisabled}
+            showDivider={true}
+            testIDPrefix={testIDPrefix}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

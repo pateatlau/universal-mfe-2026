@@ -26,14 +26,14 @@ tags:
 - assertVisible: "Password"
 
 # === Navigate to Sign Up screen ===
-# The link text is "Don't have an account? Sign Up" - tap on "Sign Up" part
+# The link text is "Don't have an account? Sign Up" - now appears below Sign In button
 # Scroll down first as the link may be below the fold on small screens
 - scrollUntilVisible:
-    element: ".*Sign Up.*"
+    element: ".*Don't have an account.*"
     direction: DOWN
     timeout: 5000
 - tapOn:
-    text: ".*Sign Up.*"
+    text: ".*Don't have an account.*"
     index: 0
 
 # Verify on Sign Up screen - wait for unique element (auth.signup.title = "Create Account")
@@ -48,14 +48,14 @@ tags:
 - assertVisible: "Confirm Password"
 
 # === Navigate back to Login ===
-# The link text is "Already have an account? Sign In"
+# The link text is "Already have an account? Sign In" - now appears below Sign Up button
 # Scroll down first as the link may be below the fold on small screens
 - scrollUntilVisible:
-    element: ".*Sign In.*"
+    element: ".*Already have an account.*"
     direction: DOWN
     timeout: 5000
 - tapOn:
-    text: ".*Sign In.*"
+    text: ".*Already have an account.*"
     index: 0
 
 # Verify back on login screen (use login-unique element "Forgot Password?")
