@@ -36,20 +36,15 @@ tags:
 
 # === Switch to Hindi via header toggle ===
 
-# Scroll back to top to see title (which will update after language change)
-- scrollUntilVisible:
-    element: "Sign In"
-    direction: UP
-    timeout: 5000
-
 # Tap language toggle (shows NEXT locale, not current)
 # When current locale is English, the toggle button shows "हिन्दी" (Hindi)
 - tapOn: ".*हिन्दी.*"
 
-# Wait for language change - login screen should update
+# Scroll to see title after language change (scrollUntilVisible handles the wait)
 # auth.login.title in Hindi = "साइन इन करें"
-- extendedWaitUntil:
-    visible: "साइन इन करें"
+- scrollUntilVisible:
+    element: "साइन इन करें"
+    direction: UP
     timeout: 5000
 
 # Verify Hindi text on login screen
