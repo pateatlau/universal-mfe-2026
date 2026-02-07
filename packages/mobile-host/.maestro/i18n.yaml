@@ -36,9 +36,11 @@ tags:
 
 # === Switch to Hindi via header toggle ===
 
-# Scroll back to top first (so title will be visible after language change)
-- scroll:
+# Scroll back to top to see title (which will update after language change)
+- scrollUntilVisible:
+    element: "Sign In"
     direction: UP
+    timeout: 5000
 
 # Tap language toggle (shows NEXT locale, not current)
 # When current locale is English, the toggle button shows "हिन्दी" (Hindi)
