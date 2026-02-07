@@ -39,5 +39,9 @@ tags:
 - assertVisible: "Email"
 - assertVisible: "Password"
 
-# Verify social login options are visible
+# Verify social login options are visible (may need scrolling on small screens)
+- scrollUntilVisible:
+    element: "Continue with Google"
+    direction: DOWN
+    timeout: 5000
 - assertVisible: "Continue with Google"

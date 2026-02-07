@@ -228,9 +228,10 @@ jobs:
 
             adb devices -l
             adb install -r packages/mobile-host/android/app/build/outputs/apk/release/app-release.apk
-            sleep 5
+            sleep 10
 
             echo "Running Maestro E2E tests..."
+            export MAESTRO_DRIVER_STARTUP_TIMEOUT=180000
             MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.mobilehosttmp maestro test packages/mobile-host/.maestro/ --exclude-tags=remote --format=junit --output=packages/mobile-host/maestro-results.xml
 
       - name: Upload Maestro results
@@ -456,6 +457,7 @@ jobs:
           xcrun simctl bootstatus "iPhone 16" -b
 
           echo "Running Maestro E2E tests..."
+          export MAESTRO_DRIVER_STARTUP_TIMEOUT=180000
           MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_APP_ID=com.universal.mobilehost maestro test .maestro/ --exclude-tags=remote --format=junit --output=maestro-results.xml
 
       - name: Upload Maestro results

@@ -27,6 +27,11 @@ tags:
 - assertVisible: "Sign In"
 - assertVisible: "Email"
 - assertVisible: "Password"
+# Scroll to see social login buttons (may be below fold after layout changes)
+- scrollUntilVisible:
+    element: "Continue with Google"
+    direction: DOWN
+    timeout: 5000
 - assertVisible: "Continue with Google"
 
 # === Switch to Hindi via header toggle ===
@@ -35,10 +40,11 @@ tags:
 # When current locale is English, the toggle button shows "हिन्दी" (Hindi)
 - tapOn: ".*हिन्दी.*"
 
-# Wait for language change - login screen should update
+# Scroll to see title after language change (scrollUntilVisible handles the wait)
 # auth.login.title in Hindi = "साइन इन करें"
-- extendedWaitUntil:
-    visible: "साइन इन करें"
+- scrollUntilVisible:
+    element: "साइन इन करें"
+    direction: UP
     timeout: 5000
 
 # Verify Hindi text on login screen
@@ -125,4 +131,9 @@ tags:
 # Verify login screen in English
 - assertVisible: "Email"
 - assertVisible: "Password"
+# Scroll to see social login buttons
+- scrollUntilVisible:
+    element: "Continue with Google"
+    direction: DOWN
+    timeout: 5000
 - assertVisible: "Continue with Google"
