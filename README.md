@@ -1,6 +1,13 @@
 # Universal Microfrontend Platform
 
-A production-ready microfrontend architecture enabling a **single React Native codebase** to run on **Web, iOS, and Android** with dynamic runtime module loading via [Module Federation v2](https://module-federation.io/).
+A governed, cross-platform microfrontend platform enabling a **single React Native codebase** to power **Web, iOS, and Android** via runtime [Module Federation v2](https://module-federation.io/).
+
+## Why This Platform Exists
+
+- **Eliminate duplicated UI logic** across web and mobile — write components once using React Native primitives, render everywhere
+- **Enable independent feature deployment** via runtime Module Federation without host redeployment
+- **Enforce host-governed boundaries** — routing, authentication, and session lifecycle are owned by the host
+- **Provide a scalable architecture** for multi-team frontend development with strict MFE isolation
 
 ## Architecture Overview
 
@@ -53,6 +60,29 @@ A production-ready microfrontend architecture enabling a **single React Native c
 
 **Key Innovation**: Write UI once using React Native primitives (`View`, `Text`, `Pressable`) → renders via React Native Web on browsers, natively on mobile.
 
+### Runtime Flow
+
+```text
+User Request → Host App → Remote Resolution → Dynamic Bundle Load → Shared Library Injection → Render
+                  │              │                     │
+                  │         Web: remoteEntry.js   Web: browser fetch
+                  │         Mobile: ScriptManager Mobile: Hermes bytecode
+                  │
+                  └── Auth gate, route resolution, theme/i18n context provided by host
+
+If a remote fails to load, the host provides graceful fallback UI and preserves session continuity.
+```
+
+### Host Governance Model
+
+The host application enforces all cross-cutting concerns:
+
+- **Routing** — Host defines all routes; MFEs are URL-agnostic and request navigation via event bus
+- **Authentication** — Host owns Firebase session lifecycle; remotes receive auth state, never manage it
+- **Shared Dependencies** — Singleton-enforced via Module Federation; host controls versions
+- **Communication** — Inter-MFE messaging occurs only through the typed event bus; no direct imports between remotes
+- **Deployment** — Remotes can be deployed independently, but the host controls which versions are loaded at runtime
+
 ## Tech Stack
 
 | Layer | Web | Mobile | Shared |
@@ -68,18 +98,32 @@ A production-ready microfrontend architecture enabling a **single React Native c
 
 ## Features
 
-| Category | Features |
-|----------|----------|
-| **Universal UI** | React Native components render on all platforms |
-| **Module Federation** | Runtime remote loading without redeployment |
-| **Authentication** | Firebase Auth (Email, Google, GitHub) |
-| **Theming** | Light/dark mode, two-tier design tokens |
-| **i18n** | English + Hindi, zero-dependency |
-| **Accessibility** | WCAG 2.1 AA compliant utilities |
-| **State Management** | Zustand stores with storage abstraction |
-| **Inter-MFE Comms** | Type-safe event bus |
-| **Testing** | Jest, Playwright (web), Maestro (mobile) |
-| **CI/CD** | Trunk-based, Vercel + Firebase deployment |
+### Platform Core
+
+| Feature | Description |
+|---------|-------------|
+| **Universal UI** | React Native components render identically on Web, iOS, and Android |
+| **Module Federation v2** | Runtime remote loading — deploy remotes independently without host redeployment |
+| **Authentication** | Firebase Auth with Email/Password, Google Sign-In, and GitHub Sign-In |
+
+### Cross-Cutting Concerns
+
+| Feature | Description |
+|---------|-------------|
+| **Theming** | Light/dark mode with two-tier design token architecture and session persistence |
+| **i18n** | English + Hindi localization, zero-dependency, works across all platforms |
+| **Accessibility** | WCAG 2.1 AA compliant utilities for screen readers, roles, and focus management |
+| **State Management** | Zustand stores with platform-agnostic storage abstraction |
+| **Inter-MFE Communication** | Type-safe event bus for loose coupling between host and remotes |
+
+### Developer Experience & CI/CD
+
+| Feature | Description |
+|---------|-------------|
+| **Turborepo** | Cached build orchestration with dependency-aware task ordering |
+| **Testing Pyramid** | Jest (unit), Playwright (web E2E), Maestro (mobile E2E) |
+| **CI/CD** | Trunk-based development with mandatory E2E gates on all 3 platforms before merge |
+| **Architecture Enforcement** | Custom ESLint rules prevent cross-MFE imports and DOM usage in shared packages |
 
 ## Quick Start
 
@@ -117,6 +161,77 @@ packages/
 ├── shared-router/          # Routing abstraction
 └── shared-utils/           # Pure TypeScript utilities
 ```
+
+## Deployment
+
+| Platform | Target | Trigger | Independence |
+|----------|--------|---------|--------------|
+| Web | [Vercel](https://vercel.com/) | Push to `main` | Host and remotes deploy independently |
+| Android | Firebase App Distribution | Tag `v*` | Remote bundles deploy without app update |
+| iOS Sim | GitHub Releases | Tag `v*` | Remote bundles deploy without app update |
+
+### CI/CD Pipeline
+
+```mermaid
+flowchart LR
+    PR[Pull Request]
+    CI[CI Checks<br/>Lint, Type, Test, Build]
+    E2E[E2E Tests<br/>Web + Android + iOS]
+    Merge[Merge to main]
+    Staging[Auto-Deploy Staging<br/>Vercel + Firebase]
+    Tag[Git Tag v*]
+    ProdE2E[E2E Re-verification]
+    Prod[Production Release<br/>GitHub + Vercel + Firebase]
+
+    PR --> CI
+    CI -->|✓ Pass| E2E
+    E2E -->|✓ All platforms pass| Merge
+    Merge --> Staging
+    Staging -.->|Manual trigger| Tag
+    Tag --> ProdE2E
+    ProdE2E -->|✓ Pass| Prod
+
+    CI -->|✗ Fail| PR
+    E2E -->|✗ Fail| PR
+    ProdE2E -->|✗ Fail| PR
+
+    style Merge fill:#90EE90
+    style Staging fill:#87CEEB
+    style Prod fill:#FFD700
+    style E2E fill:#FFA07A
+    style ProdE2E fill:#FFA07A
+```
+
+**Core Invariant:** `main` is always releasable — all PRs must pass CI + E2E on all three platforms before merge.
+
+## Multi-Team Scaling Considerations
+
+This architecture is designed to support multi-team development through:
+
+- **Manifest-based version pinning** — Host controls which remote versions are loaded at runtime via manifest files
+- **Backward-compatible shared library evolution** — Semantic versioning ensures remotes can upgrade independently without breaking changes
+- **Remote rollback** — Host manifest override enables instant rollback of problematic remote versions without redeployment
+- **CI validation for shared dependencies** — Automated checks prevent breaking changes to shared packages before merge
+- **Staging environment version-skew detection** — Pre-production validation catches incompatibilities before production promotion
+
+## Trade-Offs & Constraints
+
+| Trade-Off | Rationale |
+|-----------|-----------|
+| Runtime MF adds version coordination complexity | Justified by independent deployment capability across teams |
+| React Native Web increases web bundle size vs pure React | Justified by eliminating duplicated UI logic across 3 platforms |
+| Cross-platform abstraction adds overhead | Justified when targeting Web + iOS + Android from a single codebase |
+| Hermes bytecode requires separate mobile build pipeline | Required for Module Federation v2 dynamic loading on native |
+| Exact version pinning reduces flexibility | Required for Module Federation shared dependency compatibility |
+
+### When This Architecture Is Not Appropriate
+
+This platform is designed for organizations with multiple feature teams requiring independent deployment boundaries. It is not recommended for:
+
+- Early-stage products with fewer than 3-4 frontend contributors
+- Applications without independent deployment needs
+- Projects targeting a single platform (web-only or mobile-only)
+- Tightly coupled UI domains where MFE boundaries add unnecessary overhead
 
 ## Documentation
 
@@ -162,14 +277,6 @@ packages/
 | Rspack | https://rspack.dev/ |
 | Turborepo | https://turbo.build/ |
 | Firebase | https://firebase.google.com/ |
-
-## Deployment
-
-| Platform | Target | Trigger |
-|----------|--------|---------|
-| Web | [Vercel](https://vercel.com/) | Push to `main` |
-| Android | Firebase App Distribution | Tag `v*` |
-| iOS Sim | Firebase App Distribution | Tag `v*` |
 
 ## License
 

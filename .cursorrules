@@ -447,6 +447,16 @@ Firebase Authentication is fully implemented across all platforms:
 - `packages/web-shell/src/services/firebaseAuthService.ts` - Web Firebase service
 - `docs/FIREBASE-AUTH-IMPLEMENTATION-PLAN.md` - Complete implementation guide
 
+**Known Limitations:**
+- Account linking not yet implemented. If a user signs in with Google first, they cannot later sign in with email/password using the same email (Firebase treats these as separate auth methods). A user-friendly error message is shown guiding them to use the original sign-in method.
+
+**TODO - Account Linking Feature:**
+- Implement account linking to allow users to add email/password to an OAuth-created account
+- Two approaches to consider:
+  1. **During failed login**: Detect when user tries email/password but account exists with Google, prompt re-auth with Google, then link password
+  2. **In account settings**: Add "Link Email/Password" option for OAuth users to add a password (simpler approach, requires settings page)
+- Reference: Firebase `user.linkWithCredential()` API
+
 ### CI/CD (GitHub Actions) ✅ Complete
 
 World-class trunk-based development workflow with mandatory E2E gates:
