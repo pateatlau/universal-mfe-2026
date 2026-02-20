@@ -170,9 +170,39 @@ packages/
 | Android | Firebase App Distribution | Tag `v*` | Remote bundles deploy without app update |
 | iOS Sim | GitHub Releases | Tag `v*` | Remote bundles deploy without app update |
 
-**CI/CD Pipeline:** PR → Lint/Type/Test/Build → E2E (Web + Android + iOS) → Merge → Auto-deploy staging → Tag → Production release
+### CI/CD Pipeline
 
-**Core Invariant:** `main` is always releasable.
+```mermaid
+flowchart LR
+    PR[Pull Request]
+    CI[CI Checks<br/>Lint, Type, Test, Build]
+    E2E[E2E Tests<br/>Web + Android + iOS]
+    Merge[Merge to main]
+    Staging[Auto-Deploy Staging<br/>Vercel + Firebase]
+    Tag[Git Tag v*]
+    ProdE2E[E2E Re-verification]
+    Prod[Production Release<br/>GitHub + Vercel + Firebase]
+
+    PR --> CI
+    CI -->|✓ Pass| E2E
+    E2E -->|✓ All platforms pass| Merge
+    Merge --> Staging
+    Staging -.->|Manual trigger| Tag
+    Tag --> ProdE2E
+    ProdE2E -->|✓ Pass| Prod
+
+    CI -->|✗ Fail| PR
+    E2E -->|✗ Fail| PR
+    ProdE2E -->|✗ Fail| Tag
+
+    style Merge fill:#90EE90
+    style Staging fill:#87CEEB
+    style Prod fill:#FFD700
+    style E2E fill:#FFA07A
+    style ProdE2E fill:#FFA07A
+```
+
+**Core Invariant:** `main` is always releasable — all PRs must pass CI + E2E on all three platforms before merge.
 
 ## Multi-Team Scaling Considerations
 
