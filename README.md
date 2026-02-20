@@ -1,6 +1,6 @@
 # Universal Microfrontend Platform
 
-A production-ready microfrontend architecture enabling a **single React Native codebase** to run on **Web, iOS, and Android** with dynamic runtime module loading via [Module Federation v2](https://module-federation.io/).
+A governed, cross-platform microfrontend platform enabling a **single React Native codebase** to power **Web, iOS, and Android** via runtime [Module Federation v2](https://module-federation.io/).
 
 ## Why This Platform Exists
 
@@ -69,6 +69,8 @@ User Request → Host App → Remote Resolution → Dynamic Bundle Load → Shar
                   │         Mobile: ScriptManager Mobile: Hermes bytecode
                   │
                   └── Auth gate, route resolution, theme/i18n context provided by host
+
+If a remote fails to load, the host provides graceful fallback UI and preserves session continuity.
 ```
 
 ### Host Governance Model
@@ -171,6 +173,16 @@ packages/
 **CI/CD Pipeline:** PR → Lint/Type/Test/Build → E2E (Web + Android + iOS) → Merge → Auto-deploy staging → Tag → Production release
 
 **Core Invariant:** `main` is always releasable.
+
+## Multi-Team Scaling Considerations
+
+This architecture supports multi-team development through:
+
+- **Manifest-based version pinning** — Host controls which remote versions are loaded at runtime via manifest files
+- **Backward-compatible shared library evolution** — Semantic versioning ensures remotes can upgrade independently without breaking changes
+- **Remote rollback** — Host manifest override enables instant rollback of problematic remote versions without redeployment
+- **CI validation for shared dependencies** — Automated checks prevent breaking changes to shared packages before merge
+- **Staging environment version-skew detection** — Pre-production validation catches incompatibilities before production promotion
 
 ## Trade-Offs & Constraints
 
