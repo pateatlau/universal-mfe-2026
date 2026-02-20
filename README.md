@@ -193,7 +193,7 @@ flowchart LR
 
     CI -->|✗ Fail| PR
     E2E -->|✗ Fail| PR
-    ProdE2E -->|✗ Fail| Tag
+    ProdE2E -->|✗ Fail| PR
 
     style Merge fill:#90EE90
     style Staging fill:#87CEEB
@@ -206,7 +206,7 @@ flowchart LR
 
 ## Multi-Team Scaling Considerations
 
-This architecture supports multi-team development through:
+This architecture is designed to support multi-team development through:
 
 - **Manifest-based version pinning** — Host controls which remote versions are loaded at runtime via manifest files
 - **Backward-compatible shared library evolution** — Semantic versioning ensures remotes can upgrade independently without breaking changes

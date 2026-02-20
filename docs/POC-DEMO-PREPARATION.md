@@ -587,7 +587,7 @@ A: Every PR must pass E2E tests on all three platforms (Web, Android, iOS) befor
 A: The architecture is production-ready. Next steps would be:
 1. Configure production Firebase project
 2. Set up Vercel production domains
-3. Configure Firebase App Distribution for mobile
+3. Configure Firebase App Distribution for Android / GitHub Releases for iOS Sim
 4. Add monitoring and analytics
 5. Implement feature flags for gradual rollout
 
