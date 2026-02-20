@@ -105,10 +105,10 @@ tags:
 # Tap language toggle (in Hindi, toggle shows NEXT locale = "English")
 - tapOn: ".*English.*"
 
-# Wait for language change
+# Wait for language change (longer timeout for iOS CI simulator)
 - extendedWaitUntil:
     visible: "Reset Password"
-    timeout: 5000
+    timeout: 15000
 
 # Verify English text
 - assertVisible: "Send Reset Link"
