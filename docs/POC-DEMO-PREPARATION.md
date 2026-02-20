@@ -170,8 +170,8 @@ This document provides a comprehensive preparation guide for demonstrating the *
 
 ```bash
 # Clone and install
-git clone <repo-url>
-cd universal-mfe-yarn-seed
+git clone https://github.com/pateatlau/universal-mfe-2026.git
+cd universal-mfe-2026
 
 # Install dependencies
 yarn install
@@ -184,7 +184,7 @@ yarn build:shared
 
 Ensure Firebase is configured:
 
-**Web:** Check `packages/web-shell/src/services/firebaseConfig.ts` has valid API keys.
+**Web:** Check `packages/web-shell/src/config/firebase.ts` has valid API keys.
 
 **Mobile:** Check that `GoogleService-Info.plist` (iOS) and `google-services.json` (Android) are in place.
 
@@ -385,7 +385,7 @@ Let me show you how this works in practice."
 - [ ] Open browser DevTools → Network tab
 - [ ] Point out: "remoteEntry.js loaded at runtime"
 - [ ] Show: "API calls to Firebase"
-- [ ] Point out: "No full page reloads - true SPA"
+- [ ] Point out: "No full-page reloads - true SPA"
 
 #### Key Technical Achievements
 

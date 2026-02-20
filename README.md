@@ -62,7 +62,7 @@ A production-ready microfrontend architecture enabling a **single React Native c
 
 ### Runtime Flow
 
-```
+```text
 User Request → Host App → Remote Resolution → Dynamic Bundle Load → Shared Library Injection → Render
                   │              │                     │
                   │         Web: remoteEntry.js   Web: browser fetch
@@ -166,7 +166,7 @@ packages/
 |----------|--------|---------|--------------|
 | Web | [Vercel](https://vercel.com/) | Push to `main` | Host and remotes deploy independently |
 | Android | Firebase App Distribution | Tag `v*` | Remote bundles deploy without app update |
-| iOS Sim | Firebase App Distribution | Tag `v*` | Remote bundles deploy without app update |
+| iOS Sim | GitHub Releases | Tag `v*` | Remote bundles deploy without app update |
 
 **CI/CD Pipeline:** PR → Lint/Type/Test/Build → E2E (Web + Android + iOS) → Merge → Auto-deploy staging → Tag → Production release
 

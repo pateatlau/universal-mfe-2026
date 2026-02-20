@@ -58,6 +58,7 @@ Located in `docs/adr/`:
 | `MOBILE-RELEASE-BUILD-FIXES.md` | Critical production build fixes |
 | `PATCHMFCONSOLEPLUGIN-GUIDE.md` | Hermes + MF v2 console fix guide |
 | `FIREBASE-AUTH-IMPLEMENTATION-PLAN.md` | Firebase auth implementation reference |
+| `POC-DEMO-PREPARATION.md` | Stakeholder demo preparation guide |
 | `universal-mfe-all-platforms-testing-guide.md` | Testing instructions |
 | `universal-mfe-architecture-overview.md` | System architecture |
 | `universal-mfe-mf-v2-implementation.md` | MF v2 configuration |
