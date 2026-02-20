@@ -1,6 +1,6 @@
 # Documentation Status
 
-**Last Updated:** 2026-01-30
+**Last Updated:** 2026-02-20
 
 ## Current Structure
 
@@ -57,7 +57,7 @@ Located in `docs/adr/`:
 | `CI-CD-IMPLEMENTATION-PLAN.md` | CI/CD workflow reference |
 | `MOBILE-RELEASE-BUILD-FIXES.md` | Critical production build fixes |
 | `PATCHMFCONSOLEPLUGIN-GUIDE.md` | Hermes + MF v2 console fix guide |
-| `GIT-FLOW-WORKFLOW.md` | Git workflow and branching |
+| `FIREBASE-AUTH-IMPLEMENTATION-PLAN.md` | Firebase auth implementation reference |
 | `universal-mfe-all-platforms-testing-guide.md` | Testing instructions |
 | `universal-mfe-architecture-overview.md` | System architecture |
 | `universal-mfe-mf-v2-implementation.md` | MF v2 configuration |
@@ -80,7 +80,6 @@ Located in `docs/adr/`:
 
 | Document | Status |
 |----------|--------|
-| `FIREBASE-AUTH-IMPLEMENTATION-PLAN.md` | Auth UI implemented, full auth flow in progress |
 | `APP-STORES-RELEASE-PLAN.md` | Planned for production release |
 | `INDIA-FIRST-LOCALIZATION-PLAN.md` | Hindi i18n completed, plan for India market |
 | `TECH-STACK-UPGRADE-RECOMMENDATIONS.md` | Future upgrade guidance |
